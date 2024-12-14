@@ -13,7 +13,13 @@ export function loadLevel1(scene: Scene, objectMap = {}) {
     tilemap.addTileset("target", new URL("../assets/sprites/target.png", import.meta.url).toString());
     tilemap.addTileset("player", new URL("../assets/sprites/dozer.png", import.meta.url).toString());
 
-    tilemap.addLayer("background").fill(1);
+    tilemap.addLayer("background")
+        .addProperty({
+            "name": "ge_charLayer",
+            "type": "string",
+            "value": "background"
+        })
+        .fill(1);
     tilemap.addLayer("layer1")
         .addProperty({
             "name": "ge_charLayer",
@@ -21,21 +27,35 @@ export function loadLevel1(scene: Scene, objectMap = {}) {
             "value": "layer1"
         })
         .bitblt(7, 3, [
-        [ ,  , 3,  ,  ,  ],
-        [ ,  , 3,  ,  ,  ],
-        [ ,  , 3, 3, 3, 3],
-        [3, 3, 3, 3,  ,  ],
-        [ ,  ,  , 3,  ,  ],
-        [ ,  ,  , 3,  ,  ]
-    ]);
-    tilemap.addObjectLayer("objects").bitblt(7, 3, [
-        [ ,  , 4,  ,  ,  ],
-        [ ,  ,  ,  ,  ,  ],
-        [ ,  , 2,  , 2, 4],
-        [4,  , 2, 5,  ,  ],
-        [ ,  ,  , 2,  ,  ],
-        [ ,  ,  , 4,  ,  ]
-    ]);
+            [, , 3, , ,],
+            [, , 3, , ,],
+            [, , 3, 3, 3, 3],
+            [3, 3, 3, 3, ,],
+            [, , , 3, ,],
+            [, , , 3, ,]
+        ]);
+    tilemap.addObjectLayer("objects")
+        .addProperty({
+            "name": "ge_charLayer",
+            "type": "string",
+            "value": "layer1"
+        })
+        .bitblt(7, 3, [
+            [, , 4, , ,],
+            [, , , , ,],
+            [, , 2, , 2, 4],
+            [4, , 2, 5, ,],
+            [, , , 2, ,],
+            [, , , 4, ,]
+        ]);
+
+    console.log(JSON.stringify(tilemap, function(key, value) {
+        if (Array.isArray(value) && value.every((value) => typeof value === "number")) {
+            return "[" + value.join(", ") + "]";
+        }
+
+        return value;
+    }, 4).replace(/"\[/g, '[').replace(/\]"/g, ']').replace(/\\""/g, '"').replace(/\\"/g, '"'));
 
     scene.cache.tilemap.add(name, { "format": Phaser.Tilemaps.Formats.TILED_JSON, "data": tilemap })
     const tilemapInstance = scene.cache.tilemap.add(name, Phaser.Tilemaps.ParseToTilemap(scene, name, tilemap.tilewidth, tilemap.tileheight, tilemap.width, tilemap.height)).get(name)
@@ -49,17 +69,21 @@ export function loadLevel1(scene: Scene, objectMap = {}) {
     }
 
     scene.load.once("complete", function(loader, totalComplete, totalFailed) {
-        tilemapInstance.createLayer("background", tilemapInstance.tilesets)
+        for (const { name } of tilemapInstance.layers) {
+            tilemapInstance.createLayer(name, tilemapInstance.tilesets);
+        }
 
-        for (const { objects } of tilemapInstance.objects) {
-            tilemapInstance.createLayer("layer1", tilemapInstance.tilesets);
+        for (const { objects, properties } of tilemap.layers) {
+            if (objects === undefined) {
+                continue;
+            }
 
             scene.events.once("preupdate", function() {
                 const characters = [];
 
                 const objectCount = {};
 
-                for (const { name, x, y, width, height } of objects) {
+                for (const { name, x, y } of objects) {
                     objectCount[name] ??= 1;
 
                     characters.push({
@@ -67,10 +91,10 @@ export function loadLevel1(scene: Scene, objectMap = {}) {
                         "id": (objectCount[name] -= 1) ? name + objectCount[name] : name,
                         "sprite": scene.add.sprite(0, 0, name),
                         "startPosition": {
-                            // FIXME: `width` and `height` are of the tiles, not the tilemap.
-                            "x": x / width,
-                            "y": y / height
+                            "x": x / tilemap.tilewidth,
+                            "y": y / tilemap.tileheight
                         },
+                        "charLayer": properties.find((property) => property.name === "ge_charLayer")["value"] ?? tilemapInstance.layers.at(-1)["name"]
                     });
                 }
 

@@ -48,7 +48,7 @@ export class Tilemap {
 
         this.nextlayerid += 1;
 
-        return this.layers[this.layers.length - 1];
+        return this.layers.at(-1);
     }
 
     addObjectLayer(name) {
@@ -64,9 +64,18 @@ export class Tilemap {
             visible = true;
             x = 0;
             y = 0;
+            properties;
 
             constructor(name) {
                 this.name = name;
+            }
+
+            addProperty(property) {
+                this.properties ??= [];
+
+                this.properties.push(property)
+
+                return this;
             }
 
             addObject(gid, x, y) {
@@ -93,6 +102,8 @@ export class Tilemap {
                         }
                     }
                 }
+
+                return this;
             }
         }
 
@@ -100,9 +111,10 @@ export class Tilemap {
 
         this.nextlayerid += 1;
 
-        return this.layers[this.layers.length - 1];
+        return this.layers.at(-1);
     }
 
+    /*
     // Helper for image manipulation, copies a rectangle of pixels from current (i.e. the source) image (sx, sy, w, h) to dst image (at dx, dy).
     bitblt(layerName, x, y, source) {
         const layer = this.layers.find((layer) => layer.name === layerName);
@@ -111,6 +123,7 @@ export class Tilemap {
             throw new Error();
         }
 
-        layer.bitblt(x, y, source);
+        return layer.bitblt(x, y, source);
     }
+    */
 }

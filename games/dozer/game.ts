@@ -17,11 +17,11 @@ declare module "phaser" {
 
 export const scene = new Scene("Game");
 
-scene.init = function () {
+scene.init = function() {
     console.log("init!");
 }
 
-scene.preload = function () {
+scene.preload = function() {
     const { width, height, tileWidth, tileHeight } = loadLevel1(scene, {
         "player": {
             "collides": {
@@ -40,7 +40,7 @@ scene.preload = function () {
     });
 }
 
-scene.create = function () {
+scene.create = function() {
     // Win Condition
 
     scene.time.addEvent({
@@ -60,7 +60,7 @@ scene.create = function () {
     });
 }
 
-scene.update = function (time, delta) {
+scene.update = function(time, delta) {
     // Character Movement
 
     const cursors = scene.input.keyboard.createCursorKeys();

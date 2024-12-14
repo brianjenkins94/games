@@ -41,5 +41,7 @@ export class Layer {
                 }
             }
         }
+
+        return this;
     }
 }
