@@ -35,11 +35,6 @@ export function loadLevel1(scene: Scene, objectMap = {}) {
             [, , , 3, ,]
         ]);
     tilemap.addObjectLayer("objects")
-        .addProperty({
-            "name": "ge_charLayer",
-            "type": "string",
-            "value": "layer1"
-        })
         .bitblt(7, 3, [
             [, , 4, , ,],
             [, , , , ,],
@@ -94,7 +89,7 @@ export function loadLevel1(scene: Scene, objectMap = {}) {
                             "x": x / tilemap.tilewidth,
                             "y": y / tilemap.tileheight
                         },
-                        "charLayer": properties.find((property) => property.name === "ge_charLayer")["value"] ?? tilemapInstance.layers.at(-1)["name"]
+                        "charLayer": properties?.find((property) => property.name === "ge_charLayer")["value"] ?? tilemapInstance.layers.at(-1)["name"]
                     });
                 }
 
