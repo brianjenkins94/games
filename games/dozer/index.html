@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<!-- Metadata -->
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="description" content="" />
+
+	<!-- Title -->
+	<title>Dozer</title>
+
+	<!-- Base -->
+	<base href="/games/dozer/" />
+
+	<!-- Stylesheets  -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/modern-normalize/modern-normalize.min.css" />
+	<!-- <link rel="stylesheet" href="../css/fontawesome-5.15.4.css" /> -->
+	<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.min.css" /> -->
+	<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/billboard.js/dist/billboard.min.css" /> -->
+
+	<!-- Inline Stylesheet -->
+	<style>
+        body {
+            background-color: #000000;
+        }
+
+        #app {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+
+</head>
+<body>
+
+    <div id="app">
+        <div id="game-container"></div>
+    </div>
+
+	<!-- Libraries -->
+	<script src="https://cdn.jsdelivr.net/npm/phaser/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/grid-engine/dist/GridEngine.min.js"></script>
+
+	<!-- Scripts -->
+	<!-- <script type="module" src="dist/game.js"></script> -->
+
+	<!-- Inline Script -->
+	<script type="module">
+        import { scene } from "./dist/game.js";
+
+        let game;
+
+        function resize() {
+            var canvas = document.querySelector("canvas");
+            const height = canvas.parentElement.clientHeight;
+            const width = canvas.parentElement.clientWidth;
+
+            const containerRatio = width / height;
+            const gameRatio = game.config.width / game.config.height;
+
+            canvas.style.width = (height * gameRatio) + "px";
+            canvas.style.height = height + "px";
+
+            return;
+
+            if (containerRatio < gameRatio) {
+                canvas.style.width = width + "px";
+                canvas.style.height = (width / gameRatio) + "px";
+            } else {
+                canvas.style.width = (height * gameRatio) + "px";
+                canvas.style.height = height + "px";
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function (event) {
+            game = new Phaser.Game({
+                "type": Phaser.AUTO,
+                "render": {
+                    "antialias": false,
+                },
+                "parent": 'game-container',
+                "plugins": {
+                    "scene": [
+                        {
+                            "key": "gridEngine",
+                            "plugin": GridEngine,
+                            "mapping": "gridEngine",
+                        }
+                    ]
+                },
+                "scale": {
+                    "mode": Phaser.Scale.FIT
+                },
+                "scene": [
+                    scene
+                ]
+            });
+
+            game.events.on("ready", function () {
+                resize();
+            })
+
+            window.addEventListener('resize', resize);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "name": "games",
+  "author": "Brian Jenkins",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsup --config games/dozer/tsup.config.ts --format esm --treeshake --watch",
+    "serve": "npx http-server . -c-1 -o games/dozer/"
+  },
+  "devDependencies": {
+    "@tsconfig/node-lts": "latest",
+    "@types/node": "latest",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest",
+    "grid-engine": "latest",
+    "phaser": "latest",
+    "tsup": "^8.3.5",
+    "tsx": "latest",
+    "typescript": "latest"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "sideEffects": false,
+  "overrides": {
+    "grid-engine": {
+      "phaser": "latest"
+    }
+  }
+}
