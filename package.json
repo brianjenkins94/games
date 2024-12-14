@@ -4,7 +4,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "tsup --config games/dozer/tsup.config.ts --format esm --treeshake --watch",
+    "build": "tsup --config games/dozer/tsup.config.ts --format esm --treeshake",
     "serve": "npx http-server . -c-1 -o games/dozer/"
   },
   "devDependencies": {
