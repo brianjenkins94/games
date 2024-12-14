@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "tsup --config games/dozer/tsup.config.ts --format esm --treeshake",
-    "serve": "npx http-server . -c-1 -o games/dozer/"
+    "serve": "npx http-server . -c-1 -o games/dozer/",
+    "watch": "tsup --config games/dozer/tsup.config.ts --format esm --treeshake --watch"
+
   },
   "devDependencies": {
     "@tsconfig/node-lts": "latest",

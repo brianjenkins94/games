@@ -11,13 +11,20 @@ export class Layer {
     y = 0;
     properties;
 
-    constructor(name, tilemap, properties = []) {
+    constructor(name, tilemap) {
         this.data = new Array(tilemap.width * tilemap.height).fill(0);
         this.height = tilemap.height;
         this.id = tilemap.nextlayerid;
         this.name = name;
         this.width = tilemap.width;
-        this.properties = properties;
+    }
+
+    addProperty(property) {
+        this.properties ??= [];
+
+        this.properties.push(property)
+
+        return this;
     }
 
     fill(gid) {

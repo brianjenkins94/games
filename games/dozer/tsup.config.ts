@@ -22,7 +22,8 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
     "entry": {
-       "game": path.join(__dirname, "game.ts")
+       "game": path.join(__dirname, "game.ts"),
+       "GridEngine": path.join(__dirname, "..", "..", "util", "phaser", "grid-engine", "src", "GridEngine.ts")
     },
     "esbuildOptions": esbuildOptions({
         "outdir": path.join(__dirname, "dist")
@@ -33,11 +34,12 @@ export default defineConfig({
         const file = path.join(__dirname, "dist", "game.js");
 
         const replacementMap = {
-            "phaser": "Phaser",
-            "grid-engine": "GridEngineImports"
+            "phaser": "Phaser"
         };
 
-        await fs.writeFile(file, (await fs.readFile(file, { "encoding": "utf8" })).replace(/^import(?:\* as )? (.*?) from (?:'|")(.*?)(?:'|");$/gmu, function(_, ...matches) {
+        const importRegex = new RegExp(`^import(?:\\* as )? (.*?) from (?:'|")(${Object.keys(replacementMap).join("|")})(?:'|");$` ,"gmu");
+
+        await fs.writeFile(file, (await fs.readFile(file, { "encoding": "utf8" })).replace(importRegex, function(_, ...matches) {
             return `const ${matches[0]} = ${replacementMap[matches[1]]};`;
         }))
     }

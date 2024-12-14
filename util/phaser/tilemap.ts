@@ -43,8 +43,8 @@ export class Tilemap {
         this.nextobjectid += 1;
     }
 
-    addLayer(name, properties) {
-        this.layers.push(new Layer(name, this, properties))
+    addLayer(name) {
+        this.layers.push(new Layer(name, this))
 
         this.nextlayerid += 1;
 

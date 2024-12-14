@@ -1,6 +1,9 @@
-import { GridEngine, Direction } from 'grid-engine';
 import { Scene } from 'phaser';
 import { loadLevel1 } from './levels/level1';
+import { GridEngine, Direction } from "../../util/phaser/grid-engine/src/GridEngine"
+
+// Development build of GridEngine
+globalThis.GridEngine = GridEngine;
 
 // https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
 declare module "phaser" {
@@ -25,7 +28,7 @@ scene.preload = function () {
                 "collisionGroups": ["a"]
             }
         },
-        "target": {
+        "boulder": {
             "collides": {
                 "collisionGroups": ["a"]
             }
@@ -81,7 +84,7 @@ scene.update = function (time, delta) {
                 x -= 1
             }
 
-            if (scene.cache.tilemap.get("level1").getTileAt(x, y, "layer1")?.index === -1 || scene.gridEngine.isTileBlocked({ x, y }, "layer1")) {
+            if (scene.gridEngine.isTileBlocked({ x, y }, "layer1")) {
                 console.log("Cannot not move " + direction + ". There is an object in the way.");
 
                 return;
@@ -91,7 +94,7 @@ scene.update = function (time, delta) {
 
             scene.gridEngine.move("player", direction);
         } else {
-            if (!(scene.cache.tilemap.get("level1").getTileAt(x, y, "layer1")?.index === -1) && !scene.gridEngine.isTileBlocked({ x, y }, "layer1")) {
+            if (!scene.gridEngine.isTileBlocked({ x, y }, "layer1")) {
                 scene.gridEngine.move("player", direction);
             } else {
                 console.log("Cannot move " + direction + ". It is blocked.");

@@ -1,0 +1,97 @@
+{
+  "name": "grid-engine",
+  "version": "2.46.0",
+  "description": "Phaser3 plugin for grid based movement on a 2D game board.",
+  "author": "Johannes Baum",
+  "license": "Apache-2.0",
+  "main": "dist/GridEngine.min.cjs",
+  "module": "dist/GridEngine.esm.min.js",
+  "type": "module",
+  "scripts": {
+    "test": "jest",
+    "dev": "prettier --write src/ && eslint src/",
+    "build-web": "esbuild src/main-iife.ts --bundle --minify --external:phaser --target=es2016 --outfile=dist/GridEngine.min.js",
+    "build-esm": "esbuild src/main-esm.ts --bundle --minify --format=esm --external:phaser --target=es2016 --outfile=dist/GridEngine.esm.min.js",
+    "build-cjs": "esbuild src/main-esm.ts --bundle --minify --format=cjs --external:phaser --target=node18 --platform=node --outfile=dist/GridEngine.min.cjs",
+    "build-types": "tsc -p tsconfig.emit-cjs.json && tsc -p tsconfig.emit-esm.json",
+    "build": "npm run build-web && npm run build-esm && npm run build-cjs && npm run build-types && node createPackageJsons.cjs",
+    "build-speedtest": "esbuild speedtests/run.ts --bundle --format=cjs --target=node18 --platform=node --outfile=speedtests/run.cjs",
+    "lint": "eslint .",
+    "serve": "esbuild src/main-iife.ts --servedir=serve --outfile=serve/js/GridEngine.js --bundle --target=es2016 --external:phaser",
+    "docs": "typedoc src/GridEngine.ts --excludePrivate --excludeProtected --readme none --excludeInternal --out docs/public/api --sort kind --sort alphabetical --categorizeByGroup false",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/cjs/src/main-esm.d.ts",
+        "default": "./dist/GridEngine.min.cjs"
+      },
+      "import": {
+        "types": "./dist/mjs/src/main-esm.d.ts",
+        "default": "./dist/GridEngine.esm.min.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "types": "dist/mjs/src/main-esm.d.ts",
+  "dependencies": {
+    "mnemonist": "^0.39.8",
+    "rxjs": "^7.8.1",
+    "tiled-property-flattener": "^1.1.1"
+  },
+  "peerDependencies": {
+    "phaser": "~3.86.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "@eslint/eslintrc": "^3.1.0",
+    "@eslint/js": "^9.14.0",
+    "@stryker-mutator/core": "^8.6.0",
+    "@stryker-mutator/jest-runner": "^8.6.0",
+    "@types/jest": "^29.5.14",
+    "@typescript-eslint/eslint-plugin": "^8.12.2",
+    "@typescript-eslint/parser": "8.12.2",
+    "babel-jest": "^29.7.0",
+    "canvas": "^2.11.2",
+    "csv-parse": "^5.5.6",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.14.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jest": "^28.8.3",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "phaser": "~3.86.0",
+    "phaser3spectorjs": "^0.0.8",
+    "prettier": "3.3.3",
+    "random-js": "^2.1.0",
+    "ts-jest": "^29.2.5",
+    "typedoc": "^0.26.11",
+    "typescript": "^5.6.3",
+    "vitepress": "1.4.5",
+    "vue": "^3.5.12",
+    "vue-chartjs": "^5.3.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Annoraaq/grid-engine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Annoraaq/grid-engine/issues"
+  },
+  "homepage": "https://github.com/Annoraaq/grid-engine#readme",
+  "keywords": [
+    "Phaser",
+    "RPG",
+    "2D",
+    "Movement",
+    "Grid",
+    "Pathfinding",
+    "Tile"
+  ]
+}

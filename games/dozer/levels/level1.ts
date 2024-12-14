@@ -1,7 +1,6 @@
 import { Scene } from 'phaser';
 import { Tilemap } from "../../../util/phaser/tilemap";
-import { convertToCharacters } from '../../../util/phaser/grid-engine/convertToCharacters';
-import { CollisionStrategy } from "grid-engine";
+import { CollisionStrategy } from "../../../util/phaser/grid-engine/src/GridEngine";
 
 const name = "level1";
 
@@ -15,14 +14,13 @@ export function loadLevel1(scene: Scene, objectMap = {}) {
     tilemap.addTileset("player", new URL("../assets/sprites/dozer.png", import.meta.url).toString());
 
     tilemap.addLayer("background").fill(1);
-    tilemap.addLayer("layer1", [
-        // Move this to addProperty?
-        {
+    tilemap.addLayer("layer1")
+        .addProperty({
             "name": "ge_charLayer",
             "type": "string",
             "value": "layer1"
-        }
-    ]).bitblt(7, 3, [
+        })
+        .bitblt(7, 3, [
         [ ,  , 3,  ,  ,  ],
         [ ,  , 3,  ,  ,  ],
         [ ,  , 3, 3, 3, 3],
@@ -57,7 +55,24 @@ export function loadLevel1(scene: Scene, objectMap = {}) {
             tilemapInstance.createLayer("layer1", tilemapInstance.tilesets);
 
             scene.events.once("preupdate", function() {
-                const characters = convertToCharacters(scene, objects, Object.fromEntries(tilemap.tilesets.map(({ name }) => [name, objectMap[name]])));
+                const characters = [];
+
+                const objectCount = {};
+
+                for (const { name, x, y, width, height } of objects) {
+                    objectCount[name] ??= 1;
+
+                    characters.push({
+                        ...Object.fromEntries(tilemap.tilesets.map(({ name }) => [name, objectMap[name]]))[name],
+                        "id": (objectCount[name] -= 1) ? name + objectCount[name] : name,
+                        "sprite": scene.add.sprite(0, 0, name),
+                        "startPosition": {
+                            // FIXME: `width` and `height` are of the tiles, not the tilemap.
+                            "x": x / width,
+                            "y": y / height
+                        },
+                    });
+                }
 
                 scene.gridEngine.create(scene.cache.tilemap.get(name), {
                     "characters": characters,
