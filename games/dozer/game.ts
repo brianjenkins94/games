@@ -1,6 +1,6 @@
 import { Scene } from 'phaser';
-import { loadLevel1 } from './levels/level1';
 import { GridEngine, Direction } from "../../util/phaser/grid-engine/src/GridEngine"
+import { load } from '../../util/phaser/tilemap';
 
 // Development build of GridEngine
 globalThis.GridEngine = GridEngine;
@@ -22,7 +22,7 @@ scene.init = function() {
 }
 
 scene.preload = function() {
-    const { width, height, tileWidth, tileHeight } = loadLevel1(scene, {
+    const { width, height, tileWidth, tileHeight } = load(scene, require("./levels/level1"), {
         "player": {
             "collides": {
                 "collisionGroups": ["a"]
