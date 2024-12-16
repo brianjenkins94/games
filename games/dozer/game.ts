@@ -1,28 +1,36 @@
-import { Scene } from 'phaser';
-import { GridEngine, Direction } from "../../util/phaser/grid-engine/src/GridEngine"
-import { load } from '../../util/phaser/tilemap';
+import { GridEngine } from "../../util/phaser/grid-engine/src/GridEngine"
+import { load } from '../../util/phaser/Tilemap';
+import { createOrientationSystem } from "./systems/orientation";
+import { createPlayerSystem } from "./systems/player";
+import { createSpriteSystem } from "./systems/sprite";
+import { createWorld } from "../../util/phaser/bitecs/World";
+
+import * as position from "./schemas/position";
+import * as sprite from "./schemas/sprite";
+import * as player from "./schemas/player";
+import * as orientation from "./schemas/orientation";
+import * as input from "./schemas/input";
 
 // Development build of GridEngine
 globalThis.GridEngine = GridEngine;
 
-// https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
-declare module "phaser" {
-    interface Scene {
-        init?: () => void;
-        preload?: () => void;
-        create?: () => void;
-        gridEngine: GridEngine;
-    }
-}
+export const name = "level1";
 
-export const scene = new Scene("Game");
-
-scene.init = function() {
+export function init(scene) {
     console.log("init!");
 }
 
-scene.preload = function() {
-    const { width, height, tileWidth, tileHeight } = load(scene, require("./levels/level1"), {
+export function preload(scene) {
+    scene.world = createWorld();
+
+    scene.components.position = scene.world.createComponent(position.schema)
+    scene.components.sprite = scene.world.createComponent(sprite.schema)
+    //scene.components.player = scene.world.createComponent(player.schema)
+    //scene.components.orientation = scene.world.createComponent(orientation.schema)
+    //scene.components.input = scene.world.createComponent(input.schema)
+
+    // TODO: Remove `require()`
+    load(scene, require("./levels/level1"), {
         "player": {
             "collides": {
                 "collisionGroups": ["a"]
@@ -33,85 +41,46 @@ scene.preload = function() {
                 "collisionGroups": ["a"]
             }
         }
-    })
-
-    scene.events.once("preupdate", function() {
-        scene.game.scale.setGameSize(width * tileWidth, height * tileHeight)
     });
 }
 
-scene.create = function() {
-    // Win Condition
+export function create(scene) {
+    /*
+    scene.systems.player = createPlayerSystem(scene, [
+        scene.components.player,
+        scene.components.rotation,
+        scene.components.input
+    ]);
 
-    scene.time.addEvent({
-        "delay": 500,
-        "callback": function evaluateWinCondition() {
-            const targets = scene.gridEngine.getAllCharacters()
-                .filter((character) => character.startsWith("target"))
-                .map(scene.gridEngine.getPosition, scene.gridEngine);
+    scene.systems.orientation = createOrientationSystem([
+        scene.components.position,
+        scene.components.rotation,
+        scene.components.input
+    ]);
+    */
 
-            if (targets.every((target) => scene.gridEngine.getCharactersAt(target, "layer1").some((character) => character.startsWith("boulder")))) {
-                alert("YOU FUCKING WON!!!")
-
-                this.remove();
-            }
-        },
-        "loop": true
-    });
+    scene.systems.sprite = createSpriteSystem(scene, [
+        scene.components.position,
+        scene.components.sprite
+    ]);
 }
 
-scene.update = function(time, delta) {
-    // Character Movement
+export function preupdate(scene) {
+    const { width, height, tileWidth, tileHeight } = scene.cache.tilemap.get(scene.sys.config)
 
-    const cursors = scene.input.keyboard.createCursorKeys();
+    scene.game.scale.setGameSize(width * tileWidth, height * tileHeight)
+}
 
-    function handleMovement(object, direction) {
-        scene.gridEngine.turnTowards(object, direction)
+export function update(scene, time, delta) {
+    //scene.systems.player(scene)
+    //scene.systems.orientation(scene)
+    scene.systems.sprite(scene)
 
-        let { x, y } = scene.gridEngine.getFacingPosition("player");
+    const targets = scene.gridEngine.getAllCharacters()
+        .filter((character) => character.startsWith("target"))
+        .map(scene.gridEngine.getPosition, scene.gridEngine);
 
-        const [boulder] = scene.gridEngine.getCharactersAt({ x, y }, "layer1")
-            .filter((object) => object.startsWith("boulder"));
-
-        if (boulder !== undefined) {
-            if (direction === Direction.UP) {
-                y -= 1
-            } else if (direction === Direction.RIGHT) {
-                x += 1
-            } else if (direction === Direction.DOWN) {
-                y += 1
-            } else if (direction === Direction.LEFT) {
-                x -= 1
-            }
-
-            if (scene.gridEngine.isTileBlocked({ x, y }, "layer1")) {
-                console.log("Cannot not move " + direction + ". There is an object in the way.");
-
-                return;
-            }
-
-            scene.gridEngine.move(boulder, direction);
-
-            scene.gridEngine.move("player", direction);
-        } else {
-            if (!scene.gridEngine.isTileBlocked({ x, y }, "layer1")) {
-                scene.gridEngine.move("player", direction);
-            } else {
-                console.log("Cannot move " + direction + ". It is blocked.");
-
-                console.log(scene.gridEngine.getCharactersAt({ x, y }, "layer1"))
-            }
-        }
+    if (targets.every((target) => scene.gridEngine.getCharactersAt(target, "layer1").some((character) => character.startsWith("boulder")))) {
+        alert("YOU FUCKING WON!!!")
     }
-
-    if (cursors.up.isDown) {
-        handleMovement("player", Direction.UP);
-    } else if (cursors.right.isDown) {
-        handleMovement("player", Direction.RIGHT);
-    } else if (cursors.down.isDown) {
-        handleMovement("player", Direction.DOWN);
-    } else if (cursors.left.isDown) {
-        handleMovement("player", Direction.LEFT);
-    }
-
 }

@@ -1,5 +1,19 @@
 import { Scene } from "phaser";
-import { CollisionStrategy } from "./grid-engine/src/GridEngine";
+import { CollisionStrategy, GridEngine } from "./grid-engine/src/GridEngine";
+import { addEntity } from "bitecs";
+
+import type { IWorld } from "./bitecs/World";
+
+// https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
+declare module "phaser" {
+    interface Scene {
+        gridEngine: GridEngine;
+        entities: any;
+        components: any;
+        systems: any;
+        world: IWorld;
+    }
+}
 
 class Layer {
     data;
@@ -39,7 +53,7 @@ class Layer {
     bitblt(dx, dy, source) {
         for (let x = 0; x <= source[0].length; x++) {
             for (let y = 0; y <= source.length; y++) {
-                if (source[x][y] !== undefined) {
+                if (source[x]?.[y] !== undefined) {
                     this.data[((dy + x) * this.width) + dx + y] = source[x][y];
                 }
             }
@@ -51,7 +65,7 @@ class Layer {
 
 export class Tilemap {
     compressionlevel = -1;
-    height = 12;
+    height;
     infinite = false;
     layers = [];
     nextlayerid = 1;
@@ -59,12 +73,12 @@ export class Tilemap {
     orientation = "orthogonal";
     renderorder = "right-down";
     tiledversion = "1.11.0";
-    tileheight = 32;
+    tileheight;
     tilesets = [];
-    tilewidth = 32;
+    tilewidth;
     type = "map";
     version = "1.10";
-    width = 20;
+    width;
 
     constructor(width, height, tileWidth = 32, tileHeight = 32) {
         this.width = width;
@@ -76,7 +90,8 @@ export class Tilemap {
     addTileset(name, imagePath, tileProperties = []) {
         this.tilesets.push({
             "columns": 1,
-            "firstgid": this.tilesets.length + 1, // [!] This doesn't account for multiple tiles per set
+            // FIXME: This assumes one tile per tileset.
+            "firstgid": this.tilesets.length + 1,
             "image": imagePath,
             "imageheight": this.tileheight,
             "imagewidth": this.tilewidth,
@@ -132,6 +147,7 @@ export class Tilemap {
                     "gid": gid,
                     "height": parent.tileheight,
                     "id": this.objects.length + 1,
+                    // FIXME: This assumes one tile per tileset.
                     // It might be better to use the name for lookup.
                     "name": parent.tilesets.find((tileset) => tileset.firstgid === gid)["name"],
                     "rotation": 0,
@@ -146,7 +162,7 @@ export class Tilemap {
             bitblt(dx, dy, source) {
                 for (let x = 0; x <= source[0].length; x++) {
                     for (let y = 0; y <= source.length; y++) {
-                        if (source[x][y] !== undefined) {
+                        if (source[x]?.[y] !== undefined) {
                             this.addObject(source[x][y], dx + y, dy + x);
                         }
                     }
@@ -164,7 +180,7 @@ export class Tilemap {
     }
 }
 
-export function load(scene: Scene, module, objectMap) {
+export function load(scene: Scene, module, objectMap, options = { "useGridEngine": true, "useBitECS": false }) {
     const [[name, tilemap]] = Object.entries<Tilemap>(module);
 
     console.log(JSON.stringify(tilemap, function(key, value) {
@@ -196,31 +212,44 @@ export function load(scene: Scene, module, objectMap) {
                 continue;
             }
 
-            scene.events.once("preupdate", function() {
-                const characters = [];
+            if (options["useGridEngine"]) {
+                scene.events.once("preupdate", function() {
+                    const characters = [];
 
-                const objectCount = {};
+                    const objectCount = {};
 
-                for (const { name, x, y } of objects) {
-                    objectCount[name] ??= 1;
+                    for (const { name, x, y } of objects) {
+                        objectCount[name] ??= 1;
 
-                    characters.push({
-                        ...Object.fromEntries(tilemap.tilesets.map(({ name }) => [name, objectMap[name]]))[name],
-                        "id": (objectCount[name] -= 1) ? name + objectCount[name] : name,
-                        "sprite": scene.add.sprite(0, 0, name),
-                        "startPosition": {
-                            "x": x / tilemap.tilewidth,
-                            "y": y / tilemap.tileheight
-                        },
-                        "charLayer": properties?.find((property) => property.name === "ge_charLayer")["value"] ?? tilemapInstance.layers.at(-1)["name"]
+                        characters.push({
+                            ...Object.fromEntries(tilemap.tilesets.map(({ name }) => [name, objectMap[name]]))[name],
+                            "id": (objectCount[name] -= 1) ? name + objectCount[name] : name,
+                            "sprite": scene.add.sprite(0, 0, name),
+                            "startPosition": {
+                                "x": x / tilemap.tilewidth,
+                                "y": y / tilemap.tileheight
+                            },
+                            "charLayer": properties?.find((property) => property.name === "ge_charLayer")["value"] ?? tilemapInstance.layers.at(-1)["name"]
+                        });
+
+                        if (options.useBitECS) {
+                            const entity = scene.world.addEntity();
+
+                            entity.set(scene.components.position, "x", x);
+                            entity.set(scene.components.position, "y", y);
+
+                            //scene.entities[name][objectCount[name]] = entity;
+                        }
+                    }
+
+                    scene.gridEngine.create(scene.cache.tilemap.get(name), {
+                        "characters": characters,
+                        "characterCollisionStrategy": CollisionStrategy.BLOCK_ONE_TILE_AHEAD,
                     });
-                }
-
-                scene.gridEngine.create(scene.cache.tilemap.get(name), {
-                    "characters": characters,
-                    "characterCollisionStrategy": CollisionStrategy.BLOCK_ONE_TILE_AHEAD,
                 });
-            });
+            } else {
+                throw new Error("Not implemented.");
+            }
         }
     });
 

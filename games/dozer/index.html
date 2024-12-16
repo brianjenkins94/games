@@ -54,7 +54,7 @@
 
 	<!-- Inline Script -->
 	<script type="module">
-        import { scene } from "./dist/game.js";
+        import { name, init, preload, preupdate, create, update } from "./dist/game.js";
 
         let game;
 
@@ -84,7 +84,7 @@
             game = new Phaser.Game({
                 "type": Phaser.AUTO,
                 "render": {
-                    "antialias": false,
+                    "pixelart": true,
                 },
                 "parent": 'game-container',
                 "plugins": {
@@ -99,9 +99,24 @@
                 "scale": {
                     "mode": Phaser.Scale.FIT
                 },
-                "scene": [
-                    scene
-                ]
+                "scene": function() {
+                    const scene = new Phaser.Scene(name);
+                    scene.components = {};
+                    scene.systems = {};
+
+                    scene.init = (...args) => init(scene, ...args),
+                    scene.preload = (...args) => {
+                        preload(scene, ...args)
+
+                        scene.events.once("preupdate", function() {
+                            preupdate(scene);
+                        });
+                    },
+                    scene.create = (...args) => create(scene, ...args),
+                    scene.update = (...args) => update(scene, ...args)
+
+                    return scene;
+                }
             });
 
             game.events.on("ready", function () {
