@@ -5,7 +5,7 @@ import { Direction } from '../schemas/input'
 export function createPlayerSystem(scene, components) {
     const playerQuery = defineQuery(components)
 
-    return defineSystem(function({ world }) {
+    return defineSystem(function(world) {
         const cursors = scene.input.keyboard.createCursorKeys()
 
         function handleMovement(object, direction) {

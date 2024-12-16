@@ -5,7 +5,7 @@ import { Direction } from '../schemas/input'
 export function createOrientationSystem(components) {
     const orientationQuery = defineQuery(components)
 
-    return defineSystem(function({ world }) {
+    return defineSystem(function(world) {
         for (const entity of orientationQuery(world)) {
             const direction = Input.direction[entity]
 

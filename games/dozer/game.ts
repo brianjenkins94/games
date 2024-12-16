@@ -21,13 +21,14 @@ export function init(scene) {
 }
 
 export function preload(scene) {
-    scene.world = createWorld();
+    const { world, defineComponent } = createWorld();
+    scene.world = world;
 
-    scene.components.position = scene.world.createComponent(position.schema)
-    scene.components.sprite = scene.world.createComponent(sprite.schema)
-    //scene.components.player = scene.world.createComponent(player.schema)
-    //scene.components.orientation = scene.world.createComponent(orientation.schema)
-    //scene.components.input = scene.world.createComponent(input.schema)
+    scene.components.position = defineComponent(position.schema)
+    scene.components.sprite = defineComponent(sprite.schema)
+    //scene.components.player = defineComponent(player.schema)
+    //scene.components.orientation = defineComponent(orientation.schema)
+    //scene.components.input = defineComponent(input.schema)
 
     // TODO: Remove `require()`
     load(scene, require("./levels/level1"), {
@@ -72,9 +73,9 @@ export function preupdate(scene) {
 }
 
 export function update(scene, time, delta) {
-    //scene.systems.player(scene)
-    //scene.systems.orientation(scene)
-    scene.systems.sprite(scene)
+    //scene.systems.player(scene.world)
+    //scene.systems.orientation(scene.world)
+    scene.systems.sprite(scene.world)
 
     const targets = scene.gridEngine.getAllCharacters()
         .filter((character) => character.startsWith("target"))
