@@ -1,10 +1,10 @@
+import { createWorld, defineComponent } from "../../util/phaser/bitecs";
 import { GridEngine } from "../../util/phaser/grid-engine/src/GridEngine"
+
 import { load } from '../../util/phaser/Tilemap';
 import { createOrientationSystem } from "./systems/orientation";
 import { createPlayerSystem } from "./systems/player";
 import { createSpriteSystem } from "./systems/sprite";
-import { createWorld } from "../../util/phaser/bitecs/World";
-
 import * as position from "./schemas/position";
 import * as sprite from "./schemas/sprite";
 import * as player from "./schemas/player";
@@ -21,12 +21,11 @@ export function init(scene) {
 }
 
 export function preload(scene) {
-    const { world, defineComponent } = createWorld();
-    scene.world = world;
+    scene.world = createWorld();
 
     scene.components.position = defineComponent(position.schema)
     scene.components.sprite = defineComponent(sprite.schema)
-    //scene.components.player = defineComponent(player.schema)
+    scene.components.player = defineComponent(player.schema)
     //scene.components.orientation = defineComponent(orientation.schema)
     //scene.components.input = defineComponent(input.schema)
 
@@ -35,7 +34,8 @@ export function preload(scene) {
         "player": {
             "collides": {
                 "collisionGroups": ["a"]
-            }
+            },
+            "components": ["player"]
         },
         "boulder": {
             "collides": {
@@ -46,17 +46,16 @@ export function preload(scene) {
 }
 
 export function create(scene) {
-    /*
     scene.systems.player = createPlayerSystem(scene, [
         scene.components.player,
-        scene.components.rotation,
-        scene.components.input
+        //scene.components.rotation,
+        //scene.components.input
     ]);
 
+    /*
     scene.systems.orientation = createOrientationSystem([
         scene.components.position,
-        scene.components.rotation,
-        scene.components.input
+        scene.components.rotation
     ]);
     */
 
@@ -73,7 +72,7 @@ export function preupdate(scene) {
 }
 
 export function update(scene, time, delta) {
-    //scene.systems.player(scene.world)
+    scene.systems.player(scene.world)
     //scene.systems.orientation(scene.world)
     scene.systems.sprite(scene.world)
 

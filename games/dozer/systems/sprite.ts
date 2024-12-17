@@ -1,5 +1,5 @@
 import Phaser from "phaser"
-import { defineSystem, defineQuery, enterQuery, exitQuery } from "bitecs";
+import { defineSystem, defineQuery, enterQuery, exitQuery } from "../../../util/phaser/bitecs";
 
 export function createSpriteSystem(scene: Phaser.Scene, components) {
     const spriteQuery = defineQuery(components)

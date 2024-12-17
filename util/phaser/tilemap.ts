@@ -1,8 +1,6 @@
 import { Scene } from "phaser";
 import { CollisionStrategy, GridEngine } from "./grid-engine/src/GridEngine";
-import { addEntity } from "bitecs";
-
-import type { IWorld } from "./bitecs/World";
+import { addEntity, IWorld } from "./bitecs";
 
 // https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
 declare module "phaser" {
@@ -180,7 +178,7 @@ export class Tilemap {
     }
 }
 
-export function load(scene: Scene, module, objectMap, options = { "useGridEngine": true, "useBitECS": false }) {
+export function load(scene: Scene, module, objectMap, options = { "useGridEngine": true, "useBitECS": true }) {
     const [[name, tilemap]] = Object.entries<Tilemap>(module);
 
     console.log(JSON.stringify(tilemap, function(key, value) {
@@ -233,12 +231,14 @@ export function load(scene: Scene, module, objectMap, options = { "useGridEngine
                         });
 
                         if (options.useBitECS) {
-                            const entity = scene.world.addEntity();
+                            const entity = addEntity(scene.world);
 
-                            entity.set(scene.components.position, "x", x);
-                            entity.set(scene.components.position, "y", y);
+                            for (const component of [...new Set(["position", "sprite", ...(objectMap[name]?.["components"] ?? [])])]) {
+                                entity.addComponent(scene.components[component]);
+                            }
 
-                            //scene.entities[name][objectCount[name]] = entity;
+                            entity.set(scene.components.position, "x", x / tilemap.tilewidth);
+                            entity.set(scene.components.position, "y", y / tilemap.tileheight);
                         }
                     }
 

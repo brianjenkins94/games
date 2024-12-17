@@ -1,4 +1,4 @@
-import { Types } from 'bitecs'
+import { Types } from '../../../util/phaser/bitecs'
 import { Enum } from '../../../util/enum';
 
 export const schema = {

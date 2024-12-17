@@ -1,4 +1,4 @@
-import { defineSystem, defineQuery } from "bitecs";
+import { defineSystem, defineQuery } from "../../../util/phaser/bitecs";
 
 import { Direction } from '../schemas/input'
 
