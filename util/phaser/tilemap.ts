@@ -239,6 +239,7 @@ export function load(scene: Scene, module, objectMap, options = { "useGridEngine
 
                             entity.set(scene.components.position, "x", x / tilemap.tilewidth);
                             entity.set(scene.components.position, "y", y / tilemap.tileheight);
+                            entity.set(scene.components.sprite, "texture", name);
                         }
                     }
 

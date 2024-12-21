@@ -11,7 +11,8 @@ interface EnumConstructor {
 class _Enum<const T extends readonly PropertyKey[]> {
     constructor(keys: T) {
         for (let x = 0; x < keys.length; x++) {
-            this[keys[x]] = x
+            this[keys[x]] = x;
+            this[x] = keys[x];
         }
     }
 }

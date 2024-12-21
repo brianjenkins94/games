@@ -8,22 +8,18 @@ export function createSpriteSystem(scene: Phaser.Scene, components) {
 
     return defineSystem(function(world) {
         for (const entity of spriteQueryEnter(world)) {
-            const texId = scene.components.sprite.get(entity, "texture"); //Sprite.texture[entity];
-            debugger;
-            const texture = textures[texId];
-
-            spritesMap.set(entity, scene.add.sprite(0, 0, texture))
+            // We would associate the texture with the object here,
+            // but GridEngine maintains that relationship.
         }
 
         for (const entity of spriteQuery(world)) {
-            const sprite = spritesMap.get(entity)
-
-            sprite.x = Position.x[entity]
-            sprite.y = Position.y[entity]
+            // onPositionChange()
+            //sprite.x = Position.x[id]
+            //sprite.y = Position.y[id]
         }
 
         for (const entity of spriteQueryExit(world)) {
-            spritesMap.delete(entity);
+            // Nothing to clean up.
         }
 
         return world

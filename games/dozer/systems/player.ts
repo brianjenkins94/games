@@ -1,6 +1,7 @@
 import { defineSystem, defineQuery } from "../../../util/phaser/bitecs"
 
-import { Direction } from '../schemas/input'
+import { Direction } from "../schemas/input";
+import { Direction as GridEngineDirection } from "../../../util/phaser/grid-engine/src/GridEngine";
 
 export function createPlayerSystem(scene, components) {
     const playerQuery = defineQuery(components);
@@ -24,23 +25,11 @@ export function createPlayerSystem(scene, components) {
                 x -= 1
             }
 
-            if (scene.gridEngine.isTileBlocked({ x, y }, "layer1")) {
-                console.log("Cannot not move " + direction + ". There is an object in the way.");
-
-                return;
-            }
-
             scene.gridEngine.move(boulder, direction);
 
             scene.gridEngine.move(entity, direction);
-        } else {
-            if (!scene.gridEngine.isTileBlocked({ x, y }, "layer1")) {
-                scene.gridEngine.move(entity, direction);
-            } else {
-                console.log("Cannot move " + direction + ". It is blocked.");
-
-                console.log(scene.gridEngine.getCharactersAt({ x, y }, "layer1"))
-            }
+        } else if (!scene.gridEngine.isTileBlocked({ x, y }, "layer1")) {
+            scene.gridEngine.move(entity, direction);
         }
     }
 
@@ -49,13 +38,13 @@ export function createPlayerSystem(scene, components) {
 
         for (const entity of playerQuery(world)) {
             if (cursors.up.isDown) {
-                handleMovement(entity, Direction.UP);
+                handleMovement("player", GridEngineDirection.UP);
             } else if (cursors.right.isDown) {
-                handleMovement(entity, Direction.RIGHT);
+                handleMovement("player", GridEngineDirection.RIGHT);
             } else if (cursors.down.isDown) {
-                handleMovement(entity, Direction.DOWN);
+                handleMovement("player", GridEngineDirection.DOWN);
             } else if (cursors.left.isDown) {
-                handleMovement(entity, Direction.LEFT);
+                handleMovement("player", GridEngineDirection.LEFT);
             }
         }
 
