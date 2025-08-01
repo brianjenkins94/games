@@ -16,7 +16,26 @@ export class Component {
     }
 
     set(entity, property, value) {
-        return this._world[this._component][property][entity] = value;
+        this._world[this._component][property][entity] = value;
+    }
+
+    has(entity) {
+        return bitecs.hasComponent(this._world, this._component, entity);
+    }
+
+    add(entity) {
+        return bitecs.addComponent(this._world, this._component, entity);
+    }
+
+    emit(payload = {}) {
+        const entity = addEntity(this._world);
+        entity.addComponent(this._component);
+
+        for (const key in payload) {
+            entity.set(this._component, key, payload[key]);
+        }
+
+        return entity;
     }
 }
 

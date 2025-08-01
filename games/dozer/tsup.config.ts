@@ -23,7 +23,7 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
     "entry": {
        "game": path.join(__dirname, "game.ts"),
-       "GridEngine": path.join(__dirname, "..", "..", "util", "phaser", "grid-engine", "src", "GridEngine.ts")
+       //"GridEngine": path.join(__dirname, "..", "..", "util", "phaser", "grid-engine", "src", "GridEngine.ts")
     },
     "esbuildOptions": esbuildOptions({
         "outdir": path.join(__dirname, "dist")
