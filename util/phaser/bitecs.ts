@@ -12,11 +12,11 @@ export class Component {
     }
 
     get(entity, property) {
-        return this._world[this._component][property][entity]
+        return this._component[property][entity]
     }
 
     set(entity, property, value) {
-        this._world[this._component][property][entity] = value;
+        this._component[property][entity] = value;
     }
 
     has(entity) {
@@ -25,17 +25,6 @@ export class Component {
 
     add(entity) {
         return bitecs.addComponent(this._world, this._component, entity);
-    }
-
-    emit(payload = {}) {
-        const entity = addEntity(this._world);
-        entity.addComponent(this._component);
-
-        for (const key in payload) {
-            entity.set(this._component, key, payload[key]);
-        }
-
-        return entity;
     }
 }
 
@@ -53,11 +42,11 @@ export class Entity {
     }
 
     get(component, property) {
-        return component[property][this._id]
+        return component._component[property][this._id]
     }
 
     set(component, property, value) {
-        return component[property][this._id] = value
+        return component._component[property][this._id] = value
     }
 }
 

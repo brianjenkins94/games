@@ -36,7 +36,7 @@ export function preload(scene) {
     };
 
     // TODO: Remove `require()`
-    scene._tilemapData = load(scene, require("./levels/level1"), {
+    load(scene, require("./levels/level1"), {
         "player": {
             "collides": {
                 "collisionGroups": ["a"]
