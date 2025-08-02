@@ -3,13 +3,11 @@ import { createWorld } from "../../util/phaser/bitecs";
 import { Component } from "../../util/phaser/bitecs";
 
 import { load } from '../../util/phaser/Tilemap';
-import { createPlayerSystem } from "./systems/player";
-import { createSpriteSystem } from "./systems/sprite";
+import { createInputSystem } from "./systems/input";
+import { createMoveIntentSystem } from "./systems/moveIntent";
 //import { createWinSystem } from "./systems/win";
 
-import * as position from "./schemas/position";
-import * as sprite from "./schemas/sprite";
-import * as player from "./schemas/player";
+import * as moveIntent from "./schemas/moveIntent";
 //import * as goal from "./schemas/goal";
 //import * as solved from "./schemas/solved";
 
@@ -28,9 +26,7 @@ export function preload(scene) {
     scene.sprites = {};
 
     scene.components = {
-        "position": new Component(scene.world, position.schema),
-        "sprite": new Component(scene.world, sprite.schema),
-        "player": new Component(scene.world, player.schema),
+        "moveIntent": new Component(scene.world, moveIntent.schema)
         //"goal": new Component(scene.world, goal.schema),
         //"solved": new Component(scene.world, solved.schema)
     };
@@ -41,7 +37,7 @@ export function preload(scene) {
             "collides": {
                 "collisionGroups": ["a"]
             },
-            "components": ["player"]
+            "components": ["moveIntent"]
         },
         "boulder": {
             "collides": {
@@ -56,8 +52,8 @@ export function preload(scene) {
 
 export function create(scene) {
     scene.systems = [
-        createPlayerSystem(scene, [scene.components.player]),
-        createSpriteSystem(scene, [scene.components.position, scene.components.sprite]),
+        createInputSystem(scene, [scene.components.moveIntent]),
+        createMoveIntentSystem(scene, [scene.components.moveIntent]),
         //createWinSystem(scene, [scene.components.goal, scene.components.solved])
     ];
 }

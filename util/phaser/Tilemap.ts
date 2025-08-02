@@ -219,9 +219,11 @@ export function load(scene: Scene, module, objectMap, options = { "useGridEngine
                     for (const { name, x, y } of objects) {
                         objectCount[name] ??= 1;
 
+                        const characterId = (objectCount[name] -= 1) ? name + objectCount[name] : name;
+
                         characters.push({
                             ...Object.fromEntries(tilemap.tilesets.map(({ name }) => [name, objectMap[name]]))[name],
-                            "id": (objectCount[name] -= 1) ? name + objectCount[name] : name,
+                            "id": characterId,
                             "sprite": scene.add.sprite(0, 0, name),
                             "startPosition": {
                                 "x": x / tilemap.tilewidth,
@@ -233,13 +235,12 @@ export function load(scene: Scene, module, objectMap, options = { "useGridEngine
                         if (options.useBitECS) {
                             const entity = addEntity(scene.world);
 
-                            for (const component of [...new Set(["position", "sprite", ...(objectMap[name]?.["components"] ?? [])])]) {
+                            scene.entityMap ??= {};
+                            scene.entityMap[entity.id] = characterId;
+
+                            for (const component of objectMap[name]?.["components"] ?? []) {
                                 entity.addComponent(scene.components[component]);
                             }
-
-                            entity.set(scene.components.position, "x", x / tilemap.tilewidth);
-                            entity.set(scene.components.position, "y", y / tilemap.tileheight);
-                            entity.set(scene.components.sprite, "texture", name);
                         }
                     }
 
@@ -253,6 +254,4 @@ export function load(scene: Scene, module, objectMap, options = { "useGridEngine
             }
         }
     });
-
-    return tilemapInstance;
 }

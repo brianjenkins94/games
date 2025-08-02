@@ -37,6 +37,10 @@ export class Entity {
         this._id = bitecs.addEntity(this._world);
     }
 
+    get id() {
+        return this._id;
+    }
+
     addComponent(component) {
         bitecs.addComponent(this._world, component, this._id);
     }
