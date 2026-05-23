@@ -25,13 +25,13 @@ export function createMoveIntentSystem(scene, [MoveIntent]) {
       .filter((object) => object.startsWith("boulder"));
 
     if (boulder !== undefined) {
-      if (direction === GridEngineDirection.UP) {
+      if (direction === Direction.Up) {
         y -= 1;
-      } else if (direction === GridEngineDirection.RIGHT) {
+      } else if (direction === Direction.Right) {
         x += 1;
-      } else if (direction === GridEngineDirection.DOWN) {
+      } else if (direction === Direction.Down) {
         y += 1;
-      } else if (direction === GridEngineDirection.LEFT) {
+      } else if (direction === Direction.Left) {
         x -= 1;
       }
 

@@ -1,32 +1,33 @@
 import { Scene } from "phaser";
-import { CollisionStrategy, GridEngine } from "./grid-engine/src/GridEngine";
 import { addEntity, IWorld } from "./bitecs";
 
 // https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
 declare module "phaser" {
     interface Scene {
-        gridEngine: GridEngine;
+        world: IWorld;
         entities: any;
         components: any;
         systems: any;
-        world: IWorld;
+        sprites: Map<number, Phaser.GameObjects.Sprite>;
+        walls: Set<string>;
+        tileConfig: { tileWidth: number; tileHeight: number; mapWidth: number; mapHeight: number };
     }
 }
 
 class Layer {
-    data;
-    height;
-    id;
-    name;
+    data: number[];
+    height: number;
+    id: number;
+    name: string;
     opacity = 1;
     type = "tilelayer";
     visible = true;
-    width;
+    width: number;
     x = 0;
     y = 0;
-    properties;
+    properties?: object[];
 
-    constructor(name, tilemap) {
+    constructor(name: string, tilemap: Tilemap) {
         this.data = new Array(tilemap.width * tilemap.height).fill(0);
         this.height = tilemap.height;
         this.id = tilemap.nextlayerid;
@@ -34,21 +35,18 @@ class Layer {
         this.width = tilemap.width;
     }
 
-    addProperty(property) {
+    addProperty(property: object) {
         this.properties ??= [];
-
-        this.properties.push(property)
-
+        this.properties.push(property);
         return this;
     }
 
-    fill(gid) {
-        this.data = this.data.fill(gid)
-
+    fill(gid: number) {
+        this.data = this.data.fill(gid);
         return this;
     }
 
-    bitblt(dx, dy, source) {
+    bitblt(dx: number, dy: number, source: (number | undefined)[][]) {
         for (let x = 0; x <= source[0].length; x++) {
             for (let y = 0; y <= source.length; y++) {
                 if (source[x]?.[y] !== undefined) {
@@ -56,39 +54,37 @@ class Layer {
                 }
             }
         }
-
         return this;
     }
 }
 
 export class Tilemap {
     compressionlevel = -1;
-    height;
+    height: number;
     infinite = false;
-    layers = [];
+    layers: any[] = [];
     nextlayerid = 1;
     nextobjectid = 1;
     orientation = "orthogonal";
     renderorder = "right-down";
     tiledversion = "1.11.0";
-    tileheight;
-    tilesets = [];
-    tilewidth;
+    tileheight: number;
+    tilesets: any[] = [];
+    tilewidth: number;
     type = "map";
     version = "1.10";
-    width;
+    width: number;
 
-    constructor(width, height, tileWidth = 32, tileHeight = 32) {
+    constructor(width: number, height: number, tileWidth = 32, tileHeight = 32) {
         this.width = width;
         this.height = height;
         this.tilewidth = tileWidth;
         this.tileheight = tileHeight;
     }
 
-    addTileset(name, imagePath, tileProperties = []) {
+    addTileset(name: string, imagePath: string, tileProperties: object[] = []) {
         this.tilesets.push({
             "columns": 1,
-            // FIXME: This assumes one tile per tileset.
             "firstgid": this.tilesets.length + 1,
             "image": imagePath,
             "imageheight": this.tileheight,
@@ -100,54 +96,45 @@ export class Tilemap {
             "tileheight": this.tileheight,
             "tilewidth": this.tilewidth,
             "tiles": tileProperties
-        })
-
+        });
         this.nextobjectid += 1;
     }
 
-    addLayer(name) {
-        this.layers.push(new Layer(name, this))
-
+    addLayer(name: string) {
+        this.layers.push(new Layer(name, this));
         this.nextlayerid += 1;
-
-        return this.layers.at(-1);
+        return this.layers.at(-1) as Layer;
     }
 
-    addObjectLayer(name) {
+    addObjectLayer(name: string) {
         const parent = this;
 
         class ObjectLayer {
             draworder = "topdown";
             id = 8;
-            name;
-            objects = [];
+            name: string;
+            objects: object[] = [];
             opacity = 1;
             type = "objectgroup";
             visible = true;
             x = 0;
             y = 0;
-            properties;
+            properties?: object[];
 
-            constructor(name) {
-                this.name = name;
-            }
+            constructor(n: string) { this.name = n; }
 
-            addProperty(property) {
+            addProperty(property: object) {
                 this.properties ??= [];
-
-                this.properties.push(property)
-
+                this.properties.push(property);
                 return this;
             }
 
-            addObject(gid, x, y) {
+            addObject(gid: number, x: number, y: number) {
                 this.objects.push({
                     "gid": gid,
                     "height": parent.tileheight,
-                    "id": this.objects.length + 1,
-                    // FIXME: This assumes one tile per tileset.
-                    // It might be better to use the name for lookup.
-                    "name": parent.tilesets.find((tileset) => tileset.firstgid === gid)["name"],
+                    "id": (this.objects as any[]).length + 1,
+                    "name": parent.tilesets.find((ts) => ts.firstgid === gid)["name"],
                     "rotation": 0,
                     "type": "",
                     "visible": true,
@@ -157,100 +144,102 @@ export class Tilemap {
                 });
             }
 
-            bitblt(dx, dy, source) {
+            bitblt(dx: number, dy: number, source: (number | undefined)[][]) {
                 for (let x = 0; x <= source[0].length; x++) {
                     for (let y = 0; y <= source.length; y++) {
                         if (source[x]?.[y] !== undefined) {
-                            this.addObject(source[x][y], dx + y, dy + x);
+                            this.addObject(source[x][y]!, dx + y, dy + x);
                         }
                     }
                 }
-
                 return this;
             }
         }
 
         this.layers.push(new ObjectLayer(name));
-
         this.nextlayerid += 1;
-
-        return this.layers.at(-1);
+        return this.layers.at(-1) as ObjectLayer;
     }
 }
 
-export function load(scene: Scene, module, objectMap, options = { "useGridEngine": true, "useBitECS": true }) {
-    const [[name, tilemap]] = Object.entries<Tilemap>(module);
+// entityConfig maps object-layer names to the component tags to attach, e.g.:
+//   { "player": { components: ["moveIntent", "player"] }, "boulder": { components: ["pushable"] } }
+export function load(
+    scene: Scene,
+    levelName: string,
+    tilemapData: Tilemap,
+    entityConfig: Record<string, { components?: string[] }>
+) {
+    scene.cache.tilemap.add(levelName, {
+        format: Phaser.Tilemaps.Formats.TILED_JSON,
+        data: tilemapData
+    });
 
-    console.log(JSON.stringify(tilemap, function(key, value) {
-        if (Array.isArray(value) && value.every((value) => typeof value === "number")) {
-            return "[" + value.join(", ") + "]";
-        }
-
-        return value;
-    }, 4).replace(/"\[/g, '[').replace(/\]"/g, ']').replace(/\\""/g, '"').replace(/\\"/g, '"'));
-
-    scene.cache.tilemap.add(name, { "format": Phaser.Tilemaps.Formats.TILED_JSON, "data": tilemap })
-    const tilemapInstance = scene.cache.tilemap.add(name, Phaser.Tilemaps.ParseToTilemap(scene, name, tilemap.tilewidth, tilemap.tileheight, tilemap.width, tilemap.height)).get(name)
-
-    for (const { name, image } of tilemap.tilesets) {
+    for (const { name, image } of tilemapData.tilesets) {
         scene.load.image(name, image);
-
-        scene.load.once("filecomplete-image-" + name, function(key, type, data) {
-            tilemapInstance.addTilesetImage(name);
-        });
     }
 
-    scene.load.once("complete", function(loader, totalComplete, totalFailed) {
-        for (const { name } of tilemapInstance.layers) {
-            tilemapInstance.createLayer(name, tilemapInstance.tilesets);
+    scene.load.once("complete", function() {
+        // ── Visual tile layers ────────────────────────────────────────────
+        const map = scene.make.tilemap({ key: levelName });
+
+        for (const { name } of tilemapData.tilesets) {
+            map.addTilesetImage(name);
         }
 
-        for (const { objects, properties } of tilemap.layers) {
-            if (objects === undefined) {
-                continue;
+        for (const layerData of tilemapData.layers) {
+            if (layerData.type !== "tilelayer") continue;
+            map.createLayer(layerData.name, map.tilesets);
+        }
+
+        // ── Wall set (tile-coordinate strings "x,y") ──────────────────────
+        // Every non-zero tile outside the background layer is a wall.
+        scene.walls = new Set();
+        for (const layerData of tilemapData.layers) {
+            if (layerData.type !== "tilelayer" || layerData.name === "background") continue;
+            for (let i = 0; i < layerData.data.length; i++) {
+                if (layerData.data[i] !== 0) {
+                    scene.walls.add(`${i % layerData.width},${Math.floor(i / layerData.width)}`);
+                }
             }
+        }
 
-            if (options["useGridEngine"]) {
-                scene.events.once("preupdate", function() {
-                    const characters = [];
+        // ── ECS entity spawning ───────────────────────────────────────────
+        scene.sprites = new Map();
+        scene.tileConfig = {
+            tileWidth:  tilemapData.tilewidth,
+            tileHeight: tilemapData.tileheight,
+            mapWidth:   tilemapData.width  * tilemapData.tilewidth,
+            mapHeight:  tilemapData.height * tilemapData.tileheight,
+        };
 
-                    const objectCount = {};
+        for (const layerData of tilemapData.layers) {
+            if (layerData.type !== "objectgroup") continue;
 
-                    for (const { name, x, y } of objects) {
-                        objectCount[name] ??= 1;
+            for (const obj of layerData.objects as any[]) {
+                const config = entityConfig[obj.name];
+                if (!config) continue;
 
-                        const characterId = (objectCount[name] -= 1) ? name + objectCount[name] : name;
+                const tx = Math.round(obj.x / tilemapData.tilewidth);
+                const ty = Math.round(obj.y / tilemapData.tileheight);
 
-                        characters.push({
-                            ...Object.fromEntries(tilemap.tilesets.map(({ name }) => [name, objectMap[name]]))[name],
-                            "id": characterId,
-                            "sprite": scene.add.sprite(0, 0, name),
-                            "startPosition": {
-                                "x": x / tilemap.tilewidth,
-                                "y": y / tilemap.tileheight
-                            },
-                            "charLayer": properties?.find((property) => property.name === "ge_charLayer")["value"] ?? tilemapInstance.layers.at(-1)["name"]
-                        });
+                const entity = addEntity(scene.world);
 
-                        if (options.useBitECS) {
-                            const entity = addEntity(scene.world);
+                const sprite = scene.add.sprite(
+                    tx * tilemapData.tilewidth  + tilemapData.tilewidth  / 2,
+                    ty * tilemapData.tileheight + tilemapData.tileheight / 2,
+                    obj.name
+                );
+                scene.sprites.set(entity.id, sprite);
 
-                            scene.entityMap ??= {};
-                            scene.entityMap[entity.id] = characterId;
+                // Position is added to every spawned entity automatically.
+                scene.components.position.add(entity.id);
+                scene.components.position.set(entity.id, "x", tx);
+                scene.components.position.set(entity.id, "y", ty);
 
-                            for (const component of objectMap[name]?.["components"] ?? []) {
-                                entity.addComponent(scene.components[component]);
-                            }
-                        }
-                    }
-
-                    scene.gridEngine.create(scene.cache.tilemap.get(name), {
-                        "characters": characters,
-                        "characterCollisionStrategy": CollisionStrategy.BLOCK_ONE_TILE_AHEAD,
-                    });
-                });
-            } else {
-                throw new Error("Not implemented.");
+                for (const componentName of config.components ?? []) {
+                    scene.components[componentName].add(entity.id);
+                }
             }
         }
     });
