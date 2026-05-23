@@ -1,5 +1,3 @@
-import { Types } from "../../../util/phaser/bitecs";
-
-export const schema = {
-  direction: Types.ui8
+export const MoveIntent = {
+    direction: new Uint8Array(1024)
 };

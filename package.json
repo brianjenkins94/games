@@ -14,7 +14,6 @@
     "@typescript-eslint/eslint-plugin": "latest",
     "@typescript-eslint/parser": "latest",
     "bitecs": "latest",
-    "grid-engine": "latest",
     "phaser": "latest",
     "tsup": "latest",
     "tsx": "latest",

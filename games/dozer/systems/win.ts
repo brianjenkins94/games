@@ -1,27 +1,19 @@
-import { defineSystem, defineQuery } from "../../../util/phaser/bitecs";
+import { query } from "bitecs";
+import { Position } from "../schemas/position";
+import { Pushable } from "../schemas/pushable";
+import { Target }   from "../schemas/target";
 
-export function createWinSystem(scene, [Position, Pushable, Target]) {
-    const pushableQuery = defineQuery([Pushable, Position]);
-    const targetQuery   = defineQuery([Target,   Position]);
+export function winSystem(world) {
+    const targets = new Set<string>();
+    for (const eid of query(world, [Target, Position])) {
+        targets.add(`${Position.x[eid]},${Position.y[eid]}`);
+    }
 
-    return defineSystem(function(world) {
-        // Collect all target positions each tick (cheap for puzzle-scale worlds).
-        const targetPositions = new Set<string>();
-        for (const eid of targetQuery(world)) {
-            targetPositions.add(`${Position.get(eid, "x")},${Position.get(eid, "y")}`);
-        }
+    if (!targets.size) return;
 
-        if (targetPositions.size === 0) return world;
+    for (const eid of query(world, [Pushable, Position])) {
+        if (!targets.has(`${Position.x[eid]},${Position.y[eid]}`)) return;
+    }
 
-        // Win if every boulder sits on a target.
-        for (const eid of pushableQuery(world)) {
-            if (!targetPositions.has(`${Position.get(eid, "x")},${Position.get(eid, "y")}`)) {
-                return world;
-            }
-        }
-
-        console.log("You win!");
-        // TODO: scene transition / restart
-        return world;
-    });
+    world.onWin?.();
 }

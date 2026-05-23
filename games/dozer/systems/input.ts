@@ -1,24 +1,19 @@
-import { defineSystem, defineQuery } from "../../../util/phaser/bitecs";
+import { query } from "bitecs";
+import { MoveIntent } from "../schemas/moveIntent";
 import { Direction } from "../schemas/direction";
 
-export function createInputSystem(scene, [MoveIntent]) {
-    const query = defineQuery([MoveIntent]);
-    const cursors = scene.input.keyboard.createCursorKeys();
+export function inputSystem(world) {
+    const { cursors } = world;
 
-    return defineSystem(function(world) {
-        for (const eid of query(world)) {
-            // JustDown fires exactly once per keypress — correct for a turn-based puzzle.
-            if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
-                MoveIntent.set(eid, "direction", Direction.Up);
-            } else if (Phaser.Input.Keyboard.JustDown(cursors.right)) {
-                MoveIntent.set(eid, "direction", Direction.Right);
-            } else if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
-                MoveIntent.set(eid, "direction", Direction.Down);
-            } else if (Phaser.Input.Keyboard.JustDown(cursors.left)) {
-                MoveIntent.set(eid, "direction", Direction.Left);
-            }
+    for (const eid of query(world, [MoveIntent])) {
+        if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
+            MoveIntent.direction[eid] = Direction.Up;
+        } else if (Phaser.Input.Keyboard.JustDown(cursors.right)) {
+            MoveIntent.direction[eid] = Direction.Right;
+        } else if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
+            MoveIntent.direction[eid] = Direction.Down;
+        } else if (Phaser.Input.Keyboard.JustDown(cursors.left)) {
+            MoveIntent.direction[eid] = Direction.Left;
         }
-
-        return world;
-    });
+    }
 }

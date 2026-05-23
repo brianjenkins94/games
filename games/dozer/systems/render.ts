@@ -1,19 +1,14 @@
-import { defineSystem, defineQuery } from "../../../util/phaser/bitecs";
+import { query } from "bitecs";
+import { Position } from "../schemas/position";
 
-export function createRenderSystem(scene, [Position]) {
-    const query = defineQuery([Position]);
-    const { tileWidth, tileHeight } = scene.tileConfig;
+export function renderSystem(world) {
+    const { sprites, tileConfig: { tileWidth, tileHeight } } = world;
 
-    return defineSystem(function(world) {
-        for (const eid of query(world)) {
-            const sprite = scene.sprites.get(eid);
-            if (!sprite) continue;
+    for (const eid of query(world, [Position])) {
+        const sprite = sprites.get(eid);
+        if (!sprite) continue;
 
-            // Position components hold tile coordinates; convert to pixel center.
-            sprite.x = Position.get(eid, "x") * tileWidth + tileWidth  / 2;
-            sprite.y = Position.get(eid, "y") * tileHeight + tileHeight / 2;
-        }
-
-        return world;
-    });
+        sprite.x = Position.x[eid] * tileWidth  + tileWidth  / 2;
+        sprite.y = Position.y[eid] * tileHeight + tileHeight / 2;
+    }
 }

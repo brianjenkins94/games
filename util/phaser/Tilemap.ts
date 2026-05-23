@@ -1,16 +1,11 @@
 import { Scene } from "phaser";
-import { addEntity, IWorld } from "./bitecs";
+import { addEntity, addComponent } from "bitecs";
 
 // https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
 declare module "phaser" {
     interface Scene {
-        world: IWorld;
-        entities: any;
-        components: any;
-        systems: any;
-        sprites: Map<number, Phaser.GameObjects.Sprite>;
-        walls: Set<string>;
-        tileConfig: { tileWidth: number; tileHeight: number; mapWidth: number; mapHeight: number };
+        world: any;
+        systems: ((world: any) => void)[];
     }
 }
 
@@ -85,6 +80,7 @@ export class Tilemap {
     addTileset(name: string, imagePath: string, tileProperties: object[] = []) {
         this.tilesets.push({
             "columns": 1,
+            // FIXME: This assumes one tile per tileset.
             "firstgid": this.tilesets.length + 1,
             "image": imagePath,
             "imageheight": this.tileheight,
@@ -133,6 +129,8 @@ export class Tilemap {
                 this.objects.push({
                     "gid": gid,
                     "height": parent.tileheight,
+                    // FIXME: This assumes one tile per tileset.
+                    // It might be better to use the name for lookup.
                     "id": (this.objects as any[]).length + 1,
                     "name": parent.tilesets.find((ts) => ts.firstgid === gid)["name"],
                     "rotation": 0,
@@ -162,13 +160,18 @@ export class Tilemap {
     }
 }
 
-// entityConfig maps object-layer names to the component tags to attach, e.g.:
-//   { "player": { components: ["moveIntent", "player"] }, "boulder": { components: ["pushable"] } }
+// entityConfig maps object-layer names to component refs and an optional
+// onSpawn callback for setting initial component data (e.g. Position x/y).
+export type EntityConfig = Record<string, {
+    components?: any[];
+    onSpawn?: (eid: number, tx: number, ty: number) => void;
+}>;
+
 export function load(
     scene: Scene,
     levelName: string,
     tilemapData: Tilemap,
-    entityConfig: Record<string, { components?: string[] }>
+    entityConfig: EntityConfig
 ) {
     scene.cache.tilemap.add(levelName, {
         format: Phaser.Tilemaps.Formats.TILED_JSON,
@@ -180,7 +183,9 @@ export function load(
     }
 
     scene.load.once("complete", function() {
-        // ── Visual tile layers ────────────────────────────────────────────
+        const world = scene.world;
+
+        // ── Visual tile layers ────────────────────────────────────────────────
         const map = scene.make.tilemap({ key: levelName });
 
         for (const { name } of tilemapData.tilesets) {
@@ -192,27 +197,27 @@ export function load(
             map.createLayer(layerData.name, map.tilesets);
         }
 
-        // ── Wall set (tile-coordinate strings "x,y") ──────────────────────
-        // Every non-zero tile outside the background layer is a wall.
-        scene.walls = new Set();
-        for (const layerData of tilemapData.layers) {
-            if (layerData.type !== "tilelayer" || layerData.name === "background") continue;
-            for (let i = 0; i < layerData.data.length; i++) {
-                if (layerData.data[i] !== 0) {
-                    scene.walls.add(`${i % layerData.width},${Math.floor(i / layerData.width)}`);
-                }
-            }
-        }
-
-        // ── ECS entity spawning ───────────────────────────────────────────
-        scene.sprites = new Map();
-        scene.tileConfig = {
+        // ── Resources on the world ────────────────────────────────────────────
+        world.walls = new Set<string>();
+        world.sprites = new Map<number, Phaser.GameObjects.Sprite>();
+        world.tileConfig = {
             tileWidth:  tilemapData.tilewidth,
             tileHeight: tilemapData.tileheight,
             mapWidth:   tilemapData.width  * tilemapData.tilewidth,
             mapHeight:  tilemapData.height * tilemapData.tileheight,
         };
 
+        // Every non-zero tile outside the background layer is a wall.
+        for (const layerData of tilemapData.layers) {
+            if (layerData.type !== "tilelayer" || layerData.name === "background") continue;
+            for (let i = 0; i < layerData.data.length; i++) {
+                if (layerData.data[i] !== 0) {
+                    world.walls.add(`${i % layerData.width},${Math.floor(i / layerData.width)}`);
+                }
+            }
+        }
+
+        // ── ECS entity spawning ───────────────────────────────────────────────
         for (const layerData of tilemapData.layers) {
             if (layerData.type !== "objectgroup") continue;
 
@@ -223,23 +228,20 @@ export function load(
                 const tx = Math.round(obj.x / tilemapData.tilewidth);
                 const ty = Math.round(obj.y / tilemapData.tileheight);
 
-                const entity = addEntity(scene.world);
+                const eid = addEntity(world);
 
                 const sprite = scene.add.sprite(
                     tx * tilemapData.tilewidth  + tilemapData.tilewidth  / 2,
                     ty * tilemapData.tileheight + tilemapData.tileheight / 2,
                     obj.name
                 );
-                scene.sprites.set(entity.id, sprite);
+                world.sprites.set(eid, sprite);
 
-                // Position is added to every spawned entity automatically.
-                scene.components.position.add(entity.id);
-                scene.components.position.set(entity.id, "x", tx);
-                scene.components.position.set(entity.id, "y", ty);
-
-                for (const componentName of config.components ?? []) {
-                    scene.components[componentName].add(entity.id);
+                for (const component of config.components ?? []) {
+                    addComponent(world, eid, component);
                 }
+
+                config.onSpawn?.(eid, tx, ty);
             }
         }
     });

@@ -1,6 +1,4 @@
-import { Types } from "../../../util/phaser/bitecs";
-
-export const schema = {
-    x: Types.ui8,
-    y: Types.ui8
+export const Position = {
+    x: new Uint8Array(1024),
+    y: new Uint8Array(1024)
 };
