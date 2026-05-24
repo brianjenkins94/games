@@ -27,9 +27,9 @@ export function preload(scene) {
     }
 
     load(scene, "level1", level1, {
-        "player":  { components: [MoveIntent, Player], onSpawn: setPosition },
-        "boulder": { components: [Pushable],           onSpawn: setPosition },
-        "target":  { components: [Target],             onSpawn: setPosition },
+        "player":  { components: [MoveIntent, Player], depth: 2, onSpawn: setPosition },
+        "boulder": { components: [Pushable],           depth: 1, onSpawn: setPosition },
+        "target":  { components: [Target],             depth: 0, onSpawn: setPosition },
     });
 }
 
@@ -39,7 +39,15 @@ export function create(scene) {
 
     // Keyboard cursors live on the world so systems only need `world`.
     scene.world.cursors = scene.input.keyboard!.createCursorKeys();
-    scene.world.onWin   = () => console.log("You win!");
+    scene.world.onWin = () => {
+        scene.add.text(mapWidth / 2, mapHeight / 2, "You Win!", {
+            fontSize: "32px",
+            color: "#ffffff",
+            backgroundColor: "#000000",
+            padding: { x: 16, y: 8 },
+        }).setOrigin(0.5).setDepth(10);
+        scene.systems = [];
+    };
 
     scene.systems = [inputSystem, movementSystem, renderSystem, winSystem];
 }

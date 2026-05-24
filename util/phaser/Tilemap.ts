@@ -164,6 +164,7 @@ export class Tilemap {
 // onSpawn callback for setting initial component data (e.g. Position x/y).
 export type EntityConfig = Record<string, {
     components?: any[];
+    depth?: number;
     onSpawn?: (eid: number, tx: number, ty: number) => void;
 }>;
 
@@ -198,7 +199,6 @@ export function load(
         }
 
         // ── Resources on the world ────────────────────────────────────────────
-        world.walls = new Set<string>();
         world.sprites = new Map<number, Phaser.GameObjects.Sprite>();
         world.tileConfig = {
             tileWidth:  tilemapData.tilewidth,
@@ -207,12 +207,22 @@ export function load(
             mapHeight:  tilemapData.height * tilemapData.tileheight,
         };
 
-        // Every non-zero tile outside the background layer is a wall.
+        // Non-background tile layers paint the *floor* (walkable area).
+        // Every map position that has no floor tile is a wall.
+        const floor = new Set<string>();
         for (const layerData of tilemapData.layers) {
             if (layerData.type !== "tilelayer" || layerData.name === "background") continue;
             for (let i = 0; i < layerData.data.length; i++) {
                 if (layerData.data[i] !== 0) {
-                    world.walls.add(`${i % layerData.width},${Math.floor(i / layerData.width)}`);
+                    floor.add(`${i % layerData.width},${Math.floor(i / layerData.width)}`);
+                }
+            }
+        }
+        world.walls = new Set<string>();
+        for (let ty = 0; ty < tilemapData.height; ty++) {
+            for (let tx = 0; tx < tilemapData.width; tx++) {
+                if (!floor.has(`${tx},${ty}`)) {
+                    world.walls.add(`${tx},${ty}`);
                 }
             }
         }
@@ -235,6 +245,7 @@ export function load(
                     ty * tilemapData.tileheight + tilemapData.tileheight / 2,
                     obj.name
                 );
+                if (config.depth !== undefined) sprite.setDepth(config.depth);
                 world.sprites.set(eid, sprite);
 
                 for (const component of config.components ?? []) {
