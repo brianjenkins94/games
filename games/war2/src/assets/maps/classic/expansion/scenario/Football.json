@@ -1,0 +1,2730 @@
+{
+	"compressionlevel": -1,
+	"height": 32,
+	"infinite": false,
+	"layers": [
+		{
+			"data": [
+				20,
+				28,
+				28,
+				30,
+				28,
+				29,
+				28,
+				29,
+				29,
+				29,
+				28,
+				29,
+				29,
+				28,
+				29,
+				28,
+				28,
+				28,
+				29,
+				29,
+				29,
+				28,
+				30,
+				28,
+				28,
+				30,
+				28,
+				28,
+				29,
+				29,
+				29,
+				27,
+				22,
+				348,
+				349,
+				22,
+				348,
+				347,
+				347,
+				348,
+				347,
+				347,
+				347,
+				348,
+				347,
+				348,
+				347,
+				347,
+				347,
+				347,
+				349,
+				348,
+				347,
+				348,
+				22,
+				349,
+				347,
+				23,
+				348,
+				349,
+				347,
+				347,
+				348,
+				22,
+				23,
+				347,
+				349,
+				22,
+				347,
+				354,
+				348,
+				347,
+				348,
+				282,
+				291,
+				273,
+				347,
+				347,
+				349,
+				349,
+				347,
+				349,
+				357,
+				347,
+				349,
+				349,
+				23,
+				349,
+				349,
+				23,
+				348,
+				347,
+				348,
+				347,
+				349,
+				22,
+				25,
+				29,
+				28,
+				32,
+				349,
+				348,
+				348,
+				249,
+				241,
+				286,
+				333,
+				274,
+				348,
+				349,
+				250,
+				257,
+				259,
+				258,
+				241,
+				347,
+				355,
+				348,
+				24,
+				29,
+				28,
+				31,
+				250,
+				259,
+				259,
+				242,
+				349,
+				22,
+				23,
+				348,
+				347,
+				22,
+				348,
+				348,
+				347,
+				254,
+				243,
+				267,
+				270,
+				266,
+				349,
+				356,
+				254,
+				263,
+				263,
+				263,
+				244,
+				348,
+				349,
+				347,
+				347,
+				349,
+				348,
+				348,
+				253,
+				248,
+				240,
+				235,
+				348,
+				23,
+				23,
+				349,
+				347,
+				22,
+				349,
+				349,
+				348,
+				255,
+				260,
+				257,
+				257,
+				259,
+				241,
+				249,
+				261,
+				248,
+				256,
+				263,
+				260,
+				241,
+				347,
+				348,
+				20,
+				29,
+				29,
+				27,
+				237,
+				234,
+				348,
+				348,
+				347,
+				23,
+				23,
+				349,
+				347,
+				23,
+				349,
+				250,
+				259,
+				261,
+				264,
+				248,
+				238,
+				256,
+				244,
+				236,
+				238,
+				234,
+				236,
+				256,
+				263,
+				243,
+				349,
+				348,
+				23,
+				348,
+				348,
+				23,
+				349,
+				348,
+				349,
+				348,
+				347,
+				22,
+				22,
+				348,
+				347,
+				22,
+				349,
+				254,
+				262,
+				248,
+				239,
+				251,
+				259,
+				247,
+				251,
+				242,
+				349,
+				349,
+				349,
+				254,
+				264,
+				245,
+				348,
+				347,
+				23,
+				361,
+				347,
+				23,
+				349,
+				348,
+				347,
+				347,
+				348,
+				23,
+				23,
+				349,
+				361,
+				22,
+				347,
+				236,
+				239,
+				251,
+				258,
+				261,
+				262,
+				245,
+				237,
+				235,
+				282,
+				292,
+				272,
+				255,
+				262,
+				244,
+				348,
+				349,
+				22,
+				349,
+				348,
+				25,
+				29,
+				26,
+				347,
+				19,
+				29,
+				32,
+				22,
+				349,
+				349,
+				22,
+				347,
+				347,
+				347,
+				253,
+				372,
+				248,
+				240,
+				234,
+				348,
+				349,
+				268,
+				270,
+				266,
+				237,
+				240,
+				234,
+				348,
+				348,
+				22,
+				347,
+				349,
+				22,
+				348,
+				347,
+				347,
+				347,
+				348,
+				23,
+				22,
+				347,
+				348,
+				23,
+				348,
+				349,
+				347,
+				236,
+				239,
+				235,
+				281,
+				290,
+				273,
+				349,
+				348,
+				250,
+				257,
+				241,
+				282,
+				273,
+				347,
+				348,
+				22,
+				349,
+				347,
+				23,
+				249,
+				259,
+				259,
+				242,
+				348,
+				23,
+				22,
+				360,
+				349,
+				23,
+				349,
+				354,
+				348,
+				281,
+				291,
+				291,
+				295,
+				280,
+				265,
+				359,
+				249,
+				261,
+				368,
+				245,
+				286,
+				276,
+				348,
+				348,
+				22,
+				347,
+				349,
+				22,
+				253,
+				264,
+				262,
+				243,
+				349,
+				22,
+				22,
+				348,
+				348,
+				23,
+				349,
+				349,
+				348,
+				268,
+				269,
+				271,
+				270,
+				266,
+				347,
+				250,
+				261,
+				264,
+				364,
+				245,
+				268,
+				266,
+				348,
+				348,
+				22,
+				349,
+				349,
+				22,
+				237,
+				256,
+				262,
+				245,
+				347,
+				23,
+				23,
+				349,
+				348,
+				22,
+				361,
+				347,
+				348,
+				249,
+				258,
+				258,
+				259,
+				242,
+				250,
+				261,
+				248,
+				240,
+				239,
+				234,
+				349,
+				349,
+				349,
+				349,
+				23,
+				347,
+				347,
+				22,
+				347,
+				236,
+				240,
+				235,
+				348,
+				22,
+				23,
+				349,
+				352,
+				22,
+				281,
+				291,
+				272,
+				237,
+				238,
+				256,
+				365,
+				245,
+				236,
+				256,
+				243,
+				282,
+				290,
+				273,
+				348,
+				348,
+				360,
+				348,
+				23,
+				347,
+				348,
+				22,
+				348,
+				348,
+				347,
+				348,
+				347,
+				23,
+				23,
+				349,
+				348,
+				23,
+				285,
+				332,
+				294,
+				290,
+				273,
+				236,
+				240,
+				234,
+				349,
+				236,
+				234,
+				286,
+				336,
+				293,
+				291,
+				272,
+				349,
+				347,
+				22,
+				347,
+				348,
+				25,
+				30,
+				30,
+				30,
+				30,
+				30,
+				32,
+				22,
+				347,
+				348,
+				22,
+				268,
+				269,
+				271,
+				269,
+				265,
+				348,
+				282,
+				290,
+				272,
+				349,
+				281,
+				277,
+				271,
+				269,
+				269,
+				266,
+				349,
+				348,
+				23,
+				347,
+				347,
+				25,
+				33,
+				33,
+				33,
+				33,
+				33,
+				32,
+				23,
+				347,
+				347,
+				23,
+				348,
+				250,
+				259,
+				241,
+				348,
+				349,
+				268,
+				269,
+				266,
+				347,
+				287,
+				275,
+				250,
+				257,
+				241,
+				347,
+				349,
+				349,
+				23,
+				349,
+				348,
+				22,
+				348,
+				349,
+				347,
+				348,
+				349,
+				23,
+				23,
+				347,
+				347,
+				22,
+				349,
+				255,
+				366,
+				244,
+				349,
+				249,
+				257,
+				242,
+				349,
+				347,
+				268,
+				265,
+				253,
+				363,
+				245,
+				348,
+				353,
+				349,
+				23,
+				349,
+				354,
+				22,
+				355,
+				249,
+				257,
+				257,
+				242,
+				23,
+				23,
+				347,
+				348,
+				22,
+				349,
+				254,
+				263,
+				260,
+				259,
+				261,
+				262,
+				260,
+				258,
+				242,
+				349,
+				347,
+				254,
+				263,
+				260,
+				241,
+				348,
+				348,
+				23,
+				348,
+				347,
+				22,
+				349,
+				255,
+				262,
+				263,
+				243,
+				22,
+				23,
+				355,
+				348,
+				22,
+				349,
+				236,
+				238,
+				240,
+				256,
+				264,
+				365,
+				264,
+				262,
+				260,
+				258,
+				257,
+				261,
+				248,
+				238,
+				234,
+				349,
+				347,
+				22,
+				347,
+				347,
+				22,
+				348,
+				255,
+				262,
+				248,
+				235,
+				22,
+				23,
+				348,
+				357,
+				22,
+				347,
+				348,
+				281,
+				273,
+				253,
+				364,
+				367,
+				248,
+				256,
+				263,
+				264,
+				263,
+				263,
+				244,
+				281,
+				273,
+				348,
+				347,
+				23,
+				349,
+				348,
+				23,
+				348,
+				253,
+				263,
+				243,
+				348,
+				22,
+				23,
+				349,
+				348,
+				22,
+				348,
+				347,
+				285,
+				275,
+				236,
+				256,
+				262,
+				260,
+				247,
+				240,
+				256,
+				263,
+				248,
+				235,
+				286,
+				276,
+				347,
+				349,
+				23,
+				347,
+				349,
+				22,
+				349,
+				236,
+				239,
+				234,
+				349,
+				23,
+				22,
+				348,
+				348,
+				22,
+				349,
+				349,
+				267,
+				266,
+				347,
+				237,
+				240,
+				240,
+				234,
+				249,
+				261,
+				368,
+				244,
+				282,
+				277,
+				265,
+				349,
+				348,
+				22,
+				348,
+				349,
+				25,
+				29,
+				26,
+				348,
+				19,
+				29,
+				32,
+				22,
+				353,
+				349,
+				22,
+				348,
+				349,
+				349,
+				249,
+				259,
+				258,
+				241,
+				281,
+				272,
+				237,
+				256,
+				248,
+				234,
+				287,
+				274,
+				347,
+				348,
+				349,
+				23,
+				348,
+				347,
+				22,
+				347,
+				347,
+				348,
+				347,
+				348,
+				23,
+				23,
+				348,
+				347,
+				22,
+				347,
+				349,
+				347,
+				236,
+				256,
+				264,
+				245,
+				285,
+				294,
+				273,
+				253,
+				243,
+				347,
+				268,
+				265,
+				347,
+				353,
+				355,
+				22,
+				349,
+				348,
+				23,
+				349,
+				250,
+				257,
+				241,
+				348,
+				23,
+				22,
+				347,
+				347,
+				23,
+				348,
+				348,
+				349,
+				348,
+				236,
+				239,
+				235,
+				268,
+				271,
+				265,
+				253,
+				260,
+				257,
+				241,
+				349,
+				347,
+				358,
+				349,
+				24,
+				29,
+				29,
+				31,
+				349,
+				255,
+				264,
+				244,
+				348,
+				23,
+				22,
+				348,
+				359,
+				23,
+				349,
+				347,
+				348,
+				348,
+				282,
+				292,
+				273,
+				348,
+				250,
+				259,
+				261,
+				263,
+				248,
+				251,
+				257,
+				241,
+				348,
+				348,
+				348,
+				348,
+				359,
+				349,
+				250,
+				261,
+				263,
+				260,
+				242,
+				23,
+				25,
+				28,
+				28,
+				32,
+				349,
+				348,
+				348,
+				347,
+				285,
+				333,
+				276,
+				250,
+				261,
+				373,
+				248,
+				240,
+				234,
+				254,
+				263,
+				243,
+				349,
+				347,
+				20,
+				28,
+				29,
+				27,
+				253,
+				264,
+				263,
+				263,
+				245,
+				23,
+				22,
+				348,
+				349,
+				22,
+				349,
+				349,
+				348,
+				351,
+				268,
+				270,
+				266,
+				236,
+				240,
+				238,
+				234,
+				347,
+				348,
+				253,
+				262,
+				244,
+				349,
+				347,
+				22,
+				349,
+				349,
+				23,
+				236,
+				256,
+				262,
+				248,
+				235,
+				23,
+				23,
+				349,
+				348,
+				23,
+				348,
+				347,
+				348,
+				349,
+				347,
+				349,
+				347,
+				347,
+				349,
+				348,
+				349,
+				356,
+				348,
+				236,
+				238,
+				235,
+				359,
+				347,
+				23,
+				348,
+				349,
+				23,
+				349,
+				237,
+				240,
+				234,
+				348,
+				23,
+				24,
+				29,
+				28,
+				33,
+				29,
+				29,
+				29,
+				29,
+				28,
+				28,
+				29,
+				28,
+				29,
+				28,
+				29,
+				29,
+				28,
+				28,
+				28,
+				28,
+				29,
+				28,
+				33,
+				29,
+				28,
+				33,
+				29,
+				28,
+				28,
+				29,
+				29,
+				31
+			],
+			"height": 32,
+			"id": 1,
+			"name": "terrain",
+			"opacity": 1,
+			"type": "tilelayer",
+			"visible": true,
+			"width": 32,
+			"x": 0,
+			"y": 0
+		},
+		{
+			"id": 2,
+			"name": "units",
+			"opacity": 1,
+			"type": "objectgroup",
+			"visible": true,
+			"x": 0,
+			"y": 0,
+			"objects": [
+				{
+					"id": 1,
+					"name": "unit-orc-watch-tower",
+					"type": "unit-orc-watch-tower",
+					"x": 32,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 2,
+					"name": "unit-orc-watch-tower",
+					"type": "unit-orc-watch-tower",
+					"x": 736,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 3,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 928,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 4,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 832,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 5,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 224,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 6,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 192,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 7,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 448,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 8,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 256,
+					"y": 96,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 9,
+					"name": "unit-death-knight",
+					"type": "unit-death-knight",
+					"x": 352,
+					"y": 96,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 10,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 512,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 11,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 160,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 12,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 512,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 13,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 192,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 14,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 928,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 15,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 832,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 16,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 17,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 448,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 18,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 384,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 19,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 320,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 20,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 256,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 21,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 480,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 22,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 416,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 23,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 352,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 24,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 288,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 25,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 224,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 26,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 224,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 27,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 256,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 28,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 736,
+					"y": 256,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 29,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 32,
+					"y": 256,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 30,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 31,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 32,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 32,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 352,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 33,
+					"name": "unit-orc-barracks",
+					"type": "unit-orc-barracks",
+					"x": 864,
+					"y": 352,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 34,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 384,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 35,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 384,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 36,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 37,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 32,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 38,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 39,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 40,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 32,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 41,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 480,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 42,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 736,
+					"y": 480,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 43,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 736,
+					"y": 512,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 44,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 512,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 45,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 512,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 46,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 47,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 48,
+					"name": "unit-human-barracks",
+					"type": "unit-human-barracks",
+					"x": 864,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 49,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 50,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 32,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 51,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 52,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 53,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 736,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 54,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 32,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 55,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 736,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 56,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 736,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 57,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 58,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 736,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 59,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 928,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 60,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 832,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 61,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 768,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 62,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 63,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 32,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 64,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 64,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 65,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 288,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 66,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 480,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 67,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 320,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 68,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 224,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 69,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 512,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 70,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 448,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 71,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 352,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 72,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 256,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 73,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 192,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 74,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 384,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 75,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 544,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 76,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 160,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 77,
+					"name": "unit-human-watch-tower",
+					"type": "unit-human-watch-tower",
+					"x": 736,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 78,
+					"name": "unit-human-watch-tower",
+					"type": "unit-human-watch-tower",
+					"x": 32,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 79,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 832,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 80,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 928,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 81,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 448,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 82,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 576,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 83,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 128,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 84,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 288,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 85,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 192,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 86,
+					"name": "unit-mage",
+					"type": "unit-mage",
+					"x": 352,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				}
+			]
+		}
+	],
+	"nextlayerid": 3,
+	"nextobjectid": 87,
+	"orientation": "orthogonal",
+	"renderorder": "right-down",
+	"tiledversion": "1.5.0",
+	"tileheight": 32,
+	"tilesets": [
+		{
+			"columns": 16,
+			"firstgid": 1,
+			"image": "wasteland.png",
+			"imageheight": 768,
+			"imagewidth": 512,
+			"margin": 0,
+			"name": "wasteland",
+			"spacing": 0,
+			"tilecount": 384,
+			"tileheight": 32,
+			"tilewidth": 32
+		}
+	],
+	"tilewidth": 32,
+	"type": "map",
+	"version": 1.5,
+	"width": 32,
+	"properties": [
+		{
+			"name": "description",
+			"type": "string",
+			"value": "No Referee! No Penalties!"
+		},
+		{
+			"name": "numPlayers",
+			"type": "int",
+			"value": 2
+		},
+		{
+			"name": "p0_type",
+			"type": "string",
+			"value": "person"
+		},
+		{
+			"name": "p0_race",
+			"type": "string",
+			"value": "human"
+		},
+		{
+			"name": "p0_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p0_gold",
+			"type": "int",
+			"value": 10000
+		},
+		{
+			"name": "p0_wood",
+			"type": "int",
+			"value": 0
+		},
+		{
+			"name": "p0_oil",
+			"type": "int",
+			"value": 0
+		},
+		{
+			"name": "p0_startX",
+			"type": "int",
+			"value": 11
+		},
+		{
+			"name": "p0_startY",
+			"type": "int",
+			"value": 28
+		},
+		{
+			"name": "p1_type",
+			"type": "string",
+			"value": "person"
+		},
+		{
+			"name": "p1_race",
+			"type": "string",
+			"value": "orc"
+		},
+		{
+			"name": "p1_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p1_gold",
+			"type": "int",
+			"value": 10000
+		},
+		{
+			"name": "p1_wood",
+			"type": "int",
+			"value": 0
+		},
+		{
+			"name": "p1_oil",
+			"type": "int",
+			"value": 0
+		},
+		{
+			"name": "p1_startX",
+			"type": "int",
+			"value": 11
+		},
+		{
+			"name": "p1_startY",
+			"type": "int",
+			"value": 3
+		},
+		{
+			"name": "p15_type",
+			"type": "string",
+			"value": "neutral"
+		},
+		{
+			"name": "p15_race",
+			"type": "string",
+			"value": "neutral"
+		}
+	]
+}

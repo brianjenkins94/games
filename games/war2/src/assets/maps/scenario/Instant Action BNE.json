@@ -1,0 +1,2558 @@
+{
+	"compressionlevel": -1,
+	"height": 32,
+	"infinite": false,
+	"layers": [
+		{
+			"data": [
+				350,
+				351,
+				350,
+				350,
+				352,
+				351,
+				351,
+				352,
+				351,
+				351,
+				351,
+				19,
+				30,
+				30,
+				30,
+				30,
+				30,
+				30,
+				30,
+				30,
+				26,
+				352,
+				350,
+				351,
+				351,
+				352,
+				351,
+				352,
+				352,
+				350,
+				352,
+				350,
+				352,
+				352,
+				350,
+				351,
+				350,
+				352,
+				352,
+				352,
+				351,
+				351,
+				352,
+				352,
+				24,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				31,
+				350,
+				352,
+				350,
+				352,
+				350,
+				350,
+				350,
+				352,
+				350,
+				352,
+				350,
+				350,
+				352,
+				350,
+				352,
+				351,
+				352,
+				350,
+				351,
+				352,
+				352,
+				352,
+				352,
+				350,
+				350,
+				24,
+				34,
+				34,
+				34,
+				34,
+				31,
+				276,
+				286,
+				267,
+				351,
+				350,
+				352,
+				352,
+				351,
+				350,
+				350,
+				350,
+				350,
+				352,
+				352,
+				352,
+				351,
+				351,
+				350,
+				352,
+				351,
+				350,
+				350,
+				352,
+				277,
+				285,
+				267,
+				350,
+				25,
+				34,
+				34,
+				32,
+				277,
+				290,
+				333,
+				269,
+				352,
+				350,
+				351,
+				352,
+				351,
+				351,
+				352,
+				351,
+				351,
+				352,
+				350,
+				350,
+				350,
+				351,
+				351,
+				277,
+				267,
+				351,
+				351,
+				351,
+				281,
+				332,
+				289,
+				268,
+				25,
+				34,
+				34,
+				32,
+				280,
+				333,
+				335,
+				270,
+				350,
+				352,
+				350,
+				277,
+				268,
+				352,
+				352,
+				351,
+				351,
+				351,
+				352,
+				351,
+				352,
+				350,
+				277,
+				290,
+				289,
+				268,
+				351,
+				351,
+				282,
+				334,
+				333,
+				271,
+				25,
+				34,
+				34,
+				32,
+				263,
+				284,
+				333,
+				288,
+				287,
+				287,
+				286,
+				290,
+				289,
+				267,
+				350,
+				352,
+				350,
+				350,
+				351,
+				352,
+				352,
+				352,
+				263,
+				284,
+				334,
+				289,
+				268,
+				277,
+				291,
+				334,
+				339,
+				270,
+				25,
+				34,
+				34,
+				32,
+				351,
+				282,
+				339,
+				333,
+				333,
+				336,
+				333,
+				334,
+				274,
+				261,
+				351,
+				352,
+				352,
+				352,
+				350,
+				351,
+				352,
+				350,
+				350,
+				262,
+				283,
+				332,
+				289,
+				290,
+				334,
+				333,
+				275,
+				260,
+				25,
+				34,
+				34,
+				32,
+				276,
+				290,
+				334,
+				332,
+				332,
+				334,
+				275,
+				266,
+				260,
+				352,
+				350,
+				351,
+				350,
+				352,
+				350,
+				350,
+				352,
+				352,
+				351,
+				351,
+				263,
+				284,
+				332,
+				336,
+				332,
+				334,
+				271,
+				352,
+				25,
+				34,
+				34,
+				32,
+				282,
+				334,
+				332,
+				334,
+				332,
+				333,
+				289,
+				267,
+				350,
+				352,
+				351,
+				352,
+				352,
+				352,
+				351,
+				351,
+				351,
+				351,
+				350,
+				276,
+				287,
+				290,
+				334,
+				333,
+				333,
+				275,
+				260,
+				351,
+				25,
+				34,
+				34,
+				32,
+				262,
+				284,
+				332,
+				333,
+				333,
+				333,
+				332,
+				269,
+				350,
+				352,
+				350,
+				351,
+				352,
+				350,
+				351,
+				350,
+				277,
+				285,
+				285,
+				291,
+				334,
+				332,
+				332,
+				332,
+				334,
+				269,
+				352,
+				350,
+				25,
+				34,
+				34,
+				32,
+				351,
+				282,
+				338,
+				333,
+				333,
+				340,
+				334,
+				289,
+				286,
+				285,
+				287,
+				267,
+				351,
+				350,
+				18,
+				351,
+				282,
+				332,
+				334,
+				333,
+				333,
+				333,
+				334,
+				332,
+				275,
+				261,
+				351,
+				20,
+				34,
+				34,
+				34,
+				34,
+				27,
+				263,
+				266,
+				265,
+				283,
+				334,
+				334,
+				332,
+				338,
+				333,
+				334,
+				271,
+				350,
+				18,
+				25,
+				27,
+				263,
+				265,
+				284,
+				340,
+				275,
+				284,
+				333,
+				275,
+				260,
+				351,
+				20,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				27,
+				352,
+				350,
+				281,
+				332,
+				332,
+				334,
+				275,
+				265,
+				266,
+				261,
+				20,
+				32,
+				25,
+				34,
+				27,
+				350,
+				263,
+				264,
+				261,
+				262,
+				264,
+				260,
+				350,
+				20,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				27,
+				351,
+				263,
+				266,
+				266,
+				265,
+				260,
+				350,
+				352,
+				20,
+				34,
+				32,
+				25,
+				34,
+				34,
+				30,
+				30,
+				30,
+				30,
+				30,
+				30,
+				30,
+				30,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				30,
+				30,
+				30,
+				30,
+				30,
+				30,
+				30,
+				30,
+				34,
+				34,
+				32,
+				25,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				32,
+				25,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				32,
+				25,
+				34,
+				34,
+				33,
+				33,
+				33,
+				33,
+				33,
+				33,
+				33,
+				33,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				33,
+				33,
+				33,
+				33,
+				33,
+				33,
+				33,
+				33,
+				34,
+				34,
+				32,
+				25,
+				34,
+				31,
+				276,
+				287,
+				267,
+				350,
+				350,
+				277,
+				285,
+				267,
+				24,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				31,
+				277,
+				287,
+				287,
+				286,
+				285,
+				287,
+				268,
+				351,
+				24,
+				34,
+				32,
+				25,
+				31,
+				276,
+				290,
+				334,
+				289,
+				287,
+				286,
+				290,
+				332,
+				271,
+				352,
+				24,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				31,
+				276,
+				290,
+				332,
+				332,
+				332,
+				334,
+				339,
+				288,
+				286,
+				268,
+				24,
+				32,
+				21,
+				351,
+				281,
+				333,
+				275,
+				284,
+				338,
+				339,
+				332,
+				332,
+				288,
+				287,
+				268,
+				24,
+				34,
+				34,
+				34,
+				34,
+				31,
+				276,
+				291,
+				334,
+				333,
+				274,
+				265,
+				284,
+				332,
+				333,
+				333,
+				271,
+				351,
+				21,
+				351,
+				350,
+				263,
+				266,
+				261,
+				282,
+				333,
+				333,
+				332,
+				333,
+				338,
+				334,
+				271,
+				352,
+				25,
+				34,
+				34,
+				32,
+				352,
+				280,
+				333,
+				333,
+				334,
+				289,
+				286,
+				273,
+				266,
+				264,
+				265,
+				260,
+				350,
+				352,
+				352,
+				350,
+				350,
+				350,
+				350,
+				281,
+				334,
+				332,
+				333,
+				332,
+				334,
+				332,
+				288,
+				268,
+				25,
+				34,
+				34,
+				32,
+				352,
+				281,
+				334,
+				333,
+				338,
+				332,
+				334,
+				269,
+				351,
+				350,
+				352,
+				351,
+				350,
+				350,
+				350,
+				350,
+				350,
+				352,
+				351,
+				263,
+				284,
+				334,
+				333,
+				333,
+				334,
+				335,
+				334,
+				269,
+				25,
+				34,
+				34,
+				32,
+				350,
+				281,
+				334,
+				333,
+				334,
+				333,
+				332,
+				271,
+				351,
+				350,
+				351,
+				351,
+				350,
+				352,
+				352,
+				350,
+				352,
+				350,
+				351,
+				276,
+				291,
+				336,
+				332,
+				334,
+				332,
+				332,
+				334,
+				269,
+				25,
+				34,
+				34,
+				32,
+				276,
+				290,
+				334,
+				332,
+				334,
+				338,
+				334,
+				289,
+				268,
+				350,
+				350,
+				350,
+				350,
+				350,
+				350,
+				351,
+				352,
+				351,
+				276,
+				290,
+				334,
+				334,
+				332,
+				274,
+				283,
+				333,
+				332,
+				270,
+				25,
+				34,
+				34,
+				32,
+				281,
+				333,
+				332,
+				334,
+				333,
+				274,
+				284,
+				332,
+				288,
+				267,
+				350,
+				352,
+				350,
+				351,
+				351,
+				350,
+				351,
+				351,
+				262,
+				284,
+				274,
+				264,
+				266,
+				261,
+				282,
+				334,
+				333,
+				269,
+				25,
+				34,
+				34,
+				32,
+				282,
+				333,
+				336,
+				274,
+				264,
+				261,
+				262,
+				283,
+				274,
+				261,
+				351,
+				352,
+				352,
+				350,
+				351,
+				351,
+				350,
+				351,
+				350,
+				263,
+				261,
+				351,
+				350,
+				351,
+				281,
+				333,
+				274,
+				261,
+				25,
+				34,
+				34,
+				32,
+				280,
+				334,
+				332,
+				270,
+				351,
+				352,
+				352,
+				263,
+				261,
+				350,
+				352,
+				351,
+				351,
+				352,
+				352,
+				350,
+				351,
+				351,
+				351,
+				351,
+				352,
+				350,
+				351,
+				350,
+				280,
+				332,
+				270,
+				350,
+				25,
+				34,
+				34,
+				32,
+				263,
+				266,
+				266,
+				260,
+				350,
+				352,
+				350,
+				351,
+				352,
+				351,
+				350,
+				351,
+				351,
+				350,
+				351,
+				351,
+				350,
+				350,
+				352,
+				351,
+				350,
+				351,
+				352,
+				352,
+				263,
+				264,
+				260,
+				20,
+				34,
+				34,
+				34,
+				34,
+				27,
+				352,
+				351,
+				350,
+				351,
+				352,
+				350,
+				350,
+				352,
+				350,
+				352,
+				351,
+				352,
+				351,
+				350,
+				352,
+				351,
+				350,
+				351,
+				351,
+				352,
+				351,
+				350,
+				350,
+				352,
+				350,
+				20,
+				34,
+				34,
+				34,
+				34,
+				34,
+				34,
+				27,
+				350,
+				352,
+				352,
+				352,
+				350,
+				352,
+				352,
+				351,
+				351,
+				351,
+				352,
+				351,
+				351,
+				350,
+				352,
+				352,
+				351,
+				350,
+				351,
+				351,
+				350,
+				352,
+				352,
+				19,
+				33,
+				33,
+				33,
+				33,
+				33,
+				33,
+				33,
+				33,
+				26,
+				350,
+				352,
+				351,
+				352,
+				351,
+				350,
+				350,
+				351,
+				350,
+				352,
+				352
+			],
+			"height": 32,
+			"id": 1,
+			"name": "terrain",
+			"opacity": 1,
+			"type": "tilelayer",
+			"visible": true,
+			"width": 32,
+			"x": 0,
+			"y": 0
+		},
+		{
+			"id": 2,
+			"name": "units",
+			"opacity": 1,
+			"type": "objectgroup",
+			"visible": true,
+			"x": 0,
+			"y": 0,
+			"objects": [
+				{
+					"id": 1,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 704,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 2,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 896,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 3,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 768,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 4,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 832,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 5,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 960,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 6,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 0,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 7,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 256,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 8,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 64,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 9,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 192,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 10,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 128,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 11,
+					"name": "unit-alchemist",
+					"type": "unit-alchemist",
+					"x": 704,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 12,
+					"name": "unit-inventor",
+					"type": "unit-inventor",
+					"x": 64,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 13,
+					"name": "unit-alchemist",
+					"type": "unit-alchemist",
+					"x": 864,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 14,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 800,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 15,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 960,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 16,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 160,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 17,
+					"name": "unit-inventor",
+					"type": "unit-inventor",
+					"x": 224,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 18,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 0,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 19,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 960,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 20,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 0,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 21,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 896,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 22,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 64,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 23,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 960,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 24,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 0,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 25,
+					"name": "unit-alchemist",
+					"type": "unit-alchemist",
+					"x": 864,
+					"y": 224,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 26,
+					"name": "unit-inventor",
+					"type": "unit-inventor",
+					"x": 64,
+					"y": 224,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 27,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 960,
+					"y": 256,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": 28,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 0,
+					"y": 256,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": 29,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 576,
+					"y": 320,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 30,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 416,
+					"y": 320,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 31,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 608,
+					"y": 352,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 32,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 384,
+					"y": 352,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 33,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 640,
+					"y": 384,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 34,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 352,
+					"y": 384,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 35,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 672,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 36,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 320,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 37,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 672,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 38,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 320,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 39,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 640,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 40,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 352,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 41,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 608,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 42,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 384,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 43,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 576,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 44,
+					"name": "unit-critter",
+					"type": "unit-critter",
+					"x": 416,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 15
+						}
+					]
+				},
+				{
+					"id": 45,
+					"name": "unit-alchemist",
+					"type": "unit-alchemist",
+					"x": 864,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 46,
+					"name": "unit-inventor",
+					"type": "unit-inventor",
+					"x": 64,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 47,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 0,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 48,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 960,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 49,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 0,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 50,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 960,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 51,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 64,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 52,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 896,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 53,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 0,
+					"y": 832,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 54,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 960,
+					"y": 832,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 55,
+					"name": "unit-alchemist",
+					"type": "unit-alchemist",
+					"x": 864,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 56,
+					"name": "unit-inventor",
+					"type": "unit-inventor",
+					"x": 64,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 57,
+					"name": "unit-alchemist",
+					"type": "unit-alchemist",
+					"x": 704,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 58,
+					"name": "unit-inventor",
+					"type": "unit-inventor",
+					"x": 224,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 59,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 160,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 60,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 0,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 61,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 800,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 62,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 960,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 63,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 192,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 64,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 128,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 65,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 0,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 66,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 256,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 67,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 64,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 68,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 704,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 69,
+					"name": "unit-orc-guard-tower",
+					"type": "unit-orc-guard-tower",
+					"x": 896,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 70,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 768,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 71,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 832,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 72,
+					"name": "unit-pig-farm",
+					"type": "unit-pig-farm",
+					"x": 960,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				}
+			]
+		}
+	],
+	"nextlayerid": 3,
+	"nextobjectid": 73,
+	"orientation": "orthogonal",
+	"renderorder": "right-down",
+	"tiledversion": "1.5.0",
+	"tileheight": 32,
+	"tilesets": [
+		{
+			"columns": 16,
+			"firstgid": 1,
+			"image": "winter.png",
+			"imageheight": 768,
+			"imagewidth": 512,
+			"margin": 0,
+			"name": "winter",
+			"spacing": 0,
+			"tilecount": 384,
+			"tileheight": 32,
+			"tilewidth": 32
+		}
+	],
+	"tilewidth": 32,
+	"type": "map",
+	"version": 1.5,
+	"width": 32,
+	"properties": [
+		{
+			"name": "description",
+			"type": "string",
+			"value": "Go! Go! Go!"
+		},
+		{
+			"name": "numPlayers",
+			"type": "int",
+			"value": 4
+		},
+		{
+			"name": "p0_type",
+			"type": "string",
+			"value": "person"
+		},
+		{
+			"name": "p0_race",
+			"type": "string",
+			"value": "human"
+		},
+		{
+			"name": "p0_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p0_gold",
+			"type": "int",
+			"value": 28000
+		},
+		{
+			"name": "p0_wood",
+			"type": "int",
+			"value": 10000
+		},
+		{
+			"name": "p0_oil",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p0_startX",
+			"type": "int",
+			"value": 4
+		},
+		{
+			"name": "p0_startY",
+			"type": "int",
+			"value": 27
+		},
+		{
+			"name": "p1_type",
+			"type": "string",
+			"value": "person"
+		},
+		{
+			"name": "p1_race",
+			"type": "string",
+			"value": "orc"
+		},
+		{
+			"name": "p1_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p1_gold",
+			"type": "int",
+			"value": 28000
+		},
+		{
+			"name": "p1_wood",
+			"type": "int",
+			"value": 10000
+		},
+		{
+			"name": "p1_oil",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p1_startX",
+			"type": "int",
+			"value": 27
+		},
+		{
+			"name": "p1_startY",
+			"type": "int",
+			"value": 27
+		},
+		{
+			"name": "p2_type",
+			"type": "string",
+			"value": "person"
+		},
+		{
+			"name": "p2_race",
+			"type": "string",
+			"value": "human"
+		},
+		{
+			"name": "p2_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p2_gold",
+			"type": "int",
+			"value": 28000
+		},
+		{
+			"name": "p2_wood",
+			"type": "int",
+			"value": 10000
+		},
+		{
+			"name": "p2_oil",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p2_startX",
+			"type": "int",
+			"value": 4
+		},
+		{
+			"name": "p2_startY",
+			"type": "int",
+			"value": 4
+		},
+		{
+			"name": "p3_type",
+			"type": "string",
+			"value": "person"
+		},
+		{
+			"name": "p3_race",
+			"type": "string",
+			"value": "orc"
+		},
+		{
+			"name": "p3_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p3_gold",
+			"type": "int",
+			"value": 28000
+		},
+		{
+			"name": "p3_wood",
+			"type": "int",
+			"value": 10000
+		},
+		{
+			"name": "p3_oil",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p3_startX",
+			"type": "int",
+			"value": 27
+		},
+		{
+			"name": "p3_startY",
+			"type": "int",
+			"value": 4
+		},
+		{
+			"name": "p15_type",
+			"type": "string",
+			"value": "neutral"
+		},
+		{
+			"name": "p15_race",
+			"type": "string",
+			"value": "neutral"
+		}
+	]
+}

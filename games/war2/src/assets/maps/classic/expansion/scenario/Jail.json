@@ -1,0 +1,3486 @@
+{
+	"compressionlevel": -1,
+	"height": 32,
+	"infinite": false,
+	"layers": [
+		{
+			"data": [
+				256,
+				264,
+				247,
+				18,
+				256,
+				264,
+				247,
+				18,
+				255,
+				264,
+				246,
+				18,
+				256,
+				265,
+				247,
+				18,
+				255,
+				265,
+				246,
+				18,
+				256,
+				265,
+				247,
+				18,
+				255,
+				265,
+				246,
+				18,
+				256,
+				264,
+				247,
+				18,
+				260,
+				368,
+				248,
+				22,
+				260,
+				365,
+				250,
+				23,
+				261,
+				365,
+				249,
+				22,
+				259,
+				365,
+				248,
+				23,
+				260,
+				368,
+				248,
+				22,
+				260,
+				366,
+				248,
+				23,
+				261,
+				365,
+				250,
+				23,
+				259,
+				371,
+				249,
+				23,
+				242,
+				244,
+				239,
+				22,
+				241,
+				245,
+				239,
+				22,
+				242,
+				243,
+				240,
+				22,
+				242,
+				244,
+				240,
+				23,
+				242,
+				245,
+				239,
+				23,
+				241,
+				245,
+				239,
+				22,
+				241,
+				243,
+				239,
+				23,
+				241,
+				243,
+				240,
+				23,
+				19,
+				29,
+				29,
+				34,
+				29,
+				29,
+				29,
+				34,
+				28,
+				29,
+				29,
+				34,
+				29,
+				28,
+				29,
+				34,
+				29,
+				29,
+				29,
+				34,
+				29,
+				28,
+				29,
+				34,
+				28,
+				28,
+				28,
+				34,
+				29,
+				28,
+				29,
+				32,
+				255,
+				265,
+				246,
+				22,
+				256,
+				265,
+				247,
+				22,
+				256,
+				265,
+				246,
+				22,
+				255,
+				264,
+				246,
+				23,
+				255,
+				264,
+				247,
+				22,
+				256,
+				264,
+				247,
+				22,
+				256,
+				264,
+				247,
+				23,
+				256,
+				265,
+				247,
+				23,
+				259,
+				368,
+				248,
+				23,
+				261,
+				368,
+				250,
+				22,
+				261,
+				367,
+				248,
+				22,
+				260,
+				368,
+				248,
+				22,
+				261,
+				367,
+				248,
+				23,
+				260,
+				369,
+				250,
+				23,
+				259,
+				370,
+				249,
+				23,
+				261,
+				371,
+				249,
+				23,
+				241,
+				244,
+				240,
+				22,
+				242,
+				244,
+				239,
+				22,
+				241,
+				243,
+				240,
+				23,
+				242,
+				243,
+				239,
+				23,
+				242,
+				244,
+				240,
+				22,
+				242,
+				244,
+				239,
+				23,
+				241,
+				244,
+				240,
+				23,
+				241,
+				243,
+				240,
+				23,
+				19,
+				28,
+				28,
+				34,
+				29,
+				28,
+				28,
+				34,
+				28,
+				28,
+				28,
+				34,
+				28,
+				28,
+				29,
+				34,
+				28,
+				29,
+				28,
+				34,
+				29,
+				29,
+				28,
+				34,
+				29,
+				28,
+				29,
+				34,
+				29,
+				28,
+				28,
+				32,
+				256,
+				264,
+				247,
+				22,
+				255,
+				266,
+				247,
+				23,
+				255,
+				264,
+				246,
+				23,
+				256,
+				264,
+				246,
+				22,
+				255,
+				266,
+				247,
+				22,
+				256,
+				265,
+				247,
+				22,
+				255,
+				264,
+				247,
+				23,
+				256,
+				266,
+				246,
+				23,
+				260,
+				368,
+				249,
+				22,
+				260,
+				367,
+				248,
+				23,
+				259,
+				365,
+				249,
+				22,
+				261,
+				366,
+				250,
+				22,
+				259,
+				370,
+				250,
+				23,
+				259,
+				369,
+				249,
+				22,
+				261,
+				367,
+				249,
+				22,
+				259,
+				365,
+				248,
+				23,
+				242,
+				244,
+				239,
+				22,
+				242,
+				245,
+				239,
+				23,
+				242,
+				244,
+				240,
+				22,
+				242,
+				245,
+				239,
+				22,
+				241,
+				244,
+				239,
+				23,
+				242,
+				244,
+				240,
+				23,
+				242,
+				243,
+				240,
+				23,
+				242,
+				245,
+				239,
+				22,
+				19,
+				29,
+				29,
+				34,
+				28,
+				28,
+				28,
+				34,
+				28,
+				28,
+				28,
+				34,
+				29,
+				28,
+				28,
+				34,
+				29,
+				28,
+				29,
+				34,
+				28,
+				29,
+				29,
+				34,
+				28,
+				28,
+				29,
+				34,
+				29,
+				28,
+				29,
+				32,
+				255,
+				266,
+				247,
+				23,
+				256,
+				264,
+				247,
+				22,
+				256,
+				265,
+				247,
+				22,
+				255,
+				264,
+				246,
+				22,
+				255,
+				265,
+				247,
+				22,
+				256,
+				264,
+				247,
+				23,
+				255,
+				264,
+				246,
+				23,
+				255,
+				266,
+				247,
+				23,
+				261,
+				365,
+				248,
+				22,
+				260,
+				365,
+				250,
+				23,
+				260,
+				369,
+				248,
+				22,
+				259,
+				372,
+				248,
+				22,
+				261,
+				372,
+				249,
+				22,
+				259,
+				366,
+				249,
+				23,
+				260,
+				365,
+				250,
+				23,
+				259,
+				368,
+				250,
+				22,
+				241,
+				243,
+				239,
+				22,
+				241,
+				244,
+				240,
+				22,
+				241,
+				243,
+				240,
+				22,
+				242,
+				245,
+				239,
+				23,
+				241,
+				243,
+				240,
+				22,
+				242,
+				243,
+				240,
+				22,
+				242,
+				245,
+				239,
+				23,
+				242,
+				245,
+				240,
+				22,
+				19,
+				28,
+				29,
+				34,
+				29,
+				29,
+				28,
+				34,
+				28,
+				29,
+				29,
+				34,
+				28,
+				28,
+				29,
+				34,
+				28,
+				29,
+				28,
+				34,
+				28,
+				29,
+				28,
+				34,
+				29,
+				29,
+				29,
+				34,
+				29,
+				28,
+				29,
+				32,
+				256,
+				264,
+				247,
+				23,
+				255,
+				266,
+				247,
+				23,
+				256,
+				266,
+				246,
+				23,
+				255,
+				265,
+				246,
+				22,
+				256,
+				264,
+				246,
+				23,
+				256,
+				265,
+				247,
+				22,
+				255,
+				264,
+				246,
+				23,
+				255,
+				264,
+				247,
+				22,
+				261,
+				367,
+				249,
+				23,
+				260,
+				368,
+				249,
+				23,
+				261,
+				368,
+				248,
+				23,
+				259,
+				368,
+				249,
+				23,
+				261,
+				367,
+				249,
+				23,
+				259,
+				371,
+				248,
+				23,
+				259,
+				367,
+				250,
+				22,
+				259,
+				368,
+				249,
+				23,
+				241,
+				245,
+				239,
+				23,
+				241,
+				243,
+				239,
+				23,
+				242,
+				245,
+				240,
+				22,
+				242,
+				244,
+				239,
+				22,
+				242,
+				245,
+				240,
+				22,
+				241,
+				245,
+				240,
+				22,
+				241,
+				244,
+				239,
+				23,
+				242,
+				245,
+				240,
+				23,
+				19,
+				28,
+				28,
+				34,
+				28,
+				28,
+				29,
+				34,
+				29,
+				28,
+				29,
+				34,
+				28,
+				29,
+				28,
+				34,
+				28,
+				29,
+				28,
+				34,
+				28,
+				28,
+				28,
+				34,
+				28,
+				29,
+				28,
+				34,
+				29,
+				29,
+				29,
+				32,
+				255,
+				264,
+				246,
+				23,
+				256,
+				264,
+				247,
+				23,
+				255,
+				264,
+				247,
+				22,
+				256,
+				264,
+				247,
+				22,
+				256,
+				264,
+				247,
+				23,
+				256,
+				264,
+				246,
+				23,
+				255,
+				266,
+				246,
+				23,
+				256,
+				265,
+				246,
+				23,
+				260,
+				367,
+				248,
+				23,
+				260,
+				365,
+				249,
+				23,
+				261,
+				370,
+				250,
+				22,
+				260,
+				367,
+				248,
+				23,
+				261,
+				365,
+				250,
+				22,
+				261,
+				371,
+				249,
+				22,
+				261,
+				365,
+				248,
+				23,
+				260,
+				365,
+				249,
+				23,
+				241,
+				243,
+				239,
+				22,
+				241,
+				243,
+				240,
+				23,
+				241,
+				243,
+				240,
+				23,
+				242,
+				243,
+				239,
+				23,
+				241,
+				245,
+				240,
+				23,
+				241,
+				244,
+				240,
+				23,
+				241,
+				243,
+				239,
+				23,
+				241,
+				244,
+				240,
+				22,
+				19,
+				28,
+				28,
+				34,
+				28,
+				29,
+				29,
+				34,
+				28,
+				28,
+				29,
+				34,
+				29,
+				29,
+				28,
+				34,
+				29,
+				29,
+				28,
+				34,
+				29,
+				28,
+				28,
+				34,
+				28,
+				28,
+				28,
+				34,
+				29,
+				29,
+				28,
+				32,
+				255,
+				265,
+				247,
+				23,
+				255,
+				265,
+				247,
+				23,
+				255,
+				264,
+				246,
+				22,
+				255,
+				264,
+				247,
+				22,
+				256,
+				265,
+				246,
+				22,
+				256,
+				266,
+				246,
+				23,
+				256,
+				266,
+				247,
+				22,
+				255,
+				264,
+				246,
+				22,
+				260,
+				368,
+				250,
+				22,
+				261,
+				371,
+				250,
+				22,
+				261,
+				370,
+				250,
+				23,
+				259,
+				367,
+				249,
+				23,
+				260,
+				365,
+				250,
+				22,
+				261,
+				367,
+				250,
+				22,
+				261,
+				367,
+				250,
+				22,
+				259,
+				365,
+				249,
+				22,
+				242,
+				245,
+				240,
+				23,
+				242,
+				245,
+				240,
+				22,
+				242,
+				245,
+				239,
+				23,
+				241,
+				243,
+				240,
+				22,
+				242,
+				243,
+				239,
+				23,
+				241,
+				245,
+				240,
+				23,
+				241,
+				245,
+				240,
+				22,
+				242,
+				245,
+				240,
+				22,
+				19,
+				29,
+				29,
+				34,
+				28,
+				29,
+				29,
+				34,
+				28,
+				28,
+				29,
+				34,
+				29,
+				28,
+				28,
+				34,
+				28,
+				29,
+				29,
+				34,
+				29,
+				28,
+				28,
+				34,
+				29,
+				29,
+				29,
+				34,
+				29,
+				29,
+				29,
+				32,
+				255,
+				264,
+				246,
+				23,
+				256,
+				266,
+				246,
+				23,
+				255,
+				265,
+				246,
+				23,
+				256,
+				265,
+				247,
+				23,
+				255,
+				266,
+				246,
+				23,
+				255,
+				266,
+				246,
+				23,
+				255,
+				264,
+				247,
+				22,
+				255,
+				265,
+				247,
+				23,
+				260,
+				368,
+				248,
+				22,
+				261,
+				370,
+				250,
+				22,
+				260,
+				367,
+				250,
+				23,
+				260,
+				365,
+				248,
+				23,
+				259,
+				371,
+				248,
+				22,
+				260,
+				372,
+				249,
+				23,
+				261,
+				367,
+				250,
+				23,
+				261,
+				368,
+				248,
+				23,
+				241,
+				244,
+				239,
+				22,
+				241,
+				244,
+				240,
+				23,
+				242,
+				243,
+				240,
+				23,
+				242,
+				244,
+				239,
+				23,
+				241,
+				245,
+				239,
+				22,
+				241,
+				243,
+				240,
+				22,
+				241,
+				243,
+				239,
+				23,
+				241,
+				244,
+				240,
+				23,
+				19,
+				28,
+				29,
+				33,
+				29,
+				29,
+				28,
+				33,
+				28,
+				28,
+				29,
+				33,
+				29,
+				29,
+				28,
+				33,
+				29,
+				29,
+				28,
+				33,
+				29,
+				29,
+				29,
+				33,
+				28,
+				29,
+				29,
+				33,
+				28,
+				28,
+				28,
+				31
+			],
+			"height": 32,
+			"id": 1,
+			"name": "terrain",
+			"opacity": 1,
+			"type": "tilelayer",
+			"visible": true,
+			"width": 32,
+			"x": 0,
+			"y": 0
+		},
+		{
+			"id": 2,
+			"name": "units",
+			"opacity": 1,
+			"type": "objectgroup",
+			"visible": true,
+			"x": 0,
+			"y": 0,
+			"objects": [
+				{
+					"id": 1,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 0,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 2,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 768,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 3,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 512,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 4,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 256,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 5,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 928,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 6,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 672,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 7,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 416,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 8,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 160,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 9,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 800,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 10,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 544,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 11,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 288,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 12,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 32,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 13,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 832,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 14,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 576,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 15,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 320,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 16,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 64,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 17,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 896,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 18,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 640,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 19,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 384,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 20,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 128,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 21,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 800,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 22,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 544,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 23,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 288,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 24,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 32,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 25,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 928,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 26,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 672,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 27,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 416,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 28,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 160,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 29,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 960,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 30,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 704,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 31,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 448,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 32,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 192,
+					"y": 192,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 33,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 768,
+					"y": 256,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 34,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 512,
+					"y": 256,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 35,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 256,
+					"y": 256,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 36,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 64,
+					"y": 256,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 37,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 928,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 38,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 672,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 39,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 416,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 40,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 160,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 41,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 800,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 42,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 544,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 43,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 32,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 44,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 288,
+					"y": 288,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 45,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 832,
+					"y": 320,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 46,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 576,
+					"y": 320,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 47,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 320,
+					"y": 320,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 48,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 0,
+					"y": 320,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 49,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 128,
+					"y": 384,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 50,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 384,
+					"y": 384,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 51,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 640,
+					"y": 384,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 52,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 896,
+					"y": 384,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 53,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 928,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 54,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 800,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 55,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 544,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 56,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 32,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 57,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 288,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 58,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 672,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 59,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 160,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 60,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 416,
+					"y": 416,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 61,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 192,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 62,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 448,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 63,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 960,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 64,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 704,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 65,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 0,
+					"y": 512,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 66,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 256,
+					"y": 512,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 67,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 768,
+					"y": 512,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 68,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 512,
+					"y": 512,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 69,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 928,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 70,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 672,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 71,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 416,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 72,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 160,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 73,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 800,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 74,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 32,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 75,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 288,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 76,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 544,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 77,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 64,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 78,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 320,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 79,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 576,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 80,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 832,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 81,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 128,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 82,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 384,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 83,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 640,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 84,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 896,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 85,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 928,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 86,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 800,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 87,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 544,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 88,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 32,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 89,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 288,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 90,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 160,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 91,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 416,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 92,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 672,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 93,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 192,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 94,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 448,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 95,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 704,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 96,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 960,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 97,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 256,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 98,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 0,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 99,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 768,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 100,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 512,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 101,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 928,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 102,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 672,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 103,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 416,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 104,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 160,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 105,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 32,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 106,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 288,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 107,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 544,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 108,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 800,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 109,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 64,
+					"y": 832,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 110,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 320,
+					"y": 832,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 111,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 576,
+					"y": 832,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 112,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 832,
+					"y": 832,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 113,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 128,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 114,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 384,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 115,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 640,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 116,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 896,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 117,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 800,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 118,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 544,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 119,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 288,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 120,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 32,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 121,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 160,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 122,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 416,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 123,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 672,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 124,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 928,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 125,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 192,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 126,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 448,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 127,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 704,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 128,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 960,
+					"y": 960,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				}
+			]
+		}
+	],
+	"nextlayerid": 3,
+	"nextobjectid": 129,
+	"orientation": "orthogonal",
+	"renderorder": "right-down",
+	"tiledversion": "1.5.0",
+	"tileheight": 32,
+	"tilesets": [
+		{
+			"columns": 16,
+			"firstgid": 1,
+			"image": "summer.png",
+			"imageheight": 768,
+			"imagewidth": 512,
+			"margin": 0,
+			"name": "summer",
+			"spacing": 0,
+			"tilecount": 384,
+			"tileheight": 32,
+			"tilewidth": 32
+		}
+	],
+	"tilewidth": 32,
+	"type": "map",
+	"version": 1.5,
+	"width": 32,
+	"properties": [
+		{
+			"name": "description",
+			"type": "string",
+			"value": "Tear Down the Wall!"
+		},
+		{
+			"name": "numPlayers",
+			"type": "int",
+			"value": 2
+		},
+		{
+			"name": "p0_type",
+			"type": "string",
+			"value": "person"
+		},
+		{
+			"name": "p0_race",
+			"type": "string",
+			"value": "human"
+		},
+		{
+			"name": "p0_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p0_gold",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p0_wood",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p0_oil",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p0_startX",
+			"type": "int",
+			"value": 1
+		},
+		{
+			"name": "p0_startY",
+			"type": "int",
+			"value": 1
+		},
+		{
+			"name": "p1_type",
+			"type": "string",
+			"value": "computer"
+		},
+		{
+			"name": "p1_race",
+			"type": "string",
+			"value": "human"
+		},
+		{
+			"name": "p1_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p1_gold",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p1_wood",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p1_oil",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p1_startX",
+			"type": "int",
+			"value": 9
+		},
+		{
+			"name": "p1_startY",
+			"type": "int",
+			"value": 5
+		},
+		{
+			"name": "p15_type",
+			"type": "string",
+			"value": "neutral"
+		},
+		{
+			"name": "p15_race",
+			"type": "string",
+			"value": "neutral"
+		}
+	]
+}

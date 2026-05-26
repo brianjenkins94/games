@@ -1,0 +1,2910 @@
+{
+	"compressionlevel": -1,
+	"height": 32,
+	"infinite": false,
+	"layers": [
+		{
+			"data": [
+				349,
+				347,
+				254,
+				262,
+				262,
+				263,
+				264,
+				244,
+				348,
+				347,
+				348,
+				349,
+				349,
+				286,
+				331,
+				333,
+				331,
+				332,
+				276,
+				349,
+				253,
+				263,
+				260,
+				241,
+				347,
+				348,
+				348,
+				347,
+				254,
+				262,
+				262,
+				245,
+				258,
+				259,
+				261,
+				372,
+				264,
+				248,
+				238,
+				234,
+				349,
+				250,
+				258,
+				242,
+				348,
+				285,
+				331,
+				333,
+				332,
+				333,
+				275,
+				348,
+				255,
+				262,
+				262,
+				260,
+				259,
+				242,
+				349,
+				348,
+				237,
+				256,
+				366,
+				243,
+				264,
+				263,
+				263,
+				262,
+				248,
+				234,
+				348,
+				347,
+				348,
+				253,
+				263,
+				243,
+				348,
+				267,
+				289,
+				332,
+				332,
+				280,
+				266,
+				249,
+				261,
+				262,
+				264,
+				262,
+				263,
+				260,
+				241,
+				347,
+				348,
+				236,
+				239,
+				235,
+				263,
+				373,
+				264,
+				262,
+				260,
+				241,
+				348,
+				349,
+				249,
+				261,
+				262,
+				245,
+				347,
+				349,
+				287,
+				331,
+				332,
+				274,
+				349,
+				253,
+				262,
+				264,
+				264,
+				248,
+				256,
+				262,
+				260,
+				242,
+				348,
+				347,
+				348,
+				348,
+				264,
+				264,
+				262,
+				263,
+				262,
+				243,
+				250,
+				257,
+				261,
+				263,
+				263,
+				245,
+				349,
+				349,
+				286,
+				332,
+				332,
+				275,
+				347,
+				255,
+				368,
+				263,
+				248,
+				235,
+				237,
+				256,
+				364,
+				260,
+				258,
+				241,
+				348,
+				347,
+				263,
+				370,
+				264,
+				248,
+				239,
+				235,
+				254,
+				263,
+				369,
+				263,
+				262,
+				244,
+				347,
+				347,
+				286,
+				333,
+				333,
+				275,
+				347,
+				236,
+				256,
+				263,
+				260,
+				241,
+				347,
+				237,
+				256,
+				264,
+				263,
+				245,
+				349,
+				348,
+				264,
+				248,
+				240,
+				251,
+				258,
+				241,
+				237,
+				239,
+				256,
+				263,
+				248,
+				235,
+				348,
+				347,
+				285,
+				332,
+				331,
+				275,
+				349,
+				349,
+				254,
+				264,
+				262,
+				243,
+				347,
+				348,
+				254,
+				363,
+				248,
+				235,
+				349,
+				349,
+				238,
+				235,
+				347,
+				253,
+				263,
+				244,
+				347,
+				349,
+				236,
+				239,
+				234,
+				347,
+				349,
+				347,
+				287,
+				333,
+				331,
+				276,
+				349,
+				347,
+				237,
+				240,
+				240,
+				234,
+				348,
+				348,
+				237,
+				240,
+				235,
+				348,
+				348,
+				349,
+				347,
+				349,
+				349,
+				237,
+				238,
+				235,
+				347,
+				347,
+				349,
+				347,
+				349,
+				347,
+				347,
+				347,
+				268,
+				288,
+				280,
+				265,
+				347,
+				347,
+				349,
+				349,
+				348,
+				347,
+				349,
+				347,
+				347,
+				349,
+				347,
+				349,
+				348,
+				348,
+				349,
+				349,
+				348,
+				349,
+				349,
+				348,
+				349,
+				347,
+				349,
+				349,
+				349,
+				349,
+				348,
+				348,
+				348,
+				286,
+				276,
+				348,
+				349,
+				348,
+				349,
+				349,
+				349,
+				349,
+				347,
+				347,
+				348,
+				347,
+				348,
+				349,
+				349,
+				347,
+				347,
+				348,
+				348,
+				347,
+				349,
+				348,
+				349,
+				348,
+				349,
+				349,
+				348,
+				347,
+				348,
+				349,
+				349,
+				287,
+				276,
+				347,
+				349,
+				349,
+				348,
+				347,
+				347,
+				349,
+				348,
+				349,
+				349,
+				347,
+				347,
+				347,
+				347,
+				349,
+				348,
+				347,
+				348,
+				349,
+				349,
+				348,
+				349,
+				349,
+				348,
+				349,
+				347,
+				349,
+				348,
+				347,
+				348,
+				287,
+				276,
+				347,
+				347,
+				348,
+				249,
+				257,
+				242,
+				347,
+				348,
+				349,
+				347,
+				349,
+				249,
+				241,
+				348,
+				349,
+				349,
+				347,
+				349,
+				349,
+				347,
+				347,
+				347,
+				349,
+				348,
+				349,
+				349,
+				347,
+				349,
+				347,
+				347,
+				285,
+				275,
+				348,
+				349,
+				347,
+				237,
+				239,
+				235,
+				347,
+				347,
+				347,
+				349,
+				349,
+				236,
+				235,
+				348,
+				347,
+				20,
+				28,
+				28,
+				28,
+				28,
+				29,
+				28,
+				28,
+				29,
+				29,
+				29,
+				29,
+				30,
+				28,
+				26,
+				268,
+				266,
+				19,
+				28,
+				30,
+				29,
+				29,
+				29,
+				28,
+				29,
+				29,
+				28,
+				28,
+				28,
+				28,
+				28,
+				27,
+				23,
+				349,
+				250,
+				259,
+				259,
+				257,
+				257,
+				259,
+				259,
+				241,
+				347,
+				349,
+				23,
+				348,
+				249,
+				258,
+				242,
+				349,
+				348,
+				23,
+				347,
+				347,
+				249,
+				258,
+				257,
+				259,
+				257,
+				258,
+				241,
+				349,
+				348,
+				23,
+				23,
+				349,
+				237,
+				256,
+				264,
+				263,
+				262,
+				264,
+				264,
+				245,
+				348,
+				348,
+				22,
+				347,
+				254,
+				264,
+				260,
+				242,
+				347,
+				22,
+				347,
+				347,
+				237,
+				256,
+				369,
+				263,
+				262,
+				264,
+				245,
+				347,
+				349,
+				22,
+				22,
+				348,
+				348,
+				254,
+				264,
+				264,
+				263,
+				264,
+				263,
+				260,
+				242,
+				347,
+				23,
+				348,
+				237,
+				256,
+				371,
+				245,
+				347,
+				23,
+				347,
+				348,
+				348,
+				236,
+				256,
+				264,
+				262,
+				262,
+				244,
+				349,
+				348,
+				23,
+				23,
+				347,
+				348,
+				253,
+				263,
+				248,
+				240,
+				239,
+				256,
+				263,
+				243,
+				349,
+				21,
+				250,
+				257,
+				261,
+				264,
+				245,
+				349,
+				21,
+				347,
+				349,
+				250,
+				258,
+				261,
+				262,
+				262,
+				248,
+				235,
+				349,
+				349,
+				23,
+				23,
+				347,
+				349,
+				253,
+				262,
+				260,
+				242,
+				349,
+				254,
+				264,
+				260,
+				242,
+				347,
+				253,
+				264,
+				262,
+				262,
+				244,
+				348,
+				349,
+				347,
+				249,
+				261,
+				264,
+				264,
+				262,
+				248,
+				235,
+				347,
+				349,
+				349,
+				23,
+				23,
+				347,
+				347,
+				237,
+				256,
+				264,
+				245,
+				347,
+				254,
+				263,
+				262,
+				245,
+				347,
+				237,
+				256,
+				263,
+				263,
+				243,
+				349,
+				347,
+				347,
+				254,
+				262,
+				264,
+				262,
+				248,
+				235,
+				347,
+				348,
+				347,
+				349,
+				22,
+				23,
+				347,
+				347,
+				349,
+				255,
+				263,
+				260,
+				259,
+				261,
+				369,
+				248,
+				234,
+				18,
+				347,
+				236,
+				256,
+				368,
+				245,
+				349,
+				18,
+				349,
+				237,
+				256,
+				263,
+				264,
+				244,
+				347,
+				347,
+				349,
+				347,
+				348,
+				23,
+				22,
+				347,
+				347,
+				347,
+				254,
+				263,
+				263,
+				263,
+				248,
+				240,
+				234,
+				347,
+				23,
+				348,
+				348,
+				254,
+				262,
+				244,
+				348,
+				23,
+				347,
+				349,
+				237,
+				239,
+				256,
+				260,
+				259,
+				259,
+				259,
+				242,
+				347,
+				22,
+				22,
+				349,
+				347,
+				347,
+				253,
+				264,
+				363,
+				262,
+				243,
+				349,
+				347,
+				348,
+				23,
+				347,
+				249,
+				261,
+				262,
+				243,
+				347,
+				22,
+				348,
+				347,
+				347,
+				348,
+				254,
+				262,
+				262,
+				264,
+				264,
+				245,
+				349,
+				22,
+				23,
+				349,
+				347,
+				349,
+				237,
+				256,
+				262,
+				262,
+				244,
+				349,
+				347,
+				348,
+				22,
+				347,
+				254,
+				370,
+				248,
+				235,
+				347,
+				23,
+				349,
+				347,
+				347,
+				349,
+				236,
+				256,
+				367,
+				263,
+				262,
+				245,
+				347,
+				22,
+				23,
+				348,
+				348,
+				348,
+				348,
+				236,
+				256,
+				263,
+				243,
+				347,
+				348,
+				347,
+				22,
+				349,
+				236,
+				240,
+				234,
+				348,
+				348,
+				22,
+				349,
+				349,
+				348,
+				347,
+				349,
+				255,
+				264,
+				248,
+				239,
+				234,
+				348,
+				23,
+				23,
+				349,
+				348,
+				249,
+				257,
+				258,
+				261,
+				262,
+				243,
+				349,
+				349,
+				20,
+				33,
+				26,
+				347,
+				347,
+				19,
+				28,
+				28,
+				33,
+				27,
+				348,
+				349,
+				249,
+				257,
+				261,
+				262,
+				260,
+				257,
+				242,
+				349,
+				23,
+				22,
+				348,
+				347,
+				253,
+				373,
+				264,
+				262,
+				263,
+				245,
+				349,
+				348,
+				23,
+				347,
+				348,
+				347,
+				347,
+				348,
+				347,
+				348,
+				347,
+				23,
+				347,
+				347,
+				254,
+				262,
+				248,
+				239,
+				256,
+				264,
+				244,
+				349,
+				22,
+				23,
+				348,
+				250,
+				261,
+				263,
+				264,
+				364,
+				262,
+				260,
+				242,
+				347,
+				23,
+				348,
+				249,
+				258,
+				257,
+				257,
+				259,
+				242,
+				348,
+				23,
+				347,
+				249,
+				261,
+				263,
+				260,
+				259,
+				261,
+				264,
+				243,
+				347,
+				22,
+				23,
+				348,
+				254,
+				264,
+				248,
+				239,
+				256,
+				264,
+				262,
+				243,
+				347,
+				23,
+				348,
+				253,
+				263,
+				263,
+				264,
+				262,
+				244,
+				347,
+				23,
+				347,
+				254,
+				262,
+				248,
+				256,
+				264,
+				365,
+				263,
+				243,
+				349,
+				23,
+				22,
+				347,
+				237,
+				239,
+				235,
+				347,
+				236,
+				239,
+				238,
+				235,
+				348,
+				22,
+				348,
+				236,
+				239,
+				239,
+				256,
+				264,
+				243,
+				347,
+				23,
+				347,
+				237,
+				239,
+				234,
+				236,
+				239,
+				238,
+				240,
+				235,
+				348,
+				22,
+				22,
+				349,
+				348,
+				347,
+				347,
+				347,
+				349,
+				348,
+				347,
+				349,
+				347,
+				22,
+				347,
+				349,
+				347,
+				349,
+				236,
+				240,
+				235,
+				348,
+				22,
+				347,
+				349,
+				347,
+				347,
+				349,
+				348,
+				349,
+				347,
+				349,
+				349,
+				23,
+				24,
+				29,
+				28,
+				28,
+				28,
+				28,
+				28,
+				29,
+				29,
+				29,
+				28,
+				33,
+				28,
+				28,
+				28,
+				28,
+				29,
+				29,
+				29,
+				28,
+				33,
+				28,
+				29,
+				29,
+				28,
+				29,
+				29,
+				29,
+				28,
+				29,
+				29,
+				31
+			],
+			"height": 32,
+			"id": 1,
+			"name": "terrain",
+			"opacity": 1,
+			"type": "tilelayer",
+			"visible": true,
+			"width": 32,
+			"x": 0,
+			"y": 0
+		},
+		{
+			"id": 2,
+			"name": "units",
+			"opacity": 1,
+			"type": "objectgroup",
+			"visible": true,
+			"x": 0,
+			"y": 0,
+			"objects": [
+				{
+					"id": 1,
+					"name": "unit-death-knight",
+					"type": "unit-death-knight",
+					"x": 512,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 2,
+					"name": "unit-death-knight",
+					"type": "unit-death-knight",
+					"x": 448,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 3,
+					"name": "unit-goblin-sappers",
+					"type": "unit-goblin-sappers",
+					"x": 800,
+					"y": 0,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 4,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 256,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 5,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 288,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 6,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 320,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 7,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 704,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 8,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 672,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 9,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 640,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 10,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 576,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 11,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 544,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 12,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 512,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 13,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 480,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 14,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 448,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 15,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 416,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 16,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 384,
+					"y": 32,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 17,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 288,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 18,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 256,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 19,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 320,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 20,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 672,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 21,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 704,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 22,
+					"name": "unit-axethrower",
+					"type": "unit-axethrower",
+					"x": 640,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 23,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 448,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 24,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 480,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 25,
+					"name": "unit-grunt",
+					"type": "unit-grunt",
+					"x": 512,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 26,
+					"name": "unit-catapult",
+					"type": "unit-catapult",
+					"x": 352,
+					"y": 96,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 27,
+					"name": "unit-catapult",
+					"type": "unit-catapult",
+					"x": 608,
+					"y": 96,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 28,
+					"name": "unit-dragon",
+					"type": "unit-dragon",
+					"x": 192,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 29,
+					"name": "unit-dragon",
+					"type": "unit-dragon",
+					"x": 768,
+					"y": 64,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 30,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 544,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 31,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 512,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 32,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 480,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 33,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 448,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 34,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 416,
+					"y": 128,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 35,
+					"name": "unit-ogre",
+					"type": "unit-ogre",
+					"x": 480,
+					"y": 160,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 0
+						}
+					]
+				},
+				{
+					"id": 36,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 544,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 37,
+					"name": "unit-human-guard-tower",
+					"type": "unit-human-guard-tower",
+					"x": 416,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 38,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 960,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 39,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 896,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 40,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 800,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 41,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 736,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 42,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 320,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 43,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 256,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 44,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 192,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 45,
+					"name": "unit-archer",
+					"type": "unit-archer",
+					"x": 128,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 46,
+					"name": "unit-peasant",
+					"type": "unit-peasant",
+					"x": 864,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 47,
+					"name": "unit-human-blacksmith",
+					"type": "unit-human-blacksmith",
+					"x": 640,
+					"y": 448,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 48,
+					"name": "unit-peasant",
+					"type": "unit-peasant",
+					"x": 160,
+					"y": 480,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 49,
+					"name": "unit-peasant",
+					"type": "unit-peasant",
+					"x": 352,
+					"y": 480,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 50,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 224,
+					"y": 480,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 51,
+					"name": "unit-elven-lumber-mill",
+					"type": "unit-elven-lumber-mill",
+					"x": 64,
+					"y": 480,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 52,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 768,
+					"y": 512,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 53,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 832,
+					"y": 512,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 54,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 512,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 55,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 480,
+					"y": 544,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 56,
+					"name": "unit-peasant",
+					"type": "unit-peasant",
+					"x": 96,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 57,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 768,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 58,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 832,
+					"y": 576,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 59,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 576,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 60,
+					"name": "unit-footman",
+					"type": "unit-footman",
+					"x": 416,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 61,
+					"name": "unit-mage",
+					"type": "unit-mage",
+					"x": 224,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 62,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 64,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 63,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 128,
+					"y": 608,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 64,
+					"name": "unit-mage",
+					"type": "unit-mage",
+					"x": 256,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 65,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 768,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 66,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 832,
+					"y": 640,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 67,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 576,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 68,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 640,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 69,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 352,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 70,
+					"name": "unit-peasant",
+					"type": "unit-peasant",
+					"x": 736,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 71,
+					"name": "unit-peasant",
+					"type": "unit-peasant",
+					"x": 928,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 72,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 64,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 73,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 128,
+					"y": 672,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 74,
+					"name": "unit-church",
+					"type": "unit-church",
+					"x": 256,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 75,
+					"name": "unit-stables",
+					"type": "unit-stables",
+					"x": 640,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 76,
+					"name": "unit-human-barracks",
+					"type": "unit-human-barracks",
+					"x": 512,
+					"y": 704,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 77,
+					"name": "unit-peasant",
+					"type": "unit-peasant",
+					"x": 224,
+					"y": 736,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 78,
+					"name": "unit-ballista",
+					"type": "unit-ballista",
+					"x": 416,
+					"y": 736,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 79,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 192,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 80,
+					"name": "unit-knight",
+					"type": "unit-knight",
+					"x": 352,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 81,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 64,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 82,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 128,
+					"y": 768,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 83,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 896,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 84,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 768,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 85,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 832,
+					"y": 800,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 86,
+					"name": "unit-human-cannon-tower",
+					"type": "unit-human-cannon-tower",
+					"x": 576,
+					"y": 832,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 87,
+					"name": "unit-human-cannon-tower",
+					"type": "unit-human-cannon-tower",
+					"x": 384,
+					"y": 832,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 88,
+					"name": "unit-castle",
+					"type": "unit-castle",
+					"x": 448,
+					"y": 864,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 89,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 160,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 90,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 224,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 91,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 768,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 92,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 704,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 93,
+					"name": "unit-human-barracks",
+					"type": "unit-human-barracks",
+					"x": 896,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 94,
+					"name": "unit-mage-tower",
+					"type": "unit-mage-tower",
+					"x": 32,
+					"y": 896,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 95,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 576,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": 96,
+					"name": "unit-farm",
+					"type": "unit-farm",
+					"x": 384,
+					"y": 928,
+					"width": 32,
+					"height": 32,
+					"visible": true,
+					"rotation": 0,
+					"properties": [
+						{
+							"name": "owner",
+							"type": "int",
+							"value": 1
+						}
+					]
+				}
+			]
+		}
+	],
+	"nextlayerid": 3,
+	"nextobjectid": 97,
+	"orientation": "orthogonal",
+	"renderorder": "right-down",
+	"tiledversion": "1.5.0",
+	"tileheight": 32,
+	"tilesets": [
+		{
+			"columns": 16,
+			"firstgid": 1,
+			"image": "wasteland.png",
+			"imageheight": 768,
+			"imagewidth": 512,
+			"margin": 0,
+			"name": "wasteland",
+			"spacing": 0,
+			"tilecount": 384,
+			"tileheight": 32,
+			"tilewidth": 32
+		}
+	],
+	"tilewidth": 32,
+	"type": "map",
+	"version": 1.5,
+	"width": 32,
+	"properties": [
+		{
+			"name": "description",
+			"type": "string",
+			"value": "Smash a Well Garrisoned Village"
+		},
+		{
+			"name": "numPlayers",
+			"type": "int",
+			"value": 2
+		},
+		{
+			"name": "p0_type",
+			"type": "string",
+			"value": "person"
+		},
+		{
+			"name": "p0_race",
+			"type": "string",
+			"value": "orc"
+		},
+		{
+			"name": "p0_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p0_gold",
+			"type": "int",
+			"value": 0
+		},
+		{
+			"name": "p0_wood",
+			"type": "int",
+			"value": 0
+		},
+		{
+			"name": "p0_oil",
+			"type": "int",
+			"value": 0
+		},
+		{
+			"name": "p0_startX",
+			"type": "int",
+			"value": 15
+		},
+		{
+			"name": "p0_startY",
+			"type": "int",
+			"value": 4
+		},
+		{
+			"name": "p1_type",
+			"type": "string",
+			"value": "computer"
+		},
+		{
+			"name": "p1_race",
+			"type": "string",
+			"value": "human"
+		},
+		{
+			"name": "p1_ai",
+			"type": "string",
+			"value": "wc2-land-attack"
+		},
+		{
+			"name": "p1_gold",
+			"type": "int",
+			"value": 20000
+		},
+		{
+			"name": "p1_wood",
+			"type": "int",
+			"value": 10000
+		},
+		{
+			"name": "p1_oil",
+			"type": "int",
+			"value": 1000
+		},
+		{
+			"name": "p1_startX",
+			"type": "int",
+			"value": 15
+		},
+		{
+			"name": "p1_startY",
+			"type": "int",
+			"value": 24
+		},
+		{
+			"name": "p15_type",
+			"type": "string",
+			"value": "neutral"
+		},
+		{
+			"name": "p15_race",
+			"type": "string",
+			"value": "neutral"
+		}
+	]
+}
