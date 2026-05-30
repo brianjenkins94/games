@@ -16932,15 +16932,15 @@
 	"tileheight": 32,
 	"tilesets": [
 		{
-			"columns": 16,
+			"columns": 19,
 			"firstgid": 1,
-			"image": "wasteland.png",
-			"imageheight": 768,
-			"imagewidth": 512,
+			"image": "../../../tilesets/wasteland.png",
+			"imageheight": 659,
+			"imagewidth": 626,
 			"margin": 0,
 			"name": "wasteland",
-			"spacing": 0,
-			"tilecount": 384,
+			"spacing": 1,
+			"tilecount": 380,
 			"tileheight": 32,
 			"tilewidth": 32
 		}

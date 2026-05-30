@@ -16955,15 +16955,15 @@
 	"tileheight": 32,
 	"tilesets": [
 		{
-			"columns": 16,
+			"columns": 20,
 			"firstgid": 1,
-			"image": "swamp.png",
-			"imageheight": 768,
-			"imagewidth": 512,
+			"image": "../tilesets/swamp.png",
+			"imageheight": 659,
+			"imagewidth": 659,
 			"margin": 0,
 			"name": "swamp",
-			"spacing": 0,
-			"tilecount": 384,
+			"spacing": 1,
+			"tilecount": 400,
 			"tileheight": 32,
 			"tilewidth": 32
 		}
