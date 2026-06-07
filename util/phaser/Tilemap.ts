@@ -1,4 +1,4 @@
-import { Scene } from "phaser";
+import Phaser from "phaser";
 import { addEntity, addComponent } from "bitecs";
 
 // https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
@@ -169,7 +169,7 @@ export type EntityConfig = Record<string, {
 }>;
 
 export function load(
-    scene: Scene,
+    scene: Phaser.Scene,
     levelName: string,
     tilemapData: Tilemap,
     entityConfig: EntityConfig
@@ -189,8 +189,13 @@ export function load(
         // ── Visual tile layers ────────────────────────────────────────────────
         const map = scene.make.tilemap({ key: levelName });
 
-        for (const { name } of tilemapData.tilesets) {
-            map.addTilesetImage(name);
+        for (const { name, tilewidth, tileheight, margin, spacing } of tilemapData.tilesets) {
+            map.addTilesetImage(
+                name, name,
+                tilewidth, tileheight,
+                margin,
+                spacing,
+            );
         }
 
         for (const layerData of tilemapData.layers) {

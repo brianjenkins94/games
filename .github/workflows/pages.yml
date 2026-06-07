@@ -15,35 +15,31 @@
 		"id-token": "write"
 	},
 	"jobs": {
-		"build": {
-			"runs-on": "ubuntu-latest",
-			"steps": [
-				{ "uses": "actions/checkout@v4", "with": { "ref": "main" } },
-				{ "uses": "actions/setup-node@v4", "with": { "node-version": "22" } },
-
-				{ "run": "npm install" }, #{ "uses": "bahmutov/npm-install@v1", "with": { "useLockFile": false } },
-				{ "run": "npm run build" },
-				#{ "run": "npx tsx util/tree.ts" },
-				{
-					"uses": "actions/upload-pages-artifact@v3",
-					"with": {
-						"path": "./games"
-					}
-				}
-			],
-			"timeout-minutes": 15
-		},
 		"deploy": {
 			"runs-on": "ubuntu-latest",
 			"environment": {
 				"name": "github-pages",
-				"url": "${{ steps.deployment.outputs.page_url }}"
+				"url": "${{ steps.deploy.outputs.page_url }}"
 			},
-			"needs": ["build"],
 			"steps": [
+				{ "uses": "actions/checkout@v4", "with": { "ref": "main" } },
+				{ "uses": "actions/setup-node@v4", "with": { "node-version": "lts/*" } },
+				{ "uses": "pnpm/action-setup@v4", "with": { "version": "latest", "run_install": false } },
 				{
-					"id": "deployment",
-					"uses": "actions/deploy-pages@v4"
+					"uses": "actions/cache@v4",
+					"with": {
+						"path": "~/.pnpm-store",
+						"key": "pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}",
+						"restore-keys": "pnpm-store-${{ runner.os }}-"
+					}
+				},
+				{ "run": "pnpm config set --location=project --json allowBuilds \"{ \\\"esbuild\\\": true }\"" },
+				{ "run": "pnpm install" },
+				{ "run": "pnpm run build" },
+				{
+					"uses": "brianjenkins94/lib/.github/actions/pages-deploy@main",
+					"id": "deploy",
+					"with": { "path": "docs" }
 				}
 			],
 			"timeout-minutes": 15

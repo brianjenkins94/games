@@ -4,29 +4,29 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "tsup --config games/dozer/tsup.config.ts --format esm --treeshake",
-    "serve": "npx http-server . -c-1 -o games/dozer/",
-    "watch": "tsup --config games/dozer/tsup.config.ts --format esm --treeshake --watch"
+    "build": "npx tsx scripts/build.ts",
+    "postinstall": "#npx tsx scripts/postinstall.ts",
+    "purge": "find . \\( -name \"node_modules\" -or -name \"deno.lock\" -or -name \"dist\" -or -name \"package-lock.json\" \\) -prune -exec rm -rf \"{}\" +;"
   },
   "devDependencies": {
+    "@brianjenkins94/util": "https://brianjenkins94.github.io/lib/util@latest.tgz",
+    "@colyseus/schema": "latest",
+    "@modelcontextprotocol/sdk": "latest",
     "@tsconfig/node-lts": "latest",
     "@types/node": "latest",
     "@typescript-eslint/eslint-plugin": "latest",
     "@typescript-eslint/parser": "latest",
-    "bitecs": "latest",
-    "phaser": "latest",
+    "bitecs": "^0.4.0",
+    "peerjs": "latest",
+    "phaser": "^4.1.0",
     "tsup": "latest",
     "tsx": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vite": "latest"
   },
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.0.0"
   },
-  "sideEffects": false,
-  "overrides": {
-    "grid-engine": {
-      "phaser": "latest"
-    }
-  }
+  "sideEffects": false
 }
