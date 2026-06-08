@@ -29,6 +29,7 @@ export async function buildApp(appRoot: string, repoRoot: string): Promise<void>
         build: {
             outDir: resolve(repoRoot, "docs", name),
             emptyOutDir: true,
+            assetsInlineLimit: 0,
             minify: false,
             modulePreload: { polyfill: false },
             rollupOptions: {
