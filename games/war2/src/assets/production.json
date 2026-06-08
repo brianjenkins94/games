@@ -1,0 +1,371 @@
+{
+	"unit-dwarves": {
+		"casts": [
+			"spell-suicide-bomber"
+		]
+	},
+	"unit-paladin": {
+		"casts": [
+			"spell-holy-vision",
+			"spell-healing",
+			"spell-exorcism"
+		]
+	},
+	"unit-knight-rider": {
+		"casts": [
+			"spell-holy-vision",
+			"spell-healing",
+			"spell-exorcism"
+		]
+	},
+	"unit-man-of-light": {
+		"casts": [
+			"spell-holy-vision",
+			"spell-healing",
+			"spell-exorcism"
+		]
+	},
+	"unit-mage": {
+		"casts": [
+			"spell-fireball",
+			"spell-slow",
+			"spell-flame-shield",
+			"spell-invisibility",
+			"spell-polymorph",
+			"spell-blizzard"
+		]
+	},
+	"unit-white-mage": {
+		"casts": [
+			"spell-fireball",
+			"spell-slow",
+			"spell-flame-shield",
+			"spell-invisibility",
+			"spell-polymorph",
+			"spell-blizzard"
+		]
+	},
+	"unit-peasant": {
+		"builds": [
+			"unit-farm",
+			"unit-human-barracks",
+			"unit-town-hall",
+			"unit-elven-lumber-mill",
+			"unit-human-blacksmith",
+			"unit-human-watch-tower",
+			"unit-human-wall",
+			"unit-human-shipyard",
+			"unit-human-foundry",
+			"unit-human-refinery",
+			"unit-inventor",
+			"unit-stables",
+			"unit-mage-tower",
+			"unit-church",
+			"unit-gryphon-aviary"
+		]
+	},
+	"unit-farm": {
+		"trains": [
+			"unit-critter"
+		]
+	},
+	"unit-town-hall": {
+		"trains": [
+			"unit-peasant"
+		],
+		"upgradesTo": [
+			"unit-keep"
+		]
+	},
+	"unit-keep": {
+		"trains": [
+			"unit-peasant"
+		],
+		"upgradesTo": [
+			"unit-castle"
+		]
+	},
+	"unit-castle": {
+		"trains": [
+			"unit-peasant"
+		]
+	},
+	"unit-human-barracks": {
+		"trains": [
+			"unit-attack-peasant",
+			"unit-footman",
+			"unit-archer",
+			"unit-ranger",
+			"unit-ballista",
+			"unit-knight",
+			"unit-paladin"
+		]
+	},
+	"unit-inventor": {
+		"trains": [
+			"unit-balloon",
+			"unit-dwarves"
+		]
+	},
+	"unit-mage-tower": {
+		"trains": [
+			"unit-mage"
+		],
+		"researches": [
+			"upgrade-slow",
+			"upgrade-flame-shield",
+			"upgrade-invisibility",
+			"upgrade-polymorph",
+			"upgrade-blizzard"
+		]
+	},
+	"unit-gryphon-aviary": {
+		"trains": [
+			"unit-gryphon-rider"
+		]
+	},
+	"unit-human-shipyard": {
+		"trains": [
+			"unit-human-oil-tanker",
+			"unit-human-destroyer",
+			"unit-human-transport",
+			"unit-human-submarine",
+			"unit-battleship"
+		]
+	},
+	"unit-human-watch-tower": {
+		"upgradesTo": [
+			"unit-human-guard-tower",
+			"unit-human-cannon-tower"
+		]
+	},
+	"unit-human-oil-tanker": {
+		"builds": [
+			"unit-human-oil-platform"
+		]
+	},
+	"unit-human-blacksmith": {
+		"researches": [
+			"upgrade-sword1",
+			"upgrade-sword2",
+			"upgrade-human-shield1",
+			"upgrade-human-shield2",
+			"upgrade-ballista1",
+			"upgrade-ballista2"
+		]
+	},
+	"unit-elven-lumber-mill": {
+		"researches": [
+			"upgrade-arrow1",
+			"upgrade-arrow2",
+			"upgrade-ranger",
+			"upgrade-ranger-scouting",
+			"upgrade-longbow",
+			"upgrade-ranger-marksmanship"
+		]
+	},
+	"unit-church": {
+		"researches": [
+			"upgrade-paladin",
+			"upgrade-healing",
+			"upgrade-exorcism"
+		]
+	},
+	"unit-human-foundry": {
+		"researches": [
+			"upgrade-human-ship-cannon1",
+			"upgrade-human-ship-cannon2",
+			"upgrade-human-ship-armor1",
+			"upgrade-human-ship-armor2"
+		]
+	},
+	"unit-goblin-sappers": {
+		"casts": [
+			"spell-suicide-bomber"
+		]
+	},
+	"unit-ogre-mage": {
+		"casts": [
+			"spell-eye-of-vision",
+			"spell-bloodlust",
+			"spell-runes"
+		]
+	},
+	"unit-fad-man": {
+		"casts": [
+			"spell-eye-of-vision",
+			"spell-bloodlust",
+			"spell-runes"
+		]
+	},
+	"unit-double-head": {
+		"casts": [
+			"spell-eye-of-vision-double-head",
+			"spell-bloodlust-double-head",
+			"spell-runes-double-head"
+		]
+	},
+	"unit-death-knight": {
+		"casts": [
+			"spell-death-coil",
+			"spell-haste",
+			"spell-raise-dead",
+			"spell-whirlwind",
+			"spell-unholy-armor",
+			"spell-death-and-decay"
+		]
+	},
+	"unit-ice-bringer": {
+		"casts": [
+			"spell-death-coil",
+			"spell-haste",
+			"spell-raise-dead",
+			"spell-whirlwind",
+			"spell-unholy-armor",
+			"spell-death-and-decay"
+		]
+	},
+	"unit-evil-knight": {
+		"casts": [
+			"spell-death-coil",
+			"spell-haste",
+			"spell-raise-dead",
+			"spell-whirlwind",
+			"spell-unholy-armor",
+			"spell-death-and-decay"
+		]
+	},
+	"unit-peon": {
+		"builds": [
+			"unit-pig-farm",
+			"unit-orc-barracks",
+			"unit-great-hall",
+			"unit-troll-lumber-mill",
+			"unit-orc-blacksmith",
+			"unit-orc-watch-tower",
+			"unit-orc-wall",
+			"unit-orc-shipyard",
+			"unit-orc-foundry",
+			"unit-orc-refinery",
+			"unit-alchemist",
+			"unit-ogre-mound",
+			"unit-temple-of-the-damned",
+			"unit-altar-of-storms",
+			"unit-dragon-roost"
+		]
+	},
+	"unit-pig-farm": {
+		"trains": [
+			"unit-critter"
+		]
+	},
+	"unit-great-hall": {
+		"trains": [
+			"unit-peon"
+		],
+		"upgradesTo": [
+			"unit-stronghold"
+		]
+	},
+	"unit-stronghold": {
+		"trains": [
+			"unit-peon"
+		],
+		"upgradesTo": [
+			"unit-fortress"
+		]
+	},
+	"unit-fortress": {
+		"trains": [
+			"unit-peon"
+		]
+	},
+	"unit-orc-barracks": {
+		"trains": [
+			"unit-grunt",
+			"unit-axethrower",
+			"unit-berserker",
+			"unit-catapult",
+			"unit-ogre",
+			"unit-ogre-mage"
+		]
+	},
+	"unit-alchemist": {
+		"trains": [
+			"unit-zeppelin",
+			"unit-goblin-sappers"
+		]
+	},
+	"unit-temple-of-the-damned": {
+		"trains": [
+			"unit-death-knight"
+		],
+		"researches": [
+			"upgrade-haste",
+			"upgrade-raise-dead",
+			"upgrade-whirlwind",
+			"upgrade-unholy-armor",
+			"upgrade-death-and-decay"
+		]
+	},
+	"unit-dragon-roost": {
+		"trains": [
+			"unit-dragon"
+		]
+	},
+	"unit-orc-shipyard": {
+		"trains": [
+			"unit-orc-oil-tanker",
+			"unit-orc-destroyer",
+			"unit-orc-transport",
+			"unit-orc-submarine",
+			"unit-ogre-juggernaught"
+		]
+	},
+	"unit-orc-watch-tower": {
+		"upgradesTo": [
+			"unit-orc-guard-tower",
+			"unit-orc-cannon-tower"
+		]
+	},
+	"unit-orc-oil-tanker": {
+		"builds": [
+			"unit-orc-oil-platform"
+		]
+	},
+	"unit-orc-blacksmith": {
+		"researches": [
+			"upgrade-battle-axe1",
+			"upgrade-battle-axe2",
+			"upgrade-orc-shield1",
+			"upgrade-orc-shield2",
+			"upgrade-catapult1",
+			"upgrade-catapult2"
+		]
+	},
+	"unit-troll-lumber-mill": {
+		"researches": [
+			"upgrade-throwing-axe1",
+			"upgrade-throwing-axe2",
+			"upgrade-berserker",
+			"upgrade-berserker-scouting",
+			"upgrade-light-axes",
+			"upgrade-berserker-regeneration"
+		]
+	},
+	"unit-altar-of-storms": {
+		"researches": [
+			"upgrade-ogre-mage",
+			"upgrade-bloodlust",
+			"upgrade-runes"
+		]
+	},
+	"unit-orc-foundry": {
+		"researches": [
+			"upgrade-orc-ship-cannon1",
+			"upgrade-orc-ship-cannon2",
+			"upgrade-orc-ship-armor1",
+			"upgrade-orc-ship-armor2"
+		]
+	}
+}

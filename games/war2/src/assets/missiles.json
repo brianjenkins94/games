@@ -1,0 +1,362 @@
+{
+	"missile-lightning": {
+		"file": "missiles/lightning.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 30,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point-with-hit",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-griffon-hammer": {
+		"file": "missiles/gryphon_hammer.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 15,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point-bounce",
+		"speed": 16,
+		"range": 2,
+		"impactMissile": "missile-explosion",
+		"splashFactor": 2
+	},
+	"missile-dragon-breath": {
+		"file": "missiles/dragon_breath.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 5,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point-bounce",
+		"speed": 16,
+		"range": 2,
+		"impactMissile": "missile-explosion",
+		"splashFactor": 2
+	},
+	"missile-fireball": {
+		"file": "missiles/fireball.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 5,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point-bounce",
+		"speed": 16,
+		"range": 2,
+		"impactMissile": "missile-explosion",
+		"splashFactor": 2
+	},
+	"missile-flame-shield": {
+		"file": "missiles/flame_shield.png",
+		"frameWidth": 32,
+		"frameHeight": 48,
+		"frames": 6,
+		"numDirections": 1,
+		"class": "missile-class-flame-shield",
+		"speed": 4,
+		"range": 1
+	},
+	"missile-blizzard": {
+		"file": "missiles/blizzard.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 4,
+		"numDirections": 1,
+		"class": "missile-class-point-to-point-with-hit",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-death-and-decay": {
+		"file": "missiles/death_and_decay.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 8,
+		"numDirections": 1,
+		"class": "missile-class-stay",
+		"speed": 0,
+		"range": 1
+	},
+	"missile-big-cannon": {
+		"file": "missiles/big_cannon.png",
+		"frameWidth": 16,
+		"frameHeight": 16,
+		"frames": 20,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point",
+		"speed": 16,
+		"range": 2,
+		"impactMissile": "missile-cannon-tower-explosion",
+		"splashFactor": 4
+	},
+	"missile-exorcism": {
+		"file": "missiles/exorcism.png",
+		"frameWidth": 48,
+		"frameHeight": 48,
+		"frames": 10,
+		"numDirections": 1,
+		"class": "missile-class-point-to-point",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-heal-effect": {
+		"file": "missiles/heal_effect.png",
+		"frameWidth": 48,
+		"frameHeight": 48,
+		"frames": 10,
+		"numDirections": 1,
+		"class": "missile-class-stay",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-touch-of-death": {
+		"file": "missiles/touch_of_death.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 30,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point-with-hit",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-rune": {
+		"file": "missiles/rune.png",
+		"frameWidth": 16,
+		"frameHeight": 16,
+		"frames": 4,
+		"numDirections": 1,
+		"class": "missile-class-land-mine",
+		"speed": 16,
+		"range": 1,
+		"impactMissile": "missile-explosion"
+	},
+	"missile-whirlwind": {
+		"file": "missiles/tornado.png",
+		"frameWidth": 56,
+		"frameHeight": 56,
+		"frames": 4,
+		"numDirections": 1,
+		"class": "missile-class-whirlwind",
+		"speed": 2,
+		"range": 2
+	},
+	"missile-catapult-rock": {
+		"file": "missiles/catapult_rock.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 15,
+		"numDirections": 9,
+		"speed": 8,
+		"range": 2,
+		"impactMissile": "missile-impact",
+		"splashFactor": 4
+	},
+	"missile-ballista-bolt": {
+		"file": "missiles/ballista_bolt.png",
+		"frameWidth": 64,
+		"frameHeight": 64,
+		"frames": 5,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point",
+		"speed": 8,
+		"range": 2,
+		"impactMissile": "missile-impact",
+		"splashFactor": 4
+	},
+	"missile-arrow": {
+		"file": "missiles/arrow.png",
+		"frameWidth": 40,
+		"frameHeight": 40,
+		"frames": 5,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point",
+		"speed": 32,
+		"range": 0
+	},
+	"missile-arrow-super": {
+		"file": "missiles/arrow.png",
+		"frameWidth": 40,
+		"frameHeight": 40,
+		"frames": 5,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point",
+		"speed": 64,
+		"range": 0
+	},
+	"missile-axe": {
+		"file": "missiles/axe.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 15,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point",
+		"speed": 32,
+		"range": 0
+	},
+	"missile-submarine-missile": {
+		"file": "missiles/submarine_missile.png",
+		"frameWidth": 40,
+		"frameHeight": 40,
+		"frames": 5,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point",
+		"speed": 16,
+		"range": 1,
+		"impactMissile": "missile-impact"
+	},
+	"missile-turtle-missile": {
+		"file": "missiles/turtle_missile.png",
+		"frameWidth": 40,
+		"frameHeight": 40,
+		"frames": 5,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point",
+		"speed": 16,
+		"range": 1,
+		"impactMissile": "missile-impact"
+	},
+	"missile-small-fire": {
+		"file": "missiles/small_fire.png",
+		"frameWidth": 32,
+		"frameHeight": 48,
+		"frames": 6,
+		"numDirections": 1,
+		"class": "missile-class-fire",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-big-fire": {
+		"file": "missiles/big_fire.png",
+		"frameWidth": 48,
+		"frameHeight": 48,
+		"frames": 10,
+		"numDirections": 1,
+		"class": "missile-class-fire",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-impact": {
+		"file": "missiles/ballista-catapult_impact.png",
+		"frameWidth": 48,
+		"frameHeight": 48,
+		"frames": 10,
+		"numDirections": 1,
+		"class": "missile-class-stay",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-normal-spell": {
+		"file": "missiles/normal_spell.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 6,
+		"numDirections": 1,
+		"class": "missile-class-stay",
+		"speed": 0,
+		"range": 1
+	},
+	"missile-explosion": {
+		"file": "missiles/explosion.png",
+		"frameWidth": 64,
+		"frameHeight": 64,
+		"frames": 20,
+		"numDirections": 1,
+		"class": "missile-class-stay",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-small-cannon": {
+		"file": "missiles/cannon.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 15,
+		"numDirections": 9,
+		"speed": 22,
+		"range": 2,
+		"impactMissile": "missile-cannon-tower-explosion",
+		"splashFactor": 3
+	},
+	"missile-small-cannon-super": {
+		"file": "missiles/cannon.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 15,
+		"numDirections": 9,
+		"speed": 44,
+		"range": 2,
+		"impactMissile": "missile-cannon-tower-explosion",
+		"splashFactor": 3
+	},
+	"missile-cannon-explosion": {
+		"file": "missiles/cannon_explosion.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 4,
+		"numDirections": 1,
+		"class": "missile-class-stay",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-cannon-tower-explosion": {
+		"file": "missiles/cannon-tower_explosion.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 4,
+		"numDirections": 1,
+		"class": "missile-class-stay",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-daemon-fire": {
+		"file": "missiles/daemon_fire.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 15,
+		"numDirections": 9,
+		"class": "missile-class-point-to-point",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-green-cross": {
+		"file": "missiles/green_cross.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 4,
+		"numDirections": 1,
+		"class": "missile-class-cycle-once",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-none": {
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"class": "missile-class-none",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-death-coil": {
+		"file": "missiles/touch_of_death.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"frames": 30,
+		"numDirections": 9,
+		"class": "missile-class-death-coil",
+		"speed": 16,
+		"range": 1
+	},
+	"missile-hit": {
+		"frameWidth": 15,
+		"frameHeight": 15,
+		"class": "missile-class-hit",
+		"speed": 1,
+		"range": 16
+	},
+	"missile-critter-explosion": {
+		"file": "missiles/explosion.png",
+		"frameWidth": 64,
+		"frameHeight": 64,
+		"frames": 20,
+		"numDirections": 1,
+		"class": "missile-class-stay",
+		"speed": 16,
+		"range": 1
+	}
+}

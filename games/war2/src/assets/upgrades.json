@@ -1,0 +1,1215 @@
+{
+	"upgrade-sword1": {
+		"icon": "icon-sword2",
+		"costs": {
+			"time": 200,
+			"gold": 800
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 2
+			}
+		],
+		"applyTo": [
+			"unit-footman",
+			"unit-knight",
+			"unit-paladin",
+			"unit-dwarves",
+			"unit-arthor-literios",
+			"unit-wise-man",
+			"unit-man-of-light",
+			"unit-knight-rider",
+			"unit-attack-peasant"
+		]
+	},
+	"upgrade-sword2": {
+		"icon": "icon-sword3",
+		"costs": {
+			"time": 250,
+			"gold": 2400
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 2
+			}
+		],
+		"applyTo": [
+			"unit-footman",
+			"unit-knight",
+			"unit-paladin",
+			"unit-dwarves",
+			"unit-arthor-literios",
+			"unit-wise-man",
+			"unit-man-of-light",
+			"unit-knight-rider",
+			"unit-attack-peasant"
+		],
+		"requires": [
+			[
+				"upgrade-sword1"
+			]
+		]
+	},
+	"upgrade-arrow1": {
+		"icon": "icon-arrow2",
+		"costs": {
+			"time": 200,
+			"gold": 300,
+			"wood": 300
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 1
+			}
+		],
+		"applyTo": [
+			"unit-archer",
+			"unit-ranger",
+			"unit-female-hero"
+		]
+	},
+	"upgrade-arrow2": {
+		"icon": "icon-arrow3",
+		"costs": {
+			"time": 250,
+			"gold": 900,
+			"wood": 500
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 1
+			}
+		],
+		"applyTo": [
+			"unit-archer",
+			"unit-ranger",
+			"unit-female-hero"
+		],
+		"requires": [
+			[
+				"upgrade-arrow1"
+			]
+		]
+	},
+	"upgrade-human-shield1": {
+		"icon": "icon-human-shield2",
+		"costs": {
+			"time": 200,
+			"gold": 300,
+			"wood": 300
+		},
+		"modifiers": [
+			{
+				"stat": "armor",
+				"delta": 2
+			}
+		],
+		"applyTo": [
+			"unit-footman",
+			"unit-knight",
+			"unit-paladin",
+			"unit-dwarves",
+			"unit-arthor-literios",
+			"unit-wise-man",
+			"unit-man-of-light",
+			"unit-knight-rider",
+			"unit-attack-peasant"
+		]
+	},
+	"upgrade-human-shield2": {
+		"icon": "icon-human-shield3",
+		"costs": {
+			"time": 250,
+			"gold": 900,
+			"wood": 500
+		},
+		"modifiers": [
+			{
+				"stat": "armor",
+				"delta": 2
+			}
+		],
+		"applyTo": [
+			"unit-footman",
+			"unit-knight",
+			"unit-paladin",
+			"unit-dwarves",
+			"unit-arthor-literios",
+			"unit-wise-man",
+			"unit-man-of-light",
+			"unit-knight-rider",
+			"unit-attack-peasant"
+		],
+		"requires": [
+			[
+				"upgrade-human-shield1"
+			]
+		]
+	},
+	"upgrade-human-ship-cannon1": {
+		"icon": "icon-human-ship-cannon2",
+		"costs": {
+			"time": 200,
+			"gold": 700,
+			"wood": 100,
+			"oil": 1000
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 5
+			}
+		],
+		"applyTo": [
+			"unit-human-destroyer",
+			"unit-battleship",
+			"unit-human-submarine"
+		]
+	},
+	"upgrade-human-ship-cannon2": {
+		"icon": "icon-human-ship-cannon3",
+		"costs": {
+			"time": 250,
+			"gold": 2000,
+			"wood": 250,
+			"oil": 3000
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 5
+			}
+		],
+		"applyTo": [
+			"unit-human-destroyer",
+			"unit-battleship",
+			"unit-human-submarine"
+		],
+		"requires": [
+			[
+				"upgrade-human-ship-cannon1"
+			]
+		]
+	},
+	"upgrade-human-ship-armor1": {
+		"icon": "icon-human-ship-armor2",
+		"costs": {
+			"time": 200,
+			"gold": 500,
+			"wood": 500
+		},
+		"modifiers": [
+			{
+				"stat": "armor",
+				"delta": 5
+			}
+		],
+		"applyTo": [
+			"unit-human-destroyer",
+			"unit-battleship",
+			"unit-human-transport"
+		]
+	},
+	"upgrade-human-ship-armor2": {
+		"icon": "icon-human-ship-armor3",
+		"costs": {
+			"time": 250,
+			"gold": 1500,
+			"wood": 900
+		},
+		"modifiers": [
+			{
+				"stat": "armor",
+				"delta": 5
+			}
+		],
+		"applyTo": [
+			"unit-human-destroyer",
+			"unit-battleship",
+			"unit-human-transport"
+		],
+		"requires": [
+			[
+				"upgrade-human-ship-armor1"
+			]
+		]
+	},
+	"upgrade-ballista1": {
+		"icon": "icon-ballista1",
+		"costs": {
+			"time": 250,
+			"gold": 1500
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 15
+			}
+		],
+		"applyTo": [
+			"unit-ballista"
+		]
+	},
+	"upgrade-ballista2": {
+		"icon": "icon-ballista2",
+		"costs": {
+			"time": 250,
+			"gold": 4000
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 15
+			}
+		],
+		"applyTo": [
+			"unit-ballista"
+		],
+		"requires": [
+			[
+				"upgrade-ballista1"
+			]
+		]
+	},
+	"upgrade-ranger": {
+		"icon": "icon-ranger",
+		"costs": {
+			"time": 250,
+			"gold": 1500
+		},
+		"applyTo": [
+			"unit-archer"
+		],
+		"convertTo": "unit-ranger",
+		"requires": [
+			[
+				"unit-keep"
+			],
+			[
+				"unit-castle"
+			]
+		]
+	},
+	"upgrade-longbow": {
+		"icon": "icon-longbow",
+		"costs": {
+			"time": 250,
+			"gold": 2000
+		},
+		"modifiers": [
+			{
+				"stat": "sightRange",
+				"delta": 1
+			},
+			{
+				"stat": "attackRange",
+				"delta": 1
+			}
+		],
+		"applyTo": [
+			"unit-archer",
+			"unit-ranger"
+		],
+		"requires": [
+			[
+				"unit-keep",
+				"upgrade-ranger"
+			],
+			[
+				"unit-castle",
+				"upgrade-ranger"
+			]
+		]
+	},
+	"upgrade-ranger-scouting": {
+		"icon": "icon-ranger-scouting",
+		"costs": {
+			"time": 250,
+			"gold": 1500
+		},
+		"modifiers": [
+			{
+				"stat": "sightRange",
+				"delta": 3
+			}
+		],
+		"applyTo": [
+			"unit-archer",
+			"unit-ranger"
+		],
+		"requires": [
+			[
+				"unit-keep",
+				"upgrade-ranger"
+			],
+			[
+				"unit-castle",
+				"upgrade-ranger"
+			]
+		]
+	},
+	"upgrade-ranger-marksmanship": {
+		"icon": "icon-ranger-marksmanship",
+		"costs": {
+			"time": 250,
+			"gold": 2500
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 3
+			}
+		],
+		"applyTo": [
+			"unit-archer",
+			"unit-ranger"
+		],
+		"requires": [
+			[
+				"unit-keep",
+				"upgrade-ranger"
+			],
+			[
+				"unit-castle",
+				"upgrade-ranger"
+			]
+		]
+	},
+	"upgrade-paladin": {
+		"icon": "icon-paladin",
+		"costs": {
+			"time": 250,
+			"gold": 1000
+		},
+		"applyTo": [
+			"unit-knight"
+		],
+		"convertTo": "unit-paladin"
+	},
+	"upgrade-holy-vision": {
+		"icon": "icon-holy-vision",
+		"applyTo": [
+			"unit-paladin"
+		]
+	},
+	"upgrade-healing": {
+		"icon": "icon-heal",
+		"costs": {
+			"time": 200,
+			"gold": 1000
+		},
+		"applyTo": [
+			"unit-paladin"
+		],
+		"requires": [
+			[
+				"upgrade-paladin"
+			]
+		]
+	},
+	"upgrade-exorcism": {
+		"icon": "icon-exorcism",
+		"costs": {
+			"time": 200,
+			"gold": 2000
+		},
+		"applyTo": [
+			"unit-paladin"
+		],
+		"requires": [
+			[
+				"upgrade-paladin"
+			]
+		]
+	},
+	"upgrade-flame-shield": {
+		"icon": "icon-flame-shield",
+		"costs": {
+			"time": 100,
+			"gold": 1000
+		},
+		"applyTo": [
+			"unit-mage",
+			"unit-white-mage"
+		]
+	},
+	"upgrade-fireball": {
+		"icon": "icon-fireball",
+		"applyTo": [
+			"unit-mage",
+			"unit-white-mage"
+		]
+	},
+	"upgrade-slow": {
+		"icon": "icon-slow",
+		"costs": {
+			"time": 100,
+			"gold": 500
+		},
+		"applyTo": [
+			"unit-mage",
+			"unit-white-mage"
+		]
+	},
+	"upgrade-invisibility": {
+		"icon": "icon-invisibility",
+		"costs": {
+			"time": 200,
+			"gold": 2500
+		},
+		"applyTo": [
+			"unit-mage",
+			"unit-white-mage"
+		]
+	},
+	"upgrade-polymorph": {
+		"icon": "icon-critter",
+		"costs": {
+			"time": 200,
+			"gold": 2000
+		},
+		"applyTo": [
+			"unit-mage",
+			"unit-white-mage"
+		]
+	},
+	"upgrade-blizzard": {
+		"icon": "icon-blizzard",
+		"costs": {
+			"time": 200,
+			"gold": 2000
+		},
+		"applyTo": [
+			"unit-mage",
+			"unit-white-mage"
+		]
+	},
+	"upgrade-battle-axe1": {
+		"icon": "icon-battle-axe2",
+		"costs": {
+			"time": 200,
+			"gold": 500,
+			"wood": 100
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 2
+			}
+		],
+		"applyTo": [
+			"unit-grunt",
+			"unit-ogre",
+			"unit-ogre-mage",
+			"unit-goblin-sappers",
+			"unit-quick-blade",
+			"unit-beast-cry",
+			"unit-fad-man",
+			"unit-double-head"
+		]
+	},
+	"upgrade-battle-axe2": {
+		"icon": "icon-battle-axe3",
+		"costs": {
+			"time": 250,
+			"gold": 1500,
+			"wood": 300
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 2
+			}
+		],
+		"applyTo": [
+			"unit-grunt",
+			"unit-ogre",
+			"unit-ogre-mage",
+			"unit-goblin-sappers",
+			"unit-quick-blade",
+			"unit-beast-cry",
+			"unit-fad-man",
+			"unit-double-head"
+		],
+		"requires": [
+			[
+				"upgrade-battle-axe1"
+			]
+		]
+	},
+	"upgrade-throwing-axe1": {
+		"icon": "icon-throwing-axe2",
+		"costs": {
+			"time": 200,
+			"gold": 300,
+			"wood": 300
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 1
+			}
+		],
+		"applyTo": [
+			"unit-axethrower",
+			"unit-berserker",
+			"unit-sharp-axe"
+		]
+	},
+	"upgrade-throwing-axe2": {
+		"icon": "icon-throwing-axe3",
+		"costs": {
+			"time": 250,
+			"gold": 900,
+			"wood": 500
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 1
+			}
+		],
+		"applyTo": [
+			"unit-axethrower",
+			"unit-berserker",
+			"unit-sharp-axe"
+		],
+		"requires": [
+			[
+				"upgrade-throwing-axe1"
+			]
+		]
+	},
+	"upgrade-orc-shield1": {
+		"icon": "icon-orc-shield2",
+		"costs": {
+			"time": 200,
+			"gold": 300,
+			"wood": 300
+		},
+		"modifiers": [
+			{
+				"stat": "armor",
+				"delta": 2
+			}
+		],
+		"applyTo": [
+			"unit-grunt",
+			"unit-ogre",
+			"unit-ogre-mage",
+			"unit-goblin-sappers",
+			"unit-quick-blade",
+			"unit-beast-cry",
+			"unit-fad-man",
+			"unit-double-head"
+		]
+	},
+	"upgrade-orc-shield2": {
+		"icon": "icon-orc-shield3",
+		"costs": {
+			"time": 250,
+			"gold": 900,
+			"wood": 500
+		},
+		"modifiers": [
+			{
+				"stat": "armor",
+				"delta": 2
+			}
+		],
+		"applyTo": [
+			"unit-grunt",
+			"unit-ogre",
+			"unit-ogre-mage",
+			"unit-goblin-sappers",
+			"unit-quick-blade",
+			"unit-beast-cry",
+			"unit-fad-man",
+			"unit-double-head"
+		],
+		"requires": [
+			[
+				"upgrade-orc-shield1"
+			]
+		]
+	},
+	"upgrade-orc-ship-cannon1": {
+		"icon": "icon-orc-ship-cannon2",
+		"costs": {
+			"time": 200,
+			"gold": 700,
+			"wood": 100,
+			"oil": 1000
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 5
+			}
+		],
+		"applyTo": [
+			"unit-orc-destroyer",
+			"unit-ogre-juggernaught",
+			"unit-orc-submarine"
+		]
+	},
+	"upgrade-orc-ship-cannon2": {
+		"icon": "icon-orc-ship-cannon3",
+		"costs": {
+			"time": 250,
+			"gold": 2000,
+			"wood": 250,
+			"oil": 3000
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 5
+			}
+		],
+		"applyTo": [
+			"unit-orc-destroyer",
+			"unit-ogre-juggernaught",
+			"unit-orc-submarine"
+		],
+		"requires": [
+			[
+				"upgrade-orc-ship-cannon1"
+			]
+		]
+	},
+	"upgrade-orc-ship-armor1": {
+		"icon": "icon-orc-ship-armor2",
+		"costs": {
+			"time": 200,
+			"gold": 500,
+			"wood": 500
+		},
+		"modifiers": [
+			{
+				"stat": "armor",
+				"delta": 5
+			}
+		],
+		"applyTo": [
+			"unit-orc-destroyer",
+			"unit-ogre-juggernaught",
+			"unit-orc-transport"
+		]
+	},
+	"upgrade-orc-ship-armor2": {
+		"icon": "icon-orc-ship-armor3",
+		"costs": {
+			"time": 250,
+			"gold": 1500,
+			"wood": 900
+		},
+		"modifiers": [
+			{
+				"stat": "armor",
+				"delta": 5
+			}
+		],
+		"applyTo": [
+			"unit-orc-destroyer",
+			"unit-ogre-juggernaught",
+			"unit-orc-transport"
+		],
+		"requires": [
+			[
+				"upgrade-orc-ship-armor1"
+			]
+		]
+	},
+	"upgrade-catapult1": {
+		"icon": "icon-catapult1",
+		"costs": {
+			"time": 250,
+			"gold": 1500
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 15
+			}
+		],
+		"applyTo": [
+			"unit-catapult"
+		]
+	},
+	"upgrade-catapult2": {
+		"icon": "icon-catapult2",
+		"costs": {
+			"time": 250,
+			"gold": 4000
+		},
+		"modifiers": [
+			{
+				"stat": "piercingDamage",
+				"delta": 15
+			}
+		],
+		"applyTo": [
+			"unit-catapult"
+		],
+		"requires": [
+			[
+				"upgrade-catapult1"
+			]
+		]
+	},
+	"upgrade-berserker": {
+		"icon": "icon-berserker",
+		"costs": {
+			"time": 250,
+			"gold": 1500
+		},
+		"applyTo": [
+			"unit-axethrower"
+		],
+		"convertTo": "unit-berserker",
+		"requires": [
+			[
+				"unit-stronghold"
+			],
+			[
+				"unit-fortress"
+			]
+		]
+	},
+	"upgrade-light-axes": {
+		"icon": "icon-light-axes",
+		"costs": {
+			"time": 250,
+			"gold": 2000
+		},
+		"modifiers": [
+			{
+				"stat": "attackRange",
+				"delta": 1
+			}
+		],
+		"applyTo": [
+			"unit-axethrower",
+			"unit-berserker"
+		],
+		"requires": [
+			[
+				"unit-stronghold",
+				"upgrade-berserker"
+			],
+			[
+				"unit-fortress",
+				"upgrade-berserker"
+			]
+		]
+	},
+	"upgrade-berserker-scouting": {
+		"icon": "icon-berserker-scouting",
+		"costs": {
+			"time": 250,
+			"gold": 1500
+		},
+		"modifiers": [
+			{
+				"stat": "sightRange",
+				"delta": 3
+			}
+		],
+		"applyTo": [
+			"unit-axethrower",
+			"unit-berserker"
+		],
+		"requires": [
+			[
+				"unit-stronghold",
+				"upgrade-berserker"
+			],
+			[
+				"unit-fortress",
+				"upgrade-berserker"
+			]
+		]
+	},
+	"upgrade-berserker-regeneration": {
+		"icon": "icon-berserker-regeneration",
+		"costs": {
+			"time": 250,
+			"gold": 3000
+		},
+		"applyTo": [
+			"unit-axethrower",
+			"unit-berserker"
+		],
+		"requires": [
+			[
+				"unit-stronghold",
+				"upgrade-berserker"
+			],
+			[
+				"unit-fortress",
+				"upgrade-berserker"
+			]
+		]
+	},
+	"upgrade-ogre-mage": {
+		"icon": "icon-ogre-mage",
+		"costs": {
+			"time": 250,
+			"gold": 1000
+		},
+		"applyTo": [
+			"unit-ogre"
+		],
+		"convertTo": "unit-ogre-mage"
+	},
+	"upgrade-eye-of-kilrogg": {
+		"icon": "icon-eye-of-kilrogg",
+		"applyTo": [
+			"unit-ogre-mage"
+		]
+	},
+	"upgrade-bloodlust": {
+		"icon": "icon-bloodlust",
+		"costs": {
+			"time": 100,
+			"gold": 1000
+		},
+		"applyTo": [
+			"unit-ogre-mage"
+		],
+		"requires": [
+			[
+				"upgrade-ogre-mage"
+			]
+		]
+	},
+	"upgrade-raise-dead": {
+		"icon": "icon-skeleton",
+		"costs": {
+			"time": 100,
+			"gold": 1500
+		},
+		"applyTo": [
+			"unit-death-knight",
+			"unit-ice-bringer",
+			"unit-evil-knight"
+		]
+	},
+	"upgrade-death-coil": {
+		"icon": "icon-death-coil",
+		"costs": {
+			"time": 100
+		},
+		"applyTo": [
+			"unit-death-knight",
+			"unit-ice-bringer",
+			"unit-evil-knight"
+		]
+	},
+	"upgrade-whirlwind": {
+		"icon": "icon-whirlwind",
+		"costs": {
+			"time": 150,
+			"gold": 1500
+		},
+		"applyTo": [
+			"unit-death-knight",
+			"unit-ice-bringer",
+			"unit-evil-knight"
+		]
+	},
+	"upgrade-haste": {
+		"icon": "icon-haste",
+		"costs": {
+			"time": 100,
+			"gold": 500
+		},
+		"applyTo": [
+			"unit-death-knight",
+			"unit-ice-bringer",
+			"unit-evil-knight"
+		]
+	},
+	"upgrade-unholy-armor": {
+		"icon": "icon-unholy-armor",
+		"costs": {
+			"time": 200,
+			"gold": 2500
+		},
+		"applyTo": [
+			"unit-death-knight",
+			"unit-ice-bringer",
+			"unit-evil-knight"
+		]
+	},
+	"upgrade-runes": {
+		"icon": "icon-runes",
+		"costs": {
+			"time": 150,
+			"gold": 1000
+		},
+		"applyTo": [
+			"unit-ogre-mage"
+		],
+		"requires": [
+			[
+				"upgrade-ogre-mage"
+			]
+		]
+	},
+	"upgrade-death-and-decay": {
+		"icon": "icon-death-and-decay",
+		"costs": {
+			"time": 200,
+			"gold": 2000
+		},
+		"applyTo": [
+			"unit-death-knight",
+			"unit-ice-bringer",
+			"unit-evil-knight"
+		]
+	},
+	"_deps": {
+		"unit-archer": [
+			[
+				"unit-elven-lumber-mill"
+			]
+		],
+		"unit-ballista": [
+			[
+				"unit-human-blacksmith",
+				"unit-elven-lumber-mill"
+			]
+		],
+		"unit-knight": [
+			[
+				"unit-stables",
+				"unit-human-blacksmith"
+			]
+		],
+		"unit-ranger": [
+			[
+				"upgrade-ranger",
+				"unit-elven-lumber-mill"
+			]
+		],
+		"unit-paladin": [
+			[
+				"upgrade-paladin",
+				"unit-stables",
+				"unit-human-blacksmith"
+			]
+		],
+		"unit-human-submarine": [
+			[
+				"unit-inventor"
+			]
+		],
+		"unit-human-transport": [
+			[
+				"unit-human-foundry"
+			]
+		],
+		"unit-battleship": [
+			[
+				"unit-human-foundry"
+			]
+		],
+		"unit-balloon": [
+			[
+				"unit-elven-lumber-mill"
+			]
+		],
+		"unit-human-guard-tower": [
+			[
+				"unit-elven-lumber-mill"
+			]
+		],
+		"unit-human-cannon-tower": [
+			[
+				"unit-human-blacksmith"
+			]
+		],
+		"unit-human-shipyard": [
+			[
+				"unit-elven-lumber-mill"
+			]
+		],
+		"unit-human-foundry": [
+			[
+				"unit-human-shipyard"
+			]
+		],
+		"unit-human-refinery": [
+			[
+				"unit-human-shipyard"
+			]
+		],
+		"unit-keep": [
+			[
+				"unit-human-barracks"
+			]
+		],
+		"unit-inventor": [
+			[
+				"unit-castle"
+			],
+			[
+				"unit-keep"
+			]
+		],
+		"unit-stables": [
+			[
+				"unit-castle"
+			],
+			[
+				"unit-keep"
+			]
+		],
+		"unit-castle": [
+			[
+				"unit-stables",
+				"unit-human-blacksmith",
+				"unit-elven-lumber-mill"
+			]
+		],
+		"unit-mage-tower": [
+			[
+				"unit-castle"
+			]
+		],
+		"unit-church": [
+			[
+				"unit-castle"
+			]
+		],
+		"unit-gryphon-aviary": [
+			[
+				"unit-castle"
+			]
+		],
+		"unit-axethrower": [
+			[
+				"unit-troll-lumber-mill"
+			]
+		],
+		"unit-catapult": [
+			[
+				"unit-orc-blacksmith",
+				"unit-troll-lumber-mill"
+			]
+		],
+		"unit-berserker": [
+			[
+				"upgrade-berserker",
+				"unit-troll-lumber-mill"
+			]
+		],
+		"unit-ogre": [
+			[
+				"unit-ogre-mound",
+				"unit-orc-blacksmith"
+			]
+		],
+		"unit-ogre-mage": [
+			[
+				"upgrade-ogre-mage",
+				"unit-ogre-mound",
+				"unit-orc-blacksmith"
+			]
+		],
+		"unit-orc-submarine": [
+			[
+				"unit-alchemist"
+			]
+		],
+		"unit-orc-transport": [
+			[
+				"unit-orc-foundry"
+			]
+		],
+		"unit-ogre-juggernaught": [
+			[
+				"unit-orc-foundry"
+			]
+		],
+		"unit-zeppelin": [
+			[
+				"unit-troll-lumber-mill"
+			]
+		],
+		"unit-orc-guard-tower": [
+			[
+				"unit-troll-lumber-mill"
+			]
+		],
+		"unit-orc-cannon-tower": [
+			[
+				"unit-orc-blacksmith"
+			]
+		],
+		"unit-orc-shipyard": [
+			[
+				"unit-troll-lumber-mill"
+			]
+		],
+		"unit-orc-foundry": [
+			[
+				"unit-orc-shipyard"
+			]
+		],
+		"unit-orc-refinery": [
+			[
+				"unit-orc-shipyard"
+			]
+		],
+		"unit-stronghold": [
+			[
+				"unit-orc-barracks"
+			]
+		],
+		"unit-alchemist": [
+			[
+				"unit-stronghold"
+			],
+			[
+				"unit-fortress"
+			]
+		],
+		"unit-ogre-mound": [
+			[
+				"unit-stronghold"
+			],
+			[
+				"unit-fortress"
+			]
+		],
+		"unit-fortress": [
+			[
+				"unit-ogre-mound",
+				"unit-orc-blacksmith",
+				"unit-troll-lumber-mill"
+			]
+		],
+		"unit-altar-of-storms": [
+			[
+				"unit-fortress"
+			]
+		],
+		"unit-temple-of-the-damned": [
+			[
+				"unit-fortress"
+			]
+		],
+		"unit-dragon-roost": [
+			[
+				"unit-fortress"
+			]
+		]
+	}
+}

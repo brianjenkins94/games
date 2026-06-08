@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>war2 — netcode harness</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0e17;
+            color: #cdd;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            min-height: 100vh;
+        }
+
+        h1 { font-size: 14px; letter-spacing: 3px; color: #88aacc; text-transform: uppercase; }
+
+        #controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: #111827;
+            border: 1px solid #223;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
+        #controls label { display: flex; align-items: center; gap: 6px; }
+        #controls input[type=range] { width: 120px; accent-color: #4488ff; }
+        #controls span.val { color: #ff9; min-width: 50px; }
+
+        button {
+            background: #1d3d5c;
+            color: #adf;
+            border: 1px solid #2a5c8a;
+            border-radius: 4px;
+            padding: 5px 14px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button:hover { background: #26527c; }
+
+        #frames {
+            display: flex;
+            gap: 12px;
+        }
+
+        .peer-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            width: 640px;
+        }
+
+        .peer-label {
+            font-size: 11px;
+            color: #668;
+            letter-spacing: 1px;
+        }
+
+        .log-box {
+            width: 100%;
+            height: 130px;
+            overflow-y: scroll;
+            background: #070b11;
+            border: 1px solid #1a2233;
+            border-radius: 3px;
+            padding: 4px 6px;
+            font-size: 10px;
+            line-height: 1.6;
+            scroll-behavior: auto;
+        }
+
+        .log-line { white-space: pre; }
+        .log-info  { color: #7a9; }
+        .log-warn  { color: #da7; }
+        .log-error { color: #e55; }
+    </style>
+</head>
+<body>
+    <h1>war2 · netcode harness</h1>
+
+    <div id="controls">
+        <label>
+            Packet loss
+            <input id="loss" type="range" min="0" max="30" value="0" step="1" />
+            <span class="val" id="loss-val">0%</span>
+        </label>
+        <label>
+            Jitter
+            <input id="jitter" type="range" min="0" max="150" value="0" step="5" />
+            <span class="val" id="jitter-val">0 ms</span>
+        </label>
+        <button id="spawn-btn">⊕ Spawn</button>
+    </div>
+
+    <div id="frames">
+        <div class="peer-wrap" id="wrapA">
+            <span class="peer-label">PEER A · host</span>
+            <div class="log-box" id="logA"></div>
+        </div>
+        <div class="peer-wrap" id="wrapB">
+            <span class="peer-label">PEER B · client</span>
+            <div class="log-box" id="logB"></div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/parent/main.ts"></script>
+</body>
+</html>

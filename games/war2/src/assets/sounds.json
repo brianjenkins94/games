@@ -1,0 +1,1955 @@
+{
+	"units": {
+		"unit-footman": {
+			"selected": [
+				"human/basic_voices/selected/1.wav",
+				"human/basic_voices/selected/2.wav",
+				"human/basic_voices/selected/3.wav",
+				"human/basic_voices/selected/4.wav",
+				"human/basic_voices/selected/5.wav",
+				"human/basic_voices/selected/6.wav",
+				"human/basic_voices/annoyed/1.wav",
+				"human/basic_voices/annoyed/2.wav",
+				"human/basic_voices/annoyed/3.wav",
+				"human/basic_voices/annoyed/4.wav",
+				"human/basic_voices/annoyed/5.wav",
+				"human/basic_voices/annoyed/6.wav",
+				"human/basic_voices/annoyed/7.wav"
+			],
+			"acknowledge": [
+				"human/basic_voices/acknowledgement/1.wav",
+				"human/basic_voices/acknowledgement/2.wav",
+				"human/basic_voices/acknowledgement/3.wav",
+				"human/basic_voices/acknowledgement/4.wav"
+			],
+			"ready": [
+				"human/basic_voices/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-peasant": {
+			"selected": [
+				"human/units/peasant/selected/1.wav",
+				"human/units/peasant/selected/2.wav",
+				"human/units/peasant/selected/3.wav",
+				"human/units/peasant/selected/4.wav",
+				"human/units/peasant/annoyed/1.wav",
+				"human/units/peasant/annoyed/2.wav",
+				"human/units/peasant/annoyed/3.wav",
+				"human/units/peasant/annoyed/4.wav",
+				"human/units/peasant/annoyed/5.wav",
+				"human/units/peasant/annoyed/6.wav",
+				"human/units/peasant/annoyed/7.wav"
+			],
+			"acknowledge": [
+				"human/units/peasant/acknowledgement/1.wav",
+				"human/units/peasant/acknowledgement/2.wav",
+				"human/units/peasant/acknowledgement/3.wav",
+				"human/units/peasant/acknowledgement/4.wav"
+			],
+			"ready": [
+				"human/units/peasant/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-attack-peasant": {
+			"selected": [
+				"human/units/peasant/selected/1.wav",
+				"human/units/peasant/selected/2.wav",
+				"human/units/peasant/selected/3.wav",
+				"human/units/peasant/selected/4.wav",
+				"human/units/peasant/annoyed/1.wav",
+				"human/units/peasant/annoyed/2.wav",
+				"human/units/peasant/annoyed/3.wav",
+				"human/units/peasant/annoyed/4.wav",
+				"human/units/peasant/annoyed/5.wav",
+				"human/units/peasant/annoyed/6.wav",
+				"human/units/peasant/annoyed/7.wav"
+			],
+			"acknowledge": [
+				"human/units/peasant/acknowledgement/1.wav",
+				"human/units/peasant/acknowledgement/2.wav",
+				"human/units/peasant/acknowledgement/3.wav",
+				"human/units/peasant/acknowledgement/4.wav"
+			],
+			"ready": [
+				"human/units/peasant/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-ballista": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"acknowledge": [
+				"units/catapult-ballista/acknowledgement/1.wav"
+			],
+			"ready": [
+				"human/basic_voices/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-ballista-super": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"acknowledge": [
+				"units/catapult-ballista/acknowledgement/1.wav"
+			],
+			"ready": [
+				"human/basic_voices/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-knight": {
+			"selected": [
+				"human/units/knight/selected/1.wav",
+				"human/units/knight/selected/2.wav",
+				"human/units/knight/selected/3.wav",
+				"human/units/knight/selected/4.wav",
+				"human/units/knight/annoyed/1.wav",
+				"human/units/knight/annoyed/2.wav",
+				"human/units/knight/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/knight/acknowledgement/1.wav",
+				"human/units/knight/acknowledgement/2.wav",
+				"human/units/knight/acknowledgement/3.wav",
+				"human/units/knight/acknowledgement/4.wav"
+			],
+			"ready": [
+				"human/units/knight/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-archer": {
+			"selected": [
+				"human/units/elven_archer-ranger/selected/1.wav",
+				"human/units/elven_archer-ranger/selected/2.wav",
+				"human/units/elven_archer-ranger/selected/3.wav",
+				"human/units/elven_archer-ranger/selected/4.wav",
+				"human/units/elven_archer-ranger/annoyed/1.wav",
+				"human/units/elven_archer-ranger/annoyed/2.wav",
+				"human/units/elven_archer-ranger/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/elven_archer-ranger/acknowledgement/1.wav",
+				"human/units/elven_archer-ranger/acknowledgement/2.wav",
+				"human/units/elven_archer-ranger/acknowledgement/3.wav",
+				"human/units/elven_archer-ranger/acknowledgement/4.wav"
+			],
+			"ready": [
+				"human/units/elven_archer-ranger/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-mage": {
+			"selected": [
+				"human/units/mage/selected/1.wav",
+				"human/units/mage/selected/2.wav",
+				"human/units/mage/selected/3.wav",
+				"human/units/mage/annoyed/1.wav",
+				"human/units/mage/annoyed/2.wav",
+				"human/units/mage/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/mage/acknowledgement/1.wav",
+				"human/units/mage/acknowledgement/2.wav",
+				"human/units/mage/acknowledgement/3.wav"
+			],
+			"ready": [
+				"human/units/mage/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-paladin": {
+			"selected": [
+				"human/units/paladin/selected/1.wav",
+				"human/units/paladin/selected/2.wav",
+				"human/units/paladin/selected/3.wav",
+				"human/units/paladin/selected/4.wav",
+				"human/units/paladin/annoyed/1.wav",
+				"human/units/paladin/annoyed/2.wav",
+				"human/units/paladin/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/paladin/acknowledgement/1.wav",
+				"human/units/paladin/acknowledgement/2.wav",
+				"human/units/paladin/acknowledgement/3.wav",
+				"human/units/paladin/acknowledgement/4.wav"
+			],
+			"ready": [
+				"human/units/paladin/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-dwarves": {
+			"selected": [
+				"human/units/dwarven_demolition_squad/selected/1.wav",
+				"human/units/dwarven_demolition_squad/selected/2.wav",
+				"human/units/dwarven_demolition_squad/annoyed/1.wav",
+				"human/units/dwarven_demolition_squad/annoyed/2.wav",
+				"human/units/dwarven_demolition_squad/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/dwarven_demolition_squad/acknowledgement/1.wav",
+				"human/units/dwarven_demolition_squad/acknowledgement/2.wav",
+				"human/units/dwarven_demolition_squad/acknowledgement/3.wav",
+				"human/units/dwarven_demolition_squad/acknowledgement/4.wav",
+				"human/units/dwarven_demolition_squad/acknowledgement/5.wav"
+			],
+			"ready": [
+				"human/units/dwarven_demolition_squad/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-ranger": {
+			"selected": [
+				"human/units/elven_archer-ranger/selected/1.wav",
+				"human/units/elven_archer-ranger/selected/2.wav",
+				"human/units/elven_archer-ranger/selected/3.wav",
+				"human/units/elven_archer-ranger/selected/4.wav",
+				"human/units/elven_archer-ranger/annoyed/1.wav",
+				"human/units/elven_archer-ranger/annoyed/2.wav",
+				"human/units/elven_archer-ranger/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/elven_archer-ranger/acknowledgement/1.wav",
+				"human/units/elven_archer-ranger/acknowledgement/2.wav",
+				"human/units/elven_archer-ranger/acknowledgement/3.wav",
+				"human/units/elven_archer-ranger/acknowledgement/4.wav"
+			],
+			"ready": [
+				"human/units/elven_archer-ranger/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-female-hero": {
+			"selected": [
+				"human/units/alleria/selected/1.wav",
+				"human/units/alleria/selected/2.wav",
+				"human/units/alleria/selected/3.wav",
+				"human/units/alleria/annoyed/1.wav",
+				"human/units/alleria/annoyed/2.wav",
+				"human/units/alleria/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/alleria/acknowledgement/1.wav",
+				"human/units/alleria/acknowledgement/2.wav",
+				"human/units/alleria/acknowledgement/3.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-gryphon-rider": {
+			"selected": [
+				"human/units/gryphon_rider/selected/1.wav"
+			],
+			"acknowledge": [
+				"human/units/gryphon_rider/acknowledgement/2.wav"
+			],
+			"ready": [
+				"human/units/gryphon_rider/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-flying-angel": {
+			"selected": [
+				"human/units/kurdan/selected/1.wav",
+				"human/units/kurdan/selected/2.wav",
+				"human/units/kurdan/selected/3.wav",
+				"human/units/kurdan/annoyed/1.wav",
+				"human/units/kurdan/annoyed/2.wav",
+				"human/units/kurdan/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/kurdan/acknowledgement/1.wav",
+				"human/units/kurdan/acknowledgement/2.wav",
+				"human/units/kurdan/acknowledgement/3.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-white-mage": {
+			"selected": [
+				"human/units/khadgar/selected/1.wav",
+				"human/units/khadgar/selected/2.wav",
+				"human/units/khadgar/selected/3.wav",
+				"human/units/khadgar/annoyed/1.wav",
+				"human/units/khadgar/annoyed/2.wav",
+				"human/units/khadgar/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/khadgar/acknowledgement/1.wav",
+				"human/units/khadgar/acknowledgement/2.wav",
+				"human/units/khadgar/acknowledgement/3.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-human-oil-tanker": {
+			"selected": [
+				"human/ships/selected/1.wav",
+				"human/ships/selected/2.wav",
+				"human/ships/selected/3.wav",
+				"human/ships/annoyed/1.wav",
+				"human/ships/annoyed/2.wav",
+				"human/ships/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"ships/tanker/acknowledgement/1.wav"
+			],
+			"work-complete": [
+				"human/basic_voices/work_complete.wav"
+			],
+			"ready": [
+				"human/ships/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-human-transport": {
+			"selected": [
+				"human/ships/selected/1.wav",
+				"human/ships/selected/2.wav",
+				"human/ships/selected/3.wav",
+				"human/ships/annoyed/1.wav",
+				"human/ships/annoyed/2.wav",
+				"human/ships/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/ships/acknowledgement/1.wav",
+				"human/ships/acknowledgement/2.wav",
+				"human/ships/acknowledgement/3.wav"
+			],
+			"ready": [
+				"human/ships/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-human-destroyer": {
+			"selected": [
+				"human/ships/selected/1.wav",
+				"human/ships/selected/2.wav",
+				"human/ships/selected/3.wav",
+				"human/ships/annoyed/1.wav",
+				"human/ships/annoyed/2.wav",
+				"human/ships/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/ships/acknowledgement/1.wav",
+				"human/ships/acknowledgement/2.wav",
+				"human/ships/acknowledgement/3.wav"
+			],
+			"ready": [
+				"human/ships/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-battleship": {
+			"selected": [
+				"human/ships/selected/1.wav",
+				"human/ships/selected/2.wav",
+				"human/ships/selected/3.wav",
+				"human/ships/annoyed/1.wav",
+				"human/ships/annoyed/2.wav",
+				"human/ships/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/ships/acknowledgement/1.wav",
+				"human/ships/acknowledgement/2.wav",
+				"human/ships/acknowledgement/3.wav"
+			],
+			"ready": [
+				"human/ships/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-human-submarine": {
+			"selected": [
+				"human/ships/selected/1.wav",
+				"human/ships/selected/2.wav",
+				"human/ships/selected/3.wav",
+				"human/ships/gnomish_submarine/annoyed/1.wav",
+				"human/ships/gnomish_submarine/annoyed/2.wav",
+				"human/ships/gnomish_submarine/annoyed/3.wav",
+				"human/ships/gnomish_submarine/annoyed/4.wav"
+			],
+			"acknowledge": [
+				"human/ships/acknowledgement/1.wav",
+				"human/ships/acknowledgement/2.wav",
+				"human/ships/acknowledgement/3.wav"
+			],
+			"ready": [
+				"human/ships/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-balloon": {
+			"selected": [
+				"ui/click.wav",
+				"human/units/gnomish_flying_machine/annoyed/1.wav",
+				"human/units/gnomish_flying_machine/annoyed/2.wav",
+				"human/units/gnomish_flying_machine/annoyed/3.wav",
+				"human/units/gnomish_flying_machine/annoyed/4.wav",
+				"human/units/gnomish_flying_machine/annoyed/5.wav"
+			],
+			"acknowledge": [
+				"human/units/gnomish_flying_machine/acknowledgement/1.wav"
+			],
+			"ready": [
+				"human/units/gnomish_flying_machine/ready.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-knight-rider": {
+			"selected": [
+				"human/units/turalyon/selected/1.wav",
+				"human/units/turalyon/selected/2.wav",
+				"human/units/turalyon/selected/3.wav",
+				"human/units/turalyon/annoyed/1.wav",
+				"human/units/turalyon/annoyed/2.wav",
+				"human/units/turalyon/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/turalyon/acknowledgement/1.wav",
+				"human/units/turalyon/acknowledgement/2.wav",
+				"human/units/turalyon/acknowledgement/3.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-arthor-literios": {
+			"selected": [
+				"human/units/danath/selected/1.wav",
+				"human/units/danath/selected/2.wav",
+				"human/units/danath/selected/3.wav",
+				"human/units/danath/annoyed/1.wav",
+				"human/units/danath/annoyed/2.wav",
+				"human/units/danath/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/danath/acknowledgement/1.wav",
+				"human/units/danath/acknowledgement/2.wav",
+				"human/units/danath/acknowledgement/3.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-wise-man": {
+			"selected": [
+				"human/units/knight/selected/1.wav",
+				"human/units/knight/selected/2.wav",
+				"human/units/knight/selected/3.wav",
+				"human/units/knight/selected/4.wav",
+				"human/units/knight/annoyed/1.wav",
+				"human/units/knight/annoyed/2.wav",
+				"human/units/knight/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/knight/acknowledgement/1.wav",
+				"human/units/knight/acknowledgement/2.wav",
+				"human/units/knight/acknowledgement/3.wav",
+				"human/units/knight/acknowledgement/4.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-man-of-light": {
+			"selected": [
+				"human/units/paladin/selected/1.wav",
+				"human/units/paladin/selected/2.wav",
+				"human/units/paladin/selected/3.wav",
+				"human/units/paladin/selected/4.wav",
+				"human/units/paladin/annoyed/1.wav",
+				"human/units/paladin/annoyed/2.wav",
+				"human/units/paladin/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"human/units/paladin/acknowledgement/1.wav",
+				"human/units/paladin/acknowledgement/2.wav",
+				"human/units/paladin/acknowledgement/3.wav",
+				"human/units/paladin/acknowledgement/4.wav"
+			],
+			"help": [
+				"human/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"human/basic_voices/dead.wav"
+			]
+		},
+		"unit-farm": {
+			"selected": [
+				"human/buildings/farm.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-barracks": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-church": {
+			"selected": [
+				"human/buildings/church.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-watch-tower": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-stables": {
+			"selected": [
+				"human/buildings/stables.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-inventor": {
+			"selected": [
+				"human/buildings/gnomish_inventor.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-gryphon-aviary": {
+			"selected": [
+				"human/buildings/gryphon_aviary.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-shipyard": {
+			"selected": [
+				"buildings/shipyard.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-elven-lumber-mill": {
+			"selected": [
+				"buildings/lumbermill.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-foundry": {
+			"selected": [
+				"buildings/foundry.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-town-hall": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-mage-tower": {
+			"selected": [
+				"human/buildings/mage_tower.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-blacksmith": {
+			"selected": [
+				"buildings/blacksmith.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-refinery": {
+			"selected": [
+				"buildings/oil_refinery.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-oil-platform": {
+			"selected": [
+				"buildings/oil_platform.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-keep": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-castle": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-start-location": {
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-guard-tower": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-guard-tower-super": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-cannon-tower": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-cannon-tower-super": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-human-wall": {
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-grunt": {
+			"selected": [
+				"orc/basic_voices/selected/1.wav",
+				"orc/basic_voices/selected/2.wav",
+				"orc/basic_voices/selected/3.wav",
+				"orc/basic_voices/selected/4.wav",
+				"orc/basic_voices/selected/5.wav",
+				"orc/basic_voices/selected/6.wav",
+				"orc/basic_voices/annoyed/1.wav",
+				"orc/basic_voices/annoyed/2.wav",
+				"orc/basic_voices/annoyed/3.wav",
+				"orc/basic_voices/annoyed/4.wav",
+				"orc/basic_voices/annoyed/5.wav",
+				"orc/basic_voices/annoyed/6.wav",
+				"orc/basic_voices/annoyed/7.wav"
+			],
+			"acknowledge": [
+				"orc/basic_voices/acknowledgement/1.wav",
+				"orc/basic_voices/acknowledgement/2.wav",
+				"orc/basic_voices/acknowledgement/3.wav",
+				"orc/basic_voices/acknowledgement/4.wav"
+			],
+			"ready": [
+				"orc/basic_voices/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-peon": {
+			"selected": [
+				"orc/basic_voices/selected/1.wav",
+				"orc/basic_voices/selected/2.wav",
+				"orc/basic_voices/selected/3.wav",
+				"orc/basic_voices/selected/4.wav",
+				"orc/basic_voices/selected/5.wav",
+				"orc/basic_voices/selected/6.wav",
+				"orc/basic_voices/annoyed/1.wav",
+				"orc/basic_voices/annoyed/2.wav",
+				"orc/basic_voices/annoyed/3.wav",
+				"orc/basic_voices/annoyed/4.wav",
+				"orc/basic_voices/annoyed/5.wav",
+				"orc/basic_voices/annoyed/6.wav",
+				"orc/basic_voices/annoyed/7.wav"
+			],
+			"acknowledge": [
+				"orc/basic_voices/acknowledgement/1.wav",
+				"orc/basic_voices/acknowledgement/2.wav",
+				"orc/basic_voices/acknowledgement/3.wav",
+				"orc/basic_voices/acknowledgement/4.wav"
+			],
+			"ready": [
+				"orc/peon/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-attack-peon": {
+			"selected": [
+				"orc/basic_voices/selected/1.wav",
+				"orc/basic_voices/selected/2.wav",
+				"orc/basic_voices/selected/3.wav",
+				"orc/basic_voices/selected/4.wav",
+				"orc/basic_voices/selected/5.wav",
+				"orc/basic_voices/selected/6.wav",
+				"orc/basic_voices/annoyed/1.wav",
+				"orc/basic_voices/annoyed/2.wav",
+				"orc/basic_voices/annoyed/3.wav",
+				"orc/basic_voices/annoyed/4.wav",
+				"orc/basic_voices/annoyed/5.wav",
+				"orc/basic_voices/annoyed/6.wav",
+				"orc/basic_voices/annoyed/7.wav"
+			],
+			"acknowledge": [
+				"orc/basic_voices/acknowledgement/1.wav",
+				"orc/basic_voices/acknowledgement/2.wav",
+				"orc/basic_voices/acknowledgement/3.wav",
+				"orc/basic_voices/acknowledgement/4.wav"
+			],
+			"ready": [
+				"orc/peon/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-catapult": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"acknowledge": [
+				"units/catapult-ballista/acknowledgement/1.wav"
+			],
+			"ready": [
+				"orc/basic_voices/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-catapult-super": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"acknowledge": [
+				"units/catapult-ballista/acknowledgement/1.wav"
+			],
+			"ready": [
+				"orc/basic_voices/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-ogre": {
+			"selected": [
+				"orc/units/ogre/selected/1.wav",
+				"orc/units/ogre/selected/2.wav",
+				"orc/units/ogre/selected/3.wav",
+				"orc/units/ogre/selected/4.wav",
+				"orc/units/ogre/annoyed/1.wav",
+				"orc/units/ogre/annoyed/2.wav",
+				"orc/units/ogre/annoyed/3.wav",
+				"orc/units/ogre/annoyed/4.wav",
+				"orc/units/ogre/annoyed/5.wav"
+			],
+			"acknowledge": [
+				"orc/units/ogre/acknowledgement/1.wav",
+				"orc/units/ogre/acknowledgement/2.wav",
+				"orc/units/ogre/acknowledgement/3.wav"
+			],
+			"ready": [
+				"orc/units/ogre/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-axethrower": {
+			"selected": [
+				"orc/units/troll_axethrower-berserker/selected/1.wav",
+				"orc/units/troll_axethrower-berserker/selected/2.wav",
+				"orc/units/troll_axethrower-berserker/selected/3.wav",
+				"orc/units/troll_axethrower-berserker/annoyed/1.wav",
+				"orc/units/troll_axethrower-berserker/annoyed/2.wav",
+				"orc/units/troll_axethrower-berserker/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/troll_axethrower-berserker/acknowledgement/1.wav",
+				"orc/units/troll_axethrower-berserker/acknowledgement/2.wav",
+				"orc/units/troll_axethrower-berserker/acknowledgement/3.wav"
+			],
+			"ready": [
+				"orc/units/troll_axethrower-berserker/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-death-knight": {
+			"selected": [
+				"orc/units/death_knight/selected/1.wav",
+				"orc/units/death_knight/selected/2.wav",
+				"orc/units/death_knight/annoyed/1.wav",
+				"orc/units/death_knight/annoyed/2.wav",
+				"orc/units/death_knight/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/death_knight/acknowledgement/1.wav",
+				"orc/units/death_knight/acknowledgement/2.wav",
+				"orc/units/death_knight/acknowledgement/3.wav"
+			],
+			"ready": [
+				"orc/units/death_knight/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-ogre-mage": {
+			"selected": [
+				"orc/units/ogre-mage/selected/1.wav",
+				"orc/units/ogre-mage/selected/2.wav",
+				"orc/units/ogre-mage/selected/3.wav",
+				"orc/units/ogre-mage/selected/4.wav",
+				"orc/units/ogre-mage/annoyed/1.wav",
+				"orc/units/ogre-mage/annoyed/2.wav",
+				"orc/units/ogre-mage/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/ogre-mage/acknowledgement/1.wav",
+				"orc/units/ogre-mage/acknowledgement/2.wav",
+				"orc/units/ogre-mage/acknowledgement/3.wav"
+			],
+			"ready": [
+				"orc/units/ogre-mage/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-goblin-sappers": {
+			"selected": [
+				"orc/units/goblin_sappers/selected/1.wav",
+				"orc/units/goblin_sappers/selected/2.wav",
+				"orc/units/goblin_sappers/selected/3.wav",
+				"orc/units/goblin_sappers/selected/4.wav",
+				"orc/units/goblin_sappers/annoyed/1.wav",
+				"orc/units/goblin_sappers/annoyed/2.wav",
+				"orc/units/goblin_sappers/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/goblin_sappers/acknowledgement/1.wav",
+				"orc/units/goblin_sappers/acknowledgement/2.wav",
+				"orc/units/goblin_sappers/acknowledgement/3.wav",
+				"orc/units/goblin_sappers/acknowledgement/4.wav"
+			],
+			"ready": [
+				"orc/units/goblin_sappers/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-berserker": {
+			"selected": [
+				"orc/units/troll_axethrower-berserker/selected/1.wav",
+				"orc/units/troll_axethrower-berserker/selected/2.wav",
+				"orc/units/troll_axethrower-berserker/selected/3.wav",
+				"orc/units/troll_axethrower-berserker/annoyed/1.wav",
+				"orc/units/troll_axethrower-berserker/annoyed/2.wav",
+				"orc/units/troll_axethrower-berserker/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/troll_axethrower-berserker/acknowledgement/1.wav",
+				"orc/units/troll_axethrower-berserker/acknowledgement/2.wav",
+				"orc/units/troll_axethrower-berserker/acknowledgement/3.wav"
+			],
+			"ready": [
+				"orc/units/troll_axethrower-berserker/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-evil-knight": {
+			"selected": [
+				"orc/units/teron_gorefiend/selected/1.wav",
+				"orc/units/teron_gorefiend/selected/2.wav",
+				"orc/units/teron_gorefiend/selected/3.wav",
+				"orc/units/teron_gorefiend/annoyed/1.wav",
+				"orc/units/teron_gorefiend/annoyed/2.wav",
+				"orc/units/teron_gorefiend/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/teron_gorefiend/acknowledgement/1.wav",
+				"orc/units/teron_gorefiend/acknowledgement/2.wav",
+				"orc/units/teron_gorefiend/acknowledgement/3.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-fad-man": {
+			"selected": [
+				"orc/units/dentarg/selected/1.wav",
+				"orc/units/dentarg/selected/2.wav",
+				"orc/units/dentarg/selected/3.wav",
+				"orc/units/dentarg/annoyed/1.wav",
+				"orc/units/dentarg/annoyed/2.wav",
+				"orc/units/dentarg/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/dentarg/acknowledgement/1.wav",
+				"orc/units/dentarg/acknowledgement/2.wav",
+				"orc/units/dentarg/acknowledgement/3.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-beast-cry": {
+			"selected": [
+				"orc/units/grom_hellscream/selected/1.wav",
+				"orc/units/grom_hellscream/selected/2.wav",
+				"orc/units/grom_hellscream/selected/3.wav",
+				"orc/units/grom_hellscream/annoyed/1.wav",
+				"orc/units/grom_hellscream/annoyed/2.wav",
+				"orc/units/grom_hellscream/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/grom_hellscream/acknowledgement/1.wav",
+				"orc/units/grom_hellscream/acknowledgement/2.wav",
+				"orc/units/grom_hellscream/acknowledgement/3.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-orc-oil-tanker": {
+			"selected": [
+				"orc/ships/selected/1.wav",
+				"orc/ships/selected/2.wav",
+				"orc/ships/selected/3.wav",
+				"orc/ships/annoyed/1.wav",
+				"orc/ships/annoyed/2.wav",
+				"orc/ships/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"ships/tanker/acknowledgement/1.wav"
+			],
+			"ready": [
+				"orc/ships/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-orc-transport": {
+			"selected": [
+				"orc/ships/selected/1.wav",
+				"orc/ships/selected/2.wav",
+				"orc/ships/selected/3.wav",
+				"orc/ships/annoyed/1.wav",
+				"orc/ships/annoyed/2.wav",
+				"orc/ships/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/ships/acknowledgement/1.wav",
+				"orc/ships/acknowledgement/2.wav",
+				"orc/ships/acknowledgement/3.wav"
+			],
+			"ready": [
+				"orc/ships/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-orc-destroyer": {
+			"selected": [
+				"orc/ships/selected/1.wav",
+				"orc/ships/selected/2.wav",
+				"orc/ships/selected/3.wav",
+				"orc/ships/annoyed/1.wav",
+				"orc/ships/annoyed/2.wav",
+				"orc/ships/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/ships/acknowledgement/1.wav",
+				"orc/ships/acknowledgement/2.wav",
+				"orc/ships/acknowledgement/3.wav"
+			],
+			"ready": [
+				"orc/ships/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-ogre-juggernaught": {
+			"selected": [
+				"orc/ships/selected/1.wav",
+				"orc/ships/selected/2.wav",
+				"orc/ships/selected/3.wav",
+				"orc/ships/annoyed/1.wav",
+				"orc/ships/annoyed/2.wav",
+				"orc/ships/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/ships/acknowledgement/1.wav",
+				"orc/ships/acknowledgement/2.wav",
+				"orc/ships/acknowledgement/3.wav"
+			],
+			"ready": [
+				"orc/ships/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-dragon": {
+			"selected": [
+				"orc/units/dragon/selected/1.wav"
+			],
+			"acknowledge": [
+				"orc/units/dragon/acknowledgement/1.wav",
+				"orc/units/dragon/acknowledgement/2.wav"
+			],
+			"ready": [
+				"orc/units/dragon/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-fire-breeze": {
+			"selected": [
+				"orc/units/deathwing/selected/1.wav",
+				"orc/units/deathwing/selected/2.wav",
+				"orc/units/deathwing/selected/3.wav",
+				"orc/units/deathwing/annoyed/1.wav",
+				"orc/units/deathwing/annoyed/2.wav",
+				"orc/units/deathwing/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/deathwing/acknowledgement/1.wav",
+				"orc/units/deathwing/acknowledgement/2.wav",
+				"orc/units/deathwing/acknowledgement/3.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-orc-submarine": {
+			"selected": [
+				"orc/ships/selected/1.wav",
+				"orc/ships/selected/2.wav",
+				"orc/ships/selected/3.wav",
+				"orc/ships/annoyed/1.wav",
+				"orc/ships/annoyed/2.wav",
+				"orc/ships/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/ships/acknowledgement/1.wav",
+				"orc/ships/acknowledgement/2.wav",
+				"orc/ships/acknowledgement/3.wav"
+			],
+			"ready": [
+				"orc/ships/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"ships/sinking.wav"
+			]
+		},
+		"unit-zeppelin": {
+			"selected": [
+				"ui/click.wav",
+				"orc/units/goblin_zeppelin/annoyed/1.wav",
+				"orc/units/goblin_zeppelin/annoyed/2.wav"
+			],
+			"acknowledge": [
+				"orc/units/goblin_zeppelin/acknowledgement/1.wav"
+			],
+			"ready": [
+				"orc/units/goblin_zeppelin/ready.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-eye-of-vision": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			]
+		},
+		"unit-quick-blade": {
+			"selected": [
+				"orc/units/korgath_bladefist/selected/1.wav",
+				"orc/units/korgath_bladefist/selected/2.wav",
+				"orc/units/korgath_bladefist/selected/3.wav",
+				"orc/units/korgath_bladefist/annoyed/1.wav",
+				"orc/units/korgath_bladefist/annoyed/2.wav",
+				"orc/units/korgath_bladefist/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/korgath_bladefist/acknowledgement/1.wav",
+				"orc/units/korgath_bladefist/acknowledgement/2.wav",
+				"orc/units/korgath_bladefist/acknowledgement/3.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-double-head": {
+			"selected": [
+				"orc/units/ogre-mage/selected/1.wav",
+				"orc/units/ogre-mage/selected/2.wav",
+				"orc/units/ogre-mage/selected/3.wav",
+				"orc/units/ogre-mage/selected/4.wav",
+				"orc/units/ogre-mage/annoyed/1.wav",
+				"orc/units/ogre-mage/annoyed/2.wav",
+				"orc/units/ogre-mage/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/ogre-mage/acknowledgement/1.wav",
+				"orc/units/ogre-mage/acknowledgement/2.wav",
+				"orc/units/ogre-mage/acknowledgement/3.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-ice-bringer": {
+			"selected": [
+				"orc/units/death_knight/selected/1.wav",
+				"orc/units/death_knight/selected/2.wav",
+				"orc/units/death_knight/annoyed/1.wav",
+				"orc/units/death_knight/annoyed/2.wav",
+				"orc/units/death_knight/annoyed/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/death_knight/acknowledgement/1.wav",
+				"orc/units/death_knight/acknowledgement/2.wav",
+				"orc/units/death_knight/acknowledgement/3.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-sharp-axe": {
+			"selected": [
+				"orc/units/troll_axethrower-berserker/selected/1.wav",
+				"orc/units/troll_axethrower-berserker/selected/2.wav",
+				"orc/units/troll_axethrower-berserker/selected/3.wav"
+			],
+			"acknowledge": [
+				"orc/units/troll_axethrower-berserker/acknowledgement/1.wav",
+				"orc/units/troll_axethrower-berserker/acknowledgement/2.wav",
+				"orc/units/troll_axethrower-berserker/acknowledgement/3.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"orc/basic_voices/dead.wav"
+			]
+		},
+		"unit-skeleton": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"acknowledge": [
+				"sounds/neutral/units/skeleton/acknowledgement/1.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"neutral/units/skeleton/dead.wav"
+			]
+		},
+		"unit-pig-farm": {
+			"selected": [
+				"orc/buildings/pig_farm.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-barracks": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-altar-of-storms": {
+			"selected": [
+				"orc/buildings/altar_of_storms.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-watch-tower": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-ogre-mound": {
+			"selected": [
+				"orc/buildings/ogre_mound.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-alchemist": {
+			"selected": [
+				"orc/buildings/goblin_alchemist.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-dragon-roost": {
+			"selected": [
+				"orc/buildings/dragon_roost.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-shipyard": {
+			"selected": [
+				"buildings/shipyard.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-great-hall": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-troll-lumber-mill": {
+			"selected": [
+				"buildings/lumbermill.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-foundry": {
+			"selected": [
+				"buildings/foundry.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-temple-of-the-damned": {
+			"selected": [
+				"orc/buildings/temple_of_the_damned.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-blacksmith": {
+			"selected": [
+				"buildings/blacksmith.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-refinery": {
+			"selected": [
+				"buildings/oil_refinery.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-oil-platform": {
+			"selected": [
+				"buildings/oil_platform.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-stronghold": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-fortress": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-start-location": {
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-guard-tower": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-guard-tower-super": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-cannon-tower": {
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-cannon-tower-super": {
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-orc-wall": {
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-daemon": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-critter": {
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/explosion.wav"
+			]
+		},
+		"unit-gold-mine": {
+			"selected": [
+				"neutral/buildings/gold_mine.wav"
+			],
+			"help": [
+				"orc/basic_voices/help/1.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-oil-patch": {
+			"selected": [
+				"ui/click.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-pile-circle": {
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-circle-of-power": {
+			"help": [
+				"human/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-dark-portal": {
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		},
+		"unit-runestone": {
+			"help": [
+				"orc/basic_voices/help/2.wav"
+			],
+			"dead": [
+				"misc/building_explosion/1.wav",
+				"misc/building_explosion/2.wav",
+				"misc/building_explosion/3.wav"
+			]
+		}
+	},
+	"missiles": {
+		"missile-griffon-hammer": {
+			"impact": [
+				"missiles/fireball_hit.wav"
+			]
+		},
+		"missile-dragon-breath": {
+			"impact": [
+				"missiles/fireball_hit.wav"
+			]
+		},
+		"missile-fireball": {
+			"impact": [
+				"missiles/fireball_hit.wav"
+			]
+		},
+		"missile-blizzard": {
+			"impact": [
+				"missiles/fireball_hit.wav"
+			]
+		},
+		"missile-big-cannon": {
+			"impact": [
+				"misc/explosion.wav"
+			]
+		},
+		"missile-catapult-rock": {
+			"impact": [
+				"misc/explosion.wav"
+			]
+		},
+		"missile-ballista-bolt": {
+			"impact": [
+				"misc/explosion.wav"
+			]
+		},
+		"missile-arrow": {
+			"impact": [
+				"missiles/bow_hit.wav"
+			]
+		},
+		"missile-arrow-super": {
+			"impact": [
+				"missiles/bow_hit.wav"
+			]
+		},
+		"missile-axe": {
+			"impact": [
+				"missiles/bow_hit.wav"
+			]
+		},
+		"missile-submarine-missile": {
+			"impact": [
+				"misc/explosion.wav"
+			]
+		},
+		"missile-turtle-missile": {
+			"impact": [
+				"misc/explosion.wav"
+			]
+		},
+		"missile-small-cannon": {
+			"impact": [
+				"misc/explosion.wav"
+			]
+		},
+		"missile-small-cannon-super": {
+			"impact": [
+				"misc/explosion.wav"
+			]
+		},
+		"missile-daemon-fire": {
+			"impact": [
+				"missiles/fireball_hit.wav"
+			]
+		}
+	}
+}

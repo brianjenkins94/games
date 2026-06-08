@@ -1,0 +1,2983 @@
+{
+	"unit-footman": {
+		"hitPoints": 60,
+		"speed": 10,
+		"armor": 2,
+		"basicDamage": 6,
+		"piercingDamage": 3,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 60,
+			"gold": 600
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-peasant": {
+		"hitPoints": 30,
+		"speed": 10,
+		"basicDamage": 3,
+		"piercingDamage": 2,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 45,
+			"gold": 400
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "harvest",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-attack-peasant": {
+		"hitPoints": 30,
+		"speed": 10,
+		"basicDamage": 3,
+		"piercingDamage": 2,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-ballista": {},
+	"unit-ballista-super": {},
+	"unit-knight": {
+		"hitPoints": 90,
+		"speed": 13,
+		"armor": 4,
+		"basicDamage": 8,
+		"piercingDamage": 4,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 90,
+			"gold": 800,
+			"wood": 100
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-archer": {
+		"hitPoints": 40,
+		"speed": 10,
+		"basicDamage": 3,
+		"piercingDamage": 6,
+		"attackRange": 4,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 70,
+			"gold": 500,
+			"wood": 50
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-arrow",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-mage": {
+		"hitPoints": 60,
+		"speed": 8,
+		"basicDamage": 0,
+		"piercingDamage": 9,
+		"attackRange": 2,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 120,
+			"gold": 1200
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-lightning",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-paladin": {
+		"hitPoints": 90,
+		"speed": 13,
+		"armor": 4,
+		"basicDamage": 8,
+		"piercingDamage": 4,
+		"attackRange": 1,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 90,
+			"gold": 800,
+			"wood": 100
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-dwarves": {
+		"hitPoints": 40,
+		"speed": 11,
+		"basicDamage": 4,
+		"piercingDamage": 2,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 200,
+			"gold": 700,
+			"wood": 250
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "spell-cast"
+	},
+	"unit-ranger": {
+		"hitPoints": 50,
+		"speed": 10,
+		"basicDamage": 3,
+		"piercingDamage": 6,
+		"attackRange": 4,
+		"sightRange": 6,
+		"demand": 1,
+		"costs": {
+			"time": 70,
+			"gold": 500,
+			"wood": 50
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-arrow",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-female-hero": {
+		"hitPoints": 120,
+		"speed": 10,
+		"armor": 5,
+		"basicDamage": 10,
+		"piercingDamage": 18,
+		"attackRange": 7,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 70,
+			"gold": 500,
+			"wood": 50
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-arrow",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-gryphon-rider": {
+		"hitPoints": 100,
+		"speed": 14,
+		"armor": 5,
+		"basicDamage": 0,
+		"piercingDamage": 16,
+		"attackRange": 4,
+		"sightRange": 6,
+		"demand": 1,
+		"costs": {
+			"time": 250,
+			"gold": 2500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "fly",
+		"missile": "missile-griffon-hammer",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"airUnit": true,
+		"detectCloak": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-flying-angel": {
+		"hitPoints": 250,
+		"speed": 14,
+		"armor": 6,
+		"basicDamage": 0,
+		"piercingDamage": 25,
+		"attackRange": 5,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 250,
+			"gold": 2500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "fly",
+		"missile": "missile-griffon-hammer",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"airUnit": true,
+		"detectCloak": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-white-mage": {
+		"hitPoints": 120,
+		"speed": 8,
+		"armor": 3,
+		"basicDamage": 0,
+		"piercingDamage": 16,
+		"attackRange": 6,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 120,
+			"gold": 1200
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-lightning",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-human-oil-tanker": {
+		"hitPoints": 90,
+		"speed": 10,
+		"armor": 10,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 50,
+			"gold": 400,
+			"wood": 200
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"seaUnit": true,
+		"rightMouseAction": "harvest",
+		"corpse": "unit-dead-sea-body"
+	},
+	"unit-human-transport": {
+		"hitPoints": 150,
+		"speed": 10,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 70,
+			"gold": 600,
+			"wood": 200,
+			"oil": 500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"seaUnit": true,
+		"rightMouseAction": "sail",
+		"corpse": "unit-dead-sea-body"
+	},
+	"unit-human-destroyer": {
+		"hitPoints": 100,
+		"speed": 10,
+		"armor": 10,
+		"basicDamage": 35,
+		"piercingDamage": 0,
+		"attackRange": 4,
+		"sightRange": 8,
+		"demand": 1,
+		"costs": {
+			"time": 90,
+			"gold": 700,
+			"wood": 350,
+			"oil": 700
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"missile": "missile-small-cannon",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"seaUnit": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-dead-sea-body"
+	},
+	"unit-battleship": {
+		"hitPoints": 150,
+		"speed": 6,
+		"armor": 15,
+		"basicDamage": 130,
+		"piercingDamage": 0,
+		"attackRange": 6,
+		"sightRange": 8,
+		"demand": 1,
+		"costs": {
+			"time": 140,
+			"gold": 1000,
+			"wood": 500,
+			"oil": 1000
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"missile": "missile-big-cannon",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canAttack": true,
+		"seaUnit": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-dead-sea-body"
+	},
+	"unit-human-submarine": {
+		"hitPoints": 60,
+		"speed": 7,
+		"basicDamage": 50,
+		"piercingDamage": 0,
+		"attackRange": 4,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 100,
+			"gold": 800,
+			"wood": 150,
+			"oil": 900
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"missile": "missile-submarine-missile",
+		"canTargetSea": true,
+		"canAttack": true,
+		"seaUnit": true,
+		"detectCloak": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-dead-sea-body",
+		"files": {
+			"summer": "human/units/gnomish_submarine.png",
+			"winter": "human/units/gnomish_submarine.png",
+			"wasteland": "tilesets/wasteland/human/units/gnomish_submarine.png",
+			"swamp": "tilesets/swamp/human/units/gnomish_submarine.png"
+		}
+	},
+	"unit-balloon": {
+		"hitPoints": 150,
+		"speed": 17,
+		"armor": 2,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"attackRange": 1,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 65,
+			"gold": 500,
+			"wood": 100
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "fly",
+		"airUnit": true,
+		"detectCloak": true,
+		"rightMouseAction": "move"
+	},
+	"unit-knight-rider": {
+		"hitPoints": 180,
+		"speed": 13,
+		"armor": 10,
+		"basicDamage": 14,
+		"piercingDamage": 5,
+		"attackRange": 1,
+		"sightRange": 6,
+		"demand": 1,
+		"costs": {
+			"time": 90,
+			"gold": 800,
+			"wood": 100
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-arthor-literios": {
+		"hitPoints": 220,
+		"speed": 10,
+		"armor": 8,
+		"basicDamage": 15,
+		"piercingDamage": 8,
+		"attackRange": 1,
+		"sightRange": 6,
+		"demand": 1,
+		"costs": {
+			"time": 60,
+			"gold": 600
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-wise-man": {
+		"hitPoints": 90,
+		"speed": 13,
+		"armor": 4,
+		"basicDamage": 8,
+		"piercingDamage": 4,
+		"attackRange": 1,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 100,
+			"gold": 900,
+			"wood": 100
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-man-of-light": {
+		"hitPoints": 90,
+		"speed": 13,
+		"armor": 4,
+		"basicDamage": 8,
+		"piercingDamage": 4,
+		"attackRange": 1,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 100,
+			"gold": 900,
+			"wood": 100
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-human-dead-body"
+	},
+	"unit-farm": {
+		"hitPoints": 400,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"supply": 4,
+		"costs": {
+			"time": 100,
+			"gold": 500,
+			"wood": 250
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/farm.png",
+			"winter": "tilesets/winter/human/buildings/farm.png",
+			"wasteland": "tilesets/wasteland/human/buildings/farm.png",
+			"swamp": "tilesets/swamp/human/buildings/farm.png"
+		}
+	},
+	"unit-human-barracks": {
+		"hitPoints": 800,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 200,
+			"gold": 700,
+			"wood": 450
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/barracks.png",
+			"winter": "tilesets/winter/human/buildings/barracks.png",
+			"wasteland": "tilesets/summer/human/buildings/barracks.png",
+			"swamp": "tilesets/swamp/human/buildings/barracks.png"
+		}
+	},
+	"unit-church": {
+		"hitPoints": 700,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 175,
+			"gold": 900,
+			"wood": 500
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/church.png",
+			"winter": "tilesets/winter/human/buildings/church.png",
+			"wasteland": "tilesets/summer/human/buildings/church.png",
+			"swamp": "tilesets/swamp/human/buildings/church.png"
+		}
+	},
+	"unit-human-watch-tower": {
+		"hitPoints": 100,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 9,
+		"costs": {
+			"time": 60,
+			"gold": 550,
+			"wood": 200
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/scout_tower.png",
+			"winter": "tilesets/winter/human/buildings/scout_tower.png",
+			"wasteland": "tilesets/summer/human/buildings/scout_tower.png",
+			"swamp": "tilesets/swamp/human/buildings/scout_tower.png"
+		}
+	},
+	"unit-stables": {
+		"hitPoints": 500,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 150,
+			"gold": 1000,
+			"wood": 300
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/stables.png",
+			"winter": "tilesets/winter/human/buildings/stables.png",
+			"wasteland": "tilesets/summer/human/buildings/stables.png",
+			"swamp": "tilesets/swamp/human/buildings/stables.png"
+		}
+	},
+	"unit-inventor": {
+		"hitPoints": 500,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 150,
+			"gold": 1000,
+			"wood": 400
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/gnomish_inventor.png",
+			"winter": "tilesets/winter/human/buildings/gnomish_inventor.png",
+			"wasteland": "tilesets/summer/human/buildings/gnomish_inventor.png",
+			"swamp": "tilesets/swamp/human/buildings/gnomish_inventor.png"
+		}
+	},
+	"unit-gryphon-aviary": {
+		"hitPoints": 500,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 150,
+			"gold": 1000,
+			"wood": 400
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/gryphon_aviary.png",
+			"winter": "tilesets/winter/human/buildings/gryphon_aviary.png",
+			"wasteland": "tilesets/summer/human/buildings/gryphon_aviary.png",
+			"swamp": "tilesets/swamp/human/buildings/gryphon_aviary.png"
+		}
+	},
+	"unit-human-shipyard": {
+		"hitPoints": 1100,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 200,
+			"gold": 800,
+			"wood": 450
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"shoreBuilding": true,
+		"corpse": "unit-destroyed-3x3-place-water",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/shipyard.png",
+			"winter": "tilesets/winter/human/buildings/shipyard.png",
+			"wasteland": "tilesets/summer/human/buildings/shipyard.png",
+			"swamp": "tilesets/swamp/human/buildings/shipyard.png"
+		}
+	},
+	"unit-elven-lumber-mill": {
+		"hitPoints": 600,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 150,
+			"gold": 600,
+			"wood": 450
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/elven_lumber_mill.png",
+			"winter": "tilesets/winter/human/buildings/elven_lumber_mill.png",
+			"wasteland": "tilesets/wasteland/human/buildings/elven_lumber_mill.png",
+			"swamp": "tilesets/swamp/human/buildings/elven_lumber_mill.png"
+		}
+	},
+	"unit-human-foundry": {
+		"hitPoints": 750,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 175,
+			"gold": 700,
+			"wood": 400,
+			"oil": 400
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"shoreBuilding": true,
+		"corpse": "unit-destroyed-3x3-place-water",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/foundry.png",
+			"winter": "tilesets/winter/human/buildings/foundry.png",
+			"wasteland": "tilesets/summer/human/buildings/foundry.png",
+			"swamp": "tilesets/swamp/human/buildings/foundry.png"
+		}
+	},
+	"unit-town-hall": {
+		"hitPoints": 1200,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"supply": 1,
+		"costs": {
+			"time": 255,
+			"gold": 1200,
+			"wood": 800
+		},
+		"tileSize": [
+			4,
+			4
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-4x4-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/town_hall.png",
+			"winter": "tilesets/winter/human/buildings/town_hall.png",
+			"wasteland": "tilesets/summer/human/buildings/town_hall.png",
+			"swamp": "tilesets/swamp/human/buildings/town_hall.png"
+		}
+	},
+	"unit-mage-tower": {
+		"hitPoints": 500,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 125,
+			"gold": 1000,
+			"wood": 200
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"elevated": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/mage_tower.png",
+			"winter": "tilesets/winter/human/buildings/mage_tower.png",
+			"wasteland": "tilesets/summer/human/buildings/mage_tower.png",
+			"swamp": "tilesets/swamp/human/buildings/mage_tower.png"
+		}
+	},
+	"unit-human-blacksmith": {
+		"hitPoints": 775,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 200,
+			"gold": 800,
+			"wood": 450,
+			"oil": 100
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/blacksmith.png",
+			"winter": "tilesets/winter/human/buildings/blacksmith.png",
+			"wasteland": "tilesets/summer/human/buildings/blacksmith.png",
+			"swamp": "tilesets/swamp/human/buildings/blacksmith.png"
+		}
+	},
+	"unit-human-refinery": {
+		"hitPoints": 600,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 225,
+			"gold": 800,
+			"wood": 350,
+			"oil": 200
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"shoreBuilding": true,
+		"corpse": "unit-destroyed-3x3-place-water",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/refinery.png",
+			"winter": "tilesets/winter/human/buildings/refinery.png",
+			"wasteland": "tilesets/summer/human/buildings/refinery.png",
+			"swamp": "tilesets/swamp/human/buildings/refinery.png"
+		}
+	},
+	"unit-human-oil-platform": {
+		"hitPoints": 650,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 200,
+			"gold": 700,
+			"wood": 450
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "naval",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place-water",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/oil_platform.png",
+			"winter": "tilesets/winter/human/buildings/oil_platform.png",
+			"wasteland": "tilesets/wasteland/human/buildings/oil_platform.png",
+			"swamp": "tilesets/swamp/human/buildings/oil_platform.png"
+		}
+	},
+	"unit-keep": {
+		"hitPoints": 1400,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 3,
+		"supply": 1,
+		"costs": {
+			"time": 200,
+			"gold": 2000,
+			"wood": 1000,
+			"oil": 200
+		},
+		"tileSize": [
+			4,
+			4
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-4x4-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/keep.png",
+			"winter": "tilesets/winter/human/buildings/keep.png",
+			"wasteland": "tilesets/summer/human/buildings/keep.png",
+			"swamp": "tilesets/swamp/human/buildings/keep.png"
+		}
+	},
+	"unit-castle": {
+		"hitPoints": 1600,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 6,
+		"supply": 1,
+		"costs": {
+			"time": 200,
+			"gold": 2500,
+			"wood": 1200,
+			"oil": 500
+		},
+		"tileSize": [
+			4,
+			4
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-4x4-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/castle.png",
+			"winter": "tilesets/winter/human/buildings/castle.png",
+			"wasteland": "tilesets/summer/human/buildings/castle.png",
+			"swamp": "tilesets/swamp/human/buildings/castle.png"
+		}
+	},
+	"unit-human-start-location": {
+		"hitPoints": 0,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"demand": 0,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land"
+	},
+	"unit-human-guard-tower": {
+		"hitPoints": 130,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 4,
+		"piercingDamage": 12,
+		"attackRange": 6,
+		"sightRange": 9,
+		"costs": {
+			"time": 140,
+			"gold": 500,
+			"wood": 150
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"missile": "missile-arrow",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/guard_tower.png",
+			"winter": "tilesets/winter/human/buildings/guard_tower.png",
+			"wasteland": "tilesets/summer/human/buildings/guard_tower.png",
+			"swamp": "tilesets/swamp/human/buildings/guard_tower.png"
+		}
+	},
+	"unit-human-guard-tower-super": {
+		"hitPoints": 650,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 4,
+		"piercingDamage": 12,
+		"attackRange": 6,
+		"sightRange": 9,
+		"costs": {
+			"time": 1400,
+			"gold": 5000,
+			"wood": 1500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"missile": "missile-arrow-super",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/guard_tower.png",
+			"winter": "tilesets/winter/human/buildings/guard_tower.png",
+			"wasteland": "tilesets/summer/human/buildings/guard_tower.png",
+			"swamp": "tilesets/swamp/human/buildings/guard_tower.png"
+		}
+	},
+	"unit-human-cannon-tower": {
+		"hitPoints": 160,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 50,
+		"piercingDamage": 0,
+		"attackRange": 7,
+		"sightRange": 9,
+		"costs": {
+			"time": 190,
+			"gold": 1000,
+			"wood": 300
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"missile": "missile-small-cannon",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canAttack": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/cannon_tower.png",
+			"winter": "tilesets/winter/human/buildings/cannon_tower.png",
+			"wasteland": "tilesets/summer/human/buildings/cannon_tower.png",
+			"swamp": "tilesets/swamp/human/buildings/cannon_tower.png"
+		}
+	},
+	"unit-human-cannon-tower-super": {
+		"hitPoints": 800,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 50,
+		"piercingDamage": 0,
+		"attackRange": 7,
+		"sightRange": 9,
+		"costs": {
+			"time": 1900,
+			"gold": 6000,
+			"wood": 1500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"missile": "missile-small-cannon-super",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canAttack": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/human/buildings/cannon_tower.png",
+			"winter": "tilesets/winter/human/buildings/cannon_tower.png",
+			"wasteland": "tilesets/summer/human/buildings/cannon_tower.png",
+			"swamp": "tilesets/swamp/human/buildings/cannon_tower.png"
+		}
+	},
+	"unit-human-wall": {
+		"hitPoints": 40,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 30,
+			"gold": 20,
+			"wood": 10
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-1x1-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/wall.png",
+			"winter": "tilesets/winter/neutral/buildings/wall.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/wall.png",
+			"swamp": "tilesets/summer/neutral/buildings/wall.png"
+		}
+	},
+	"unit-grunt": {
+		"hitPoints": 60,
+		"speed": 10,
+		"armor": 2,
+		"basicDamage": 6,
+		"piercingDamage": 3,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 60,
+			"gold": 600
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-peon": {
+		"hitPoints": 30,
+		"speed": 10,
+		"basicDamage": 3,
+		"piercingDamage": 2,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 45,
+			"gold": 400
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "harvest",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-attack-peon": {
+		"hitPoints": 30,
+		"speed": 10,
+		"basicDamage": 3,
+		"piercingDamage": 2,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 45,
+			"gold": 400
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "harvest",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-catapult": {},
+	"unit-catapult-super": {},
+	"unit-ogre": {
+		"hitPoints": 90,
+		"speed": 13,
+		"armor": 4,
+		"basicDamage": 8,
+		"piercingDamage": 4,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 90,
+			"gold": 800,
+			"wood": 100
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-axethrower": {
+		"hitPoints": 40,
+		"speed": 10,
+		"basicDamage": 3,
+		"piercingDamage": 6,
+		"attackRange": 4,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 70,
+			"gold": 500,
+			"wood": 50
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-axe",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-death-knight": {
+		"hitPoints": 60,
+		"speed": 8,
+		"basicDamage": 0,
+		"piercingDamage": 9,
+		"attackRange": 3,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 120,
+			"gold": 1200
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-touch-of-death",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-ogre-mage": {
+		"hitPoints": 90,
+		"speed": 13,
+		"armor": 4,
+		"basicDamage": 8,
+		"piercingDamage": 4,
+		"attackRange": 1,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 90,
+			"gold": 800,
+			"wood": 100
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-goblin-sappers": {
+		"hitPoints": 40,
+		"speed": 11,
+		"basicDamage": 4,
+		"piercingDamage": 2,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 200,
+			"gold": 700,
+			"wood": 250
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "spell-cast"
+	},
+	"unit-berserker": {
+		"hitPoints": 50,
+		"speed": 10,
+		"basicDamage": 3,
+		"piercingDamage": 6,
+		"attackRange": 4,
+		"sightRange": 6,
+		"demand": 1,
+		"costs": {
+			"time": 70,
+			"gold": 500,
+			"wood": 50
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-axe",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-evil-knight": {
+		"hitPoints": 180,
+		"speed": 8,
+		"armor": 2,
+		"basicDamage": 0,
+		"piercingDamage": 16,
+		"attackRange": 4,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 120,
+			"gold": 1200
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-touch-of-death",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-fad-man": {
+		"hitPoints": 300,
+		"speed": 13,
+		"armor": 8,
+		"basicDamage": 18,
+		"piercingDamage": 6,
+		"attackRange": 1,
+		"sightRange": 6,
+		"demand": 1,
+		"costs": {
+			"time": 90,
+			"gold": 800,
+			"wood": 100
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-beast-cry": {
+		"hitPoints": 240,
+		"speed": 10,
+		"armor": 8,
+		"basicDamage": 16,
+		"piercingDamage": 6,
+		"attackRange": 1,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 60,
+			"gold": 600
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-orc-oil-tanker": {
+		"hitPoints": 90,
+		"speed": 10,
+		"armor": 10,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 50,
+			"gold": 400,
+			"wood": 200
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"seaUnit": true,
+		"rightMouseAction": "harvest",
+		"corpse": "unit-dead-sea-body"
+	},
+	"unit-orc-transport": {
+		"hitPoints": 150,
+		"speed": 10,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"attackRange": 1,
+		"sightRange": 4,
+		"demand": 1,
+		"costs": {
+			"time": 70,
+			"gold": 600,
+			"wood": 200,
+			"oil": 500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"seaUnit": true,
+		"rightMouseAction": "sail",
+		"corpse": "unit-dead-sea-body"
+	},
+	"unit-orc-destroyer": {
+		"hitPoints": 100,
+		"speed": 10,
+		"armor": 10,
+		"basicDamage": 35,
+		"piercingDamage": 0,
+		"attackRange": 4,
+		"sightRange": 8,
+		"demand": 1,
+		"costs": {
+			"time": 90,
+			"gold": 700,
+			"wood": 350,
+			"oil": 700
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"missile": "missile-small-cannon",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"seaUnit": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-dead-sea-body"
+	},
+	"unit-ogre-juggernaught": {
+		"hitPoints": 150,
+		"speed": 6,
+		"armor": 15,
+		"basicDamage": 130,
+		"piercingDamage": 0,
+		"attackRange": 6,
+		"sightRange": 8,
+		"demand": 1,
+		"costs": {
+			"time": 140,
+			"gold": 1000,
+			"wood": 500,
+			"oil": 1000
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"missile": "missile-big-cannon",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canAttack": true,
+		"seaUnit": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-dead-sea-body"
+	},
+	"unit-dragon": {
+		"hitPoints": 100,
+		"speed": 14,
+		"armor": 5,
+		"basicDamage": 0,
+		"piercingDamage": 16,
+		"attackRange": 4,
+		"sightRange": 6,
+		"demand": 1,
+		"costs": {
+			"time": 250,
+			"gold": 2500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "fly",
+		"missile": "missile-dragon-breath",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"airUnit": true,
+		"detectCloak": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-fire-breeze": {
+		"hitPoints": 800,
+		"speed": 14,
+		"armor": 10,
+		"basicDamage": 10,
+		"piercingDamage": 25,
+		"attackRange": 5,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 250,
+			"gold": 2500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "fly",
+		"missile": "missile-dragon-breath",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"airUnit": true,
+		"detectCloak": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-orc-submarine": {
+		"hitPoints": 60,
+		"speed": 7,
+		"basicDamage": 50,
+		"piercingDamage": 0,
+		"attackRange": 4,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 100,
+			"gold": 800,
+			"wood": 150,
+			"oil": 900
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval",
+		"missile": "missile-turtle-missile",
+		"canTargetSea": true,
+		"canAttack": true,
+		"seaUnit": true,
+		"detectCloak": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-dead-sea-body",
+		"files": {
+			"summer": "orc/units/giant_turtle.png",
+			"winter": "orc/units/giant_turtle.png",
+			"wasteland": "tilesets/wasteland/orc/units/giant_turtle.png",
+			"swamp": "tilesets/swamp/orc/units/giant_turtle.png"
+		}
+	},
+	"unit-zeppelin": {
+		"hitPoints": 150,
+		"speed": 17,
+		"armor": 2,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"attackRange": 1,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 65,
+			"gold": 500,
+			"wood": 100
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "fly",
+		"airUnit": true,
+		"detectCloak": true,
+		"rightMouseAction": "move"
+	},
+	"unit-eye-of-vision": {
+		"hitPoints": 100,
+		"speed": 42,
+		"basicDamage": 1,
+		"piercingDamage": 0,
+		"attackRange": 1,
+		"sightRange": 3,
+		"demand": 0,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "fly",
+		"airUnit": true,
+		"detectCloak": true,
+		"rightMouseAction": "move"
+	},
+	"unit-quick-blade": {
+		"hitPoints": 240,
+		"speed": 10,
+		"armor": 8,
+		"basicDamage": 16,
+		"piercingDamage": 6,
+		"attackRange": 1,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 60,
+			"gold": 600
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-double-head": {
+		"hitPoints": 100,
+		"speed": 13,
+		"basicDamage": 10,
+		"piercingDamage": 5,
+		"attackRange": 1,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 100,
+			"gold": 1100,
+			"wood": 50
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-ice-bringer": {
+		"hitPoints": 40,
+		"speed": 8,
+		"basicDamage": 0,
+		"piercingDamage": 3,
+		"attackRange": 3,
+		"sightRange": 8,
+		"demand": 1,
+		"costs": {
+			"time": 120,
+			"gold": 1200
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-touch-of-death",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-sharp-axe": {
+		"hitPoints": 120,
+		"speed": 10,
+		"armor": 5,
+		"basicDamage": 10,
+		"piercingDamage": 18,
+		"attackRange": 5,
+		"sightRange": 9,
+		"demand": 1,
+		"costs": {
+			"time": 70,
+			"gold": 500,
+			"wood": 50
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-axe",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack",
+		"corpse": "unit-orc-dead-body"
+	},
+	"unit-skeleton": {
+		"hitPoints": 40,
+		"speed": 8,
+		"basicDamage": 6,
+		"piercingDamage": 3,
+		"attackRange": 1,
+		"sightRange": 3,
+		"demand": 1,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canAttack": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-pig-farm": {
+		"hitPoints": 400,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 2,
+		"supply": 4,
+		"costs": {
+			"time": 100,
+			"gold": 500,
+			"wood": 250
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/pig_farm.png",
+			"winter": "tilesets/winter/orc/buildings/pig_farm.png",
+			"wasteland": "tilesets/wasteland/orc/buildings/pig_farm.png",
+			"swamp": "tilesets/swamp/orc/buildings/pig_farm.png"
+		}
+	},
+	"unit-orc-barracks": {
+		"hitPoints": 800,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 200,
+			"gold": 700,
+			"wood": 450
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/barracks.png",
+			"winter": "tilesets/winter/orc/buildings/barracks.png",
+			"wasteland": "tilesets/summer/orc/buildings/barracks.png",
+			"swamp": "tilesets/swamp/orc/buildings/barracks.png"
+		}
+	},
+	"unit-altar-of-storms": {
+		"hitPoints": 700,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 175,
+			"gold": 900,
+			"wood": 500
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/altar_of_storms.png",
+			"winter": "tilesets/winter/orc/buildings/altar_of_storms.png",
+			"wasteland": "tilesets/summer/orc/buildings/altar_of_storms.png",
+			"swamp": "tilesets/swamp/orc/buildings/altar_of_storms.png"
+		}
+	},
+	"unit-orc-watch-tower": {
+		"hitPoints": 100,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 9,
+		"costs": {
+			"time": 60,
+			"gold": 550,
+			"wood": 200
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/watch_tower.png",
+			"winter": "tilesets/winter/orc/buildings/watch_tower.png",
+			"wasteland": "tilesets/summer/orc/buildings/watch_tower.png",
+			"swamp": "tilesets/swamp/orc/buildings/watch_tower.png"
+		}
+	},
+	"unit-ogre-mound": {
+		"hitPoints": 500,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 150,
+			"gold": 1000,
+			"wood": 300
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/ogre_mound.png",
+			"winter": "tilesets/winter/orc/buildings/ogre_mound.png",
+			"wasteland": "tilesets/summer/orc/buildings/ogre_mound.png",
+			"swamp": "tilesets/swamp/orc/buildings/ogre_mound.png"
+		}
+	},
+	"unit-alchemist": {
+		"hitPoints": 500,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 150,
+			"gold": 1000,
+			"wood": 400
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/goblin_alchemist.png",
+			"winter": "tilesets/winter/orc/buildings/goblin_alchemist.png",
+			"wasteland": "tilesets/summer/orc/buildings/goblin_alchemist.png",
+			"swamp": "tilesets/swamp/orc/buildings/goblin_alchemist.png"
+		}
+	},
+	"unit-dragon-roost": {
+		"hitPoints": 500,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 150,
+			"gold": 1000,
+			"wood": 400
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/dragon_roost.png",
+			"winter": "tilesets/winter/orc/buildings/dragon_roost.png",
+			"wasteland": "tilesets/summer/orc/buildings/dragon_roost.png",
+			"swamp": "tilesets/swamp/orc/buildings/dragon_roost.png"
+		}
+	},
+	"unit-orc-shipyard": {
+		"hitPoints": 1100,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 200,
+			"gold": 800,
+			"wood": 450
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"shoreBuilding": true,
+		"corpse": "unit-destroyed-3x3-place-water",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/shipyard.png",
+			"winter": "tilesets/winter/orc/buildings/shipyard.png",
+			"wasteland": "tilesets/summer/orc/buildings/shipyard.png",
+			"swamp": "tilesets/swamp/orc/buildings/shipyard.png"
+		}
+	},
+	"unit-great-hall": {
+		"hitPoints": 1200,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"supply": 1,
+		"costs": {
+			"time": 255,
+			"gold": 1200,
+			"wood": 800
+		},
+		"tileSize": [
+			4,
+			4
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-4x4-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/great_hall.png",
+			"winter": "tilesets/winter/orc/buildings/great_hall.png",
+			"wasteland": "tilesets/summer/orc/buildings/great_hall.png",
+			"swamp": "tilesets/swamp/orc/buildings/great_hall.png"
+		}
+	},
+	"unit-troll-lumber-mill": {
+		"hitPoints": 600,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 150,
+			"gold": 600,
+			"wood": 450
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/troll_lumber_mill.png",
+			"winter": "tilesets/winter/orc/buildings/troll_lumber_mill.png",
+			"wasteland": "tilesets/wasteland/orc/buildings/troll_lumber_mill.png",
+			"swamp": "tilesets/swamp/orc/buildings/troll_lumber_mill.png"
+		}
+	},
+	"unit-orc-foundry": {
+		"hitPoints": 750,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 175,
+			"gold": 700,
+			"wood": 400,
+			"oil": 400
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"shoreBuilding": true,
+		"corpse": "unit-destroyed-3x3-place-water",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/foundry.png",
+			"winter": "tilesets/winter/orc/buildings/foundry.png",
+			"wasteland": "tilesets/summer/orc/buildings/foundry.png",
+			"swamp": "tilesets/swamp/orc/buildings/foundry.png"
+		}
+	},
+	"unit-temple-of-the-damned": {
+		"hitPoints": 500,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 125,
+			"gold": 1000,
+			"wood": 200
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/temple_of_the_damned.png",
+			"winter": "tilesets/winter/orc/buildings/temple_of_the_damned.png",
+			"wasteland": "tilesets/summer/orc/buildings/temple_of_the_damned.png",
+			"swamp": "tilesets/swamp/orc/buildings/temple_of_the_damned.png"
+		}
+	},
+	"unit-orc-blacksmith": {
+		"hitPoints": 775,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 200,
+			"gold": 800,
+			"wood": 450,
+			"oil": 100
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/blacksmith.png",
+			"winter": "tilesets/winter/orc/buildings/blacksmith.png",
+			"wasteland": "tilesets/summer/orc/buildings/blacksmith.png",
+			"swamp": "tilesets/swamp/orc/buildings/blacksmith.png"
+		}
+	},
+	"unit-orc-refinery": {
+		"hitPoints": 600,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 225,
+			"gold": 800,
+			"wood": 350,
+			"oil": 200
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"shoreBuilding": true,
+		"corpse": "unit-destroyed-3x3-place-water",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/refinery.png",
+			"winter": "tilesets/winter/orc/buildings/refinery.png",
+			"wasteland": "tilesets/summer/orc/buildings/refinery.png",
+			"swamp": "tilesets/swamp/orc/buildings/refinery.png"
+		}
+	},
+	"unit-orc-oil-platform": {
+		"hitPoints": 650,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 200,
+			"gold": 700,
+			"wood": 450
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "naval",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place-water",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/oil_platform.png",
+			"winter": "tilesets/winter/orc/buildings/oil_platform.png",
+			"wasteland": "tilesets/wasteland/orc/buildings/oil_platform.png",
+			"swamp": "tilesets/swamp/orc/buildings/oil_platform.png"
+		}
+	},
+	"unit-stronghold": {
+		"hitPoints": 1400,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 2,
+		"supply": 1,
+		"costs": {
+			"time": 200,
+			"gold": 2000,
+			"wood": 1000,
+			"oil": 200
+		},
+		"tileSize": [
+			4,
+			4
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-4x4-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/stronghold.png",
+			"winter": "tilesets/winter/orc/buildings/stronghold.png",
+			"wasteland": "tilesets/summer/orc/buildings/stronghold.png",
+			"swamp": "tilesets/swamp/orc/buildings/stronghold.png"
+		}
+	},
+	"unit-fortress": {
+		"hitPoints": 1600,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 6,
+		"supply": 1,
+		"costs": {
+			"time": 200,
+			"gold": 2500,
+			"wood": 1200,
+			"oil": 500
+		},
+		"tileSize": [
+			4,
+			4
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-4x4-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/fortress.png",
+			"winter": "tilesets/winter/orc/buildings/fortress.png",
+			"wasteland": "tilesets/summer/orc/buildings/fortress.png",
+			"swamp": "tilesets/swamp/orc/buildings/fortress.png"
+		}
+	},
+	"unit-orc-start-location": {
+		"hitPoints": 0,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"demand": 0,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land"
+	},
+	"unit-orc-guard-tower": {
+		"hitPoints": 130,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 4,
+		"piercingDamage": 12,
+		"attackRange": 6,
+		"sightRange": 9,
+		"costs": {
+			"time": 140,
+			"gold": 500,
+			"wood": 150
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"missile": "missile-arrow",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/guard_tower.png",
+			"winter": "tilesets/winter/orc/buildings/guard_tower.png",
+			"wasteland": "tilesets/summer/orc/buildings/guard_tower.png",
+			"swamp": "tilesets/swamp/orc/buildings/guard_tower.png"
+		}
+	},
+	"unit-orc-guard-tower-super": {
+		"hitPoints": 650,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 4,
+		"piercingDamage": 12,
+		"attackRange": 6,
+		"sightRange": 9,
+		"costs": {
+			"time": 1400,
+			"gold": 5000,
+			"wood": 1500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"missile": "missile-arrow-super",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/guard_tower.png",
+			"winter": "tilesets/winter/orc/buildings/guard_tower.png",
+			"wasteland": "tilesets/summer/orc/buildings/guard_tower.png",
+			"swamp": "tilesets/swamp/orc/buildings/guard_tower.png"
+		}
+	},
+	"unit-orc-cannon-tower": {
+		"hitPoints": 160,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 50,
+		"piercingDamage": 0,
+		"attackRange": 7,
+		"sightRange": 9,
+		"costs": {
+			"time": 190,
+			"gold": 1000,
+			"wood": 300
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"missile": "missile-small-cannon",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canAttack": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/cannon_tower.png",
+			"winter": "tilesets/winter/orc/buildings/cannon_tower.png",
+			"wasteland": "tilesets/summer/orc/buildings/cannon_tower.png",
+			"swamp": "tilesets/swamp/orc/buildings/cannon_tower.png"
+		}
+	},
+	"unit-orc-cannon-tower-super": {
+		"hitPoints": 800,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 50,
+		"piercingDamage": 0,
+		"attackRange": 7,
+		"sightRange": 9,
+		"costs": {
+			"time": 1900,
+			"gold": 6000,
+			"wood": 1500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"missile": "missile-small-cannon-super",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canAttack": true,
+		"building": true,
+		"elevated": true,
+		"detectCloak": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/cannon_tower.png",
+			"winter": "tilesets/winter/orc/buildings/cannon_tower.png",
+			"wasteland": "tilesets/summer/orc/buildings/cannon_tower.png",
+			"swamp": "tilesets/swamp/orc/buildings/cannon_tower.png"
+		}
+	},
+	"unit-orc-wall": {
+		"hitPoints": 40,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 30,
+			"gold": 20,
+			"wood": 10
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-1x1-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/wall.png",
+			"winter": "tilesets/winter/neutral/buildings/wall.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/wall.png",
+			"swamp": "tilesets/summer/neutral/buildings/wall.png"
+		}
+	},
+	"unit-nothing-22": {
+		"hitPoints": 10,
+		"speed": 99,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			0,
+			0
+		],
+		"type": "land"
+	},
+	"unit-nothing-24": {
+		"hitPoints": 60,
+		"speed": 99,
+		"armor": 2,
+		"basicDamage": 9,
+		"piercingDamage": 1,
+		"attackRange": 1,
+		"sightRange": 4,
+		"costs": {
+			"time": 60,
+			"gold": 400
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "naval",
+		"seaUnit": true
+	},
+	"unit-nothing-25": {
+		"hitPoints": 60,
+		"speed": 99,
+		"armor": 2,
+		"basicDamage": 9,
+		"piercingDamage": 1,
+		"attackRange": 1,
+		"sightRange": 4,
+		"costs": {
+			"time": 60,
+			"gold": 400
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "naval",
+		"seaUnit": true
+	},
+	"unit-nothing-30": {
+		"hitPoints": 0,
+		"speed": 99,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			0,
+			0
+		],
+		"type": "land"
+	},
+	"unit-nothing-36": {
+		"hitPoints": 0,
+		"speed": 99,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			0,
+			0
+		],
+		"type": "land"
+	},
+	"unit-daemon": {
+		"hitPoints": 60,
+		"speed": 14,
+		"armor": 3,
+		"basicDamage": 10,
+		"piercingDamage": 2,
+		"attackRange": 3,
+		"sightRange": 5,
+		"demand": 1,
+		"costs": {
+			"time": 70,
+			"gold": 500,
+			"oil": 50
+		},
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "fly",
+		"missile": "missile-daemon-fire",
+		"canTargetLand": true,
+		"canTargetSea": true,
+		"canTargetAir": true,
+		"canAttack": true,
+		"airUnit": true,
+		"detectCloak": true,
+		"organic": true,
+		"rightMouseAction": "attack"
+	},
+	"unit-critter": {
+		"hitPoints": 5,
+		"speed": 3,
+		"basicDamage": 80,
+		"piercingDamage": 0,
+		"attackRange": 1,
+		"sightRange": 2,
+		"demand": 1,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"missile": "missile-critter-explosion",
+		"canTargetLand": true,
+		"landUnit": true,
+		"organic": true,
+		"rightMouseAction": "move",
+		"files": {
+			"summer": "tilesets/summer/neutral/units/critter.png",
+			"winter": "tilesets/winter/neutral/units/critter.png",
+			"wasteland": "tilesets/wasteland/neutral/units/critter.png",
+			"swamp": "tilesets/swamp/neutral/units/critter.png"
+		}
+	},
+	"unit-gold-mine": {
+		"hitPoints": 25500,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 1,
+		"costs": {
+			"time": 150
+		},
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-3x3-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/gold_mine.png",
+			"winter": "tilesets/winter/neutral/buildings/gold_mine.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/gold_mine.png",
+			"swamp": "tilesets/swamp/neutral/buildings/gold_mine.png"
+		}
+	},
+	"unit-oil-patch": {
+		"hitPoints": 0,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "naval",
+		"building": true,
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/oil_patch.png",
+			"winter": "tilesets/summer/neutral/buildings/oil_patch.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/oil_patch.png",
+			"swamp": "tilesets/swamp/neutral/buildings/oil_patch.png"
+		}
+	},
+	"unit-pile-circle": {
+		"hitPoints": 0,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion"
+	},
+	"unit-circle-of-power": {
+		"hitPoints": 0,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion"
+	},
+	"unit-dark-portal": {
+		"hitPoints": 5000,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 4,
+		"costs": {
+			"time": 100,
+			"gold": 3000,
+			"wood": 3000,
+			"oil": 1000
+		},
+		"tileSize": [
+			4,
+			4
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-4x4-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/dark_portal.png",
+			"winter": "tilesets/winter/neutral/buildings/dark_portal.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/dark_portal.png",
+			"swamp": "tilesets/swamp/neutral/buildings/dark_portal.png"
+		}
+	},
+	"unit-runestone": {
+		"hitPoints": 5000,
+		"speed": 0,
+		"armor": 20,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 4,
+		"costs": {
+			"time": 175,
+			"gold": 900,
+			"wood": 500
+		},
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"building": true,
+		"corpse": "unit-destroyed-2x2-place",
+		"explodeWhenKilled": "missile-explosion",
+		"files": {
+			"summer": "neutral/buildings/runestone.png",
+			"winter": "tilesets/winter/neutral/buildings/runestone.png",
+			"wasteland": "neutral/buildings/runestone.png",
+			"swamp": "tilesets/swamp/neutral/buildings/runestone.png"
+		}
+	},
+	"unit-human-dead-body": {
+		"hitPoints": 255,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land"
+	},
+	"unit-orc-dead-body": {
+		"hitPoints": 255,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land"
+	},
+	"unit-dead-sea-body": {
+		"hitPoints": 255,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "naval"
+	},
+	"unit-destroyed-1x1-place": {
+		"hitPoints": 255,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"building": true,
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/small_destroyed_site.png",
+			"winter": "tilesets/winter/neutral/buildings/small_destroyed_site.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/small_destroyed_site.png",
+			"swamp": "tilesets/swamp/neutral/buildings/small_destroyed_site.png"
+		}
+	},
+	"unit-destroyed-2x2-place": {
+		"hitPoints": 255,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			2,
+			2
+		],
+		"type": "land",
+		"building": true,
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/destroyed_site.png",
+			"winter": "tilesets/winter/neutral/buildings/destroyed_site.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/destroyed_site.png",
+			"swamp": "tilesets/swamp/neutral/buildings/destroyed_site.png"
+		}
+	},
+	"unit-destroyed-3x3-place": {
+		"hitPoints": 255,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "land",
+		"building": true,
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/destroyed_site.png",
+			"winter": "tilesets/winter/neutral/buildings/destroyed_site.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/destroyed_site.png",
+			"swamp": "tilesets/swamp/neutral/buildings/destroyed_site.png"
+		}
+	},
+	"unit-destroyed-3x3-place-water": {
+		"hitPoints": 255,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			3,
+			3
+		],
+		"type": "naval",
+		"building": true,
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/destroyed_site.png",
+			"winter": "tilesets/winter/neutral/buildings/destroyed_site.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/destroyed_site.png",
+			"swamp": "tilesets/swamp/neutral/buildings/destroyed_site.png"
+		}
+	},
+	"unit-destroyed-4x4-place": {
+		"hitPoints": 255,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 0,
+		"tileSize": [
+			4,
+			4
+		],
+		"type": "land",
+		"building": true,
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/destroyed_site.png",
+			"winter": "tilesets/winter/neutral/buildings/destroyed_site.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/destroyed_site.png",
+			"swamp": "tilesets/swamp/neutral/buildings/destroyed_site.png"
+		}
+	},
+	"unit-revealer": {
+		"hitPoints": 1,
+		"speed": 0,
+		"basicDamage": 0,
+		"piercingDamage": 0,
+		"sightRange": 12,
+		"tileSize": [
+			1,
+			1
+		],
+		"type": "land",
+		"building": true,
+		"detectCloak": true
+	}
+}

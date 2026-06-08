@@ -1,0 +1,345 @@
+{
+	"construction-none": {
+		"size": [
+			64,
+			64
+		],
+		"files": {
+			"summer": "neutral/buildings/land_construction_site.png",
+			"winter": "tilesets/winter/neutral/buildings/land_construction_site.png",
+			"wasteland": "neutral/buildings/land_construction_site.png",
+			"swamp": "neutral/buildings/land_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-land": {
+		"size": [
+			64,
+			64
+		],
+		"files": {
+			"summer": "neutral/buildings/land_construction_site.png",
+			"winter": "tilesets/winter/neutral/buildings/land_construction_site.png",
+			"wasteland": "neutral/buildings/land_construction_site.png",
+			"swamp": "neutral/buildings/land_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-land2": {
+		"size": [
+			64,
+			64
+		],
+		"files": {
+			"summer": "neutral/buildings/land_construction_site.png",
+			"winter": "tilesets/winter/neutral/buildings/land_construction_site.png",
+			"wasteland": "neutral/buildings/land_construction_site.png",
+			"swamp": "neutral/buildings/land_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			}
+		]
+	},
+	"construction-wall": {
+		"size": [
+			32,
+			32
+		],
+		"files": {
+			"summer": "tilesets/summer/neutral/buildings/wall_construction_site.png",
+			"winter": "tilesets/winter/neutral/buildings/wall_construction_site.png",
+			"wasteland": "tilesets/wasteland/neutral/buildings/wall_construction_site.png",
+			"swamp": "tilesets/summer/neutral/buildings/wall_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-human-shipyard": {
+		"size": [
+			96,
+			96
+		],
+		"files": {
+			"summer": "human/buildings/shipyard_construction_site.png",
+			"winter": "tilesets/winter/human/buildings/shipyard_construction_site.png",
+			"wasteland": "human/buildings/shipyard_construction_site.png",
+			"swamp": "tilesets/swamp/human/buildings/shipyard_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-human-oil-well": {
+		"size": [
+			96,
+			96
+		],
+		"files": {
+			"summer": "tilesets/summer/human/buildings/oil_well_construction_site.png",
+			"winter": "tilesets/winter/human/buildings/oil_well_construction_site.png",
+			"wasteland": "tilesets/wasteland/human/buildings/oil_well_construction_site.png",
+			"swamp": "tilesets/swamp/human/buildings/oil_platform_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-human-refinery": {
+		"size": [
+			96,
+			96
+		],
+		"files": {
+			"summer": "human/buildings/refinery_construction_site.png",
+			"winter": "tilesets/winter/human/buildings/refinery_construction_site.png",
+			"wasteland": "human/buildings/refinery_construction_site.png",
+			"swamp": "tilesets/swamp/human/buildings/refinery_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-human-foundry": {
+		"size": [
+			96,
+			96
+		],
+		"files": {
+			"summer": "human/buildings/foundry_construction_site.png",
+			"winter": "tilesets/winter/human/buildings/foundry_construction_site.png",
+			"wasteland": "human/buildings/foundry_construction_site.png",
+			"swamp": "tilesets/swamp/human/buildings/foundry_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-orc-shipyard": {
+		"size": [
+			96,
+			96
+		],
+		"files": {
+			"summer": "orc/buildings/shipyard_construction_site.png",
+			"winter": "tilesets/winter/orc/buildings/shipyard_construction_site.png",
+			"wasteland": "orc/buildings/shipyard_construction_site.png",
+			"swamp": "tilesets/swamp/orc/buildings/shipyard_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-orc-oil-well": {
+		"size": [
+			96,
+			96
+		],
+		"files": {
+			"summer": "tilesets/summer/orc/buildings/oil_well_construction_site.png",
+			"winter": "tilesets/winter/orc/buildings/oil_well_construction_site.png",
+			"wasteland": "tilesets/wasteland/orc/buildings/oil_well_construction_site.png",
+			"swamp": "tilesets/swamp/orc/buildings/oil_platform_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-orc-refinery": {
+		"size": [
+			96,
+			96
+		],
+		"files": {
+			"summer": "orc/buildings/refinery_construction_site.png",
+			"winter": "tilesets/winter/orc/buildings/refinery_construction_site.png",
+			"wasteland": "orc/buildings/refinery_construction_site.png",
+			"swamp": "tilesets/swamp/orc/buildings/refinery_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	},
+	"construction-orc-foundry": {
+		"size": [
+			96,
+			96
+		],
+		"files": {
+			"summer": "orc/buildings/foundry_construction_site.png",
+			"winter": "tilesets/winter/orc/buildings/foundry_construction_site.png",
+			"wasteland": "orc/buildings/foundry_construction_site.png",
+			"swamp": "tilesets/swamp/orc/buildings/foundry_construction_site.png"
+		},
+		"stages": [
+			{
+				"percent": 0,
+				"file": "construction",
+				"frame": 0
+			},
+			{
+				"percent": 25,
+				"file": "construction",
+				"frame": 1
+			},
+			{
+				"percent": 50,
+				"file": "main",
+				"frame": 1
+			}
+		]
+	}
+}

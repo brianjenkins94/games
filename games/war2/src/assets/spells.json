@@ -1,0 +1,173 @@
+{
+	"spell-suicide-bomber": {
+		"name": "Demolish",
+		"manaCost": 0,
+		"range": 1,
+		"target": "self",
+		"sound": "explosion"
+	},
+	"spell-holy-vision": {
+		"name": "Holy Vision",
+		"manaCost": 70,
+		"range": "infinite",
+		"target": "position",
+		"dependUpgrade": "upgrade-holy-vision",
+		"sound": "holy vision"
+	},
+	"spell-healing": {
+		"name": "Healing",
+		"manaCost": 6,
+		"range": 6,
+		"target": "unit",
+		"dependUpgrade": "upgrade-healing",
+		"sound": "healing"
+	},
+	"spell-exorcism": {
+		"name": "Exorcism",
+		"manaCost": 4,
+		"range": 10,
+		"target": "unit",
+		"dependUpgrade": "upgrade-exorcism",
+		"sound": "exorcism"
+	},
+	"spell-eye-of-vision": {
+		"name": "eye of vision",
+		"manaCost": 70,
+		"range": 6,
+		"target": "position",
+		"dependUpgrade": "upgrade-eye-of-kilrogg",
+		"sound": "eye of vision"
+	},
+	"spell-eye-of-vision-double-head": {
+		"name": "eye of vision",
+		"manaCost": 70,
+		"range": 6,
+		"target": "position",
+		"sound": "eye of vision"
+	},
+	"spell-haste": {
+		"name": "haste",
+		"manaCost": 50,
+		"range": 6,
+		"target": "unit",
+		"dependUpgrade": "upgrade-haste",
+		"sound": "haste"
+	},
+	"spell-slow": {
+		"name": "slow",
+		"manaCost": 50,
+		"range": 10,
+		"target": "unit",
+		"dependUpgrade": "upgrade-slow",
+		"sound": "slow"
+	},
+	"spell-bloodlust": {
+		"name": "bloodlust",
+		"manaCost": 50,
+		"range": 6,
+		"target": "unit",
+		"dependUpgrade": "upgrade-bloodlust",
+		"sound": "bloodlust"
+	},
+	"spell-bloodlust-double-head": {
+		"name": "bloodlust",
+		"manaCost": 50,
+		"range": 6,
+		"target": "unit",
+		"sound": "bloodlust"
+	},
+	"spell-invisibility": {
+		"name": "invisibility",
+		"manaCost": 200,
+		"range": 6,
+		"target": "unit",
+		"dependUpgrade": "upgrade-invisibility",
+		"sound": "invisibility"
+	},
+	"spell-unholy-armor": {
+		"name": "unholyarmor",
+		"manaCost": 100,
+		"range": 6,
+		"target": "unit",
+		"dependUpgrade": "upgrade-unholy-armor",
+		"sound": "unholy armor"
+	},
+	"spell-flame-shield": {
+		"name": "flame shield",
+		"manaCost": 50,
+		"range": 6,
+		"target": "unit",
+		"dependUpgrade": "upgrade-flame-shield",
+		"sound": "flame shield"
+	},
+	"spell-polymorph": {
+		"name": "polymorph",
+		"manaCost": 200,
+		"range": 10,
+		"target": "unit",
+		"dependUpgrade": "upgrade-polymorph",
+		"sound": "polymorph"
+	},
+	"spell-blizzard": {
+		"name": "blizzard",
+		"manaCost": 25,
+		"range": 12,
+		"target": "position",
+		"dependUpgrade": "upgrade-blizzard",
+		"sound": "blizzard"
+	},
+	"spell-death-and-decay": {
+		"name": "death and decay",
+		"manaCost": 25,
+		"range": 12,
+		"target": "position",
+		"dependUpgrade": "upgrade-death-and-decay",
+		"sound": "death and decay"
+	},
+	"spell-fireball": {
+		"name": "fireball",
+		"manaCost": 100,
+		"range": 8,
+		"target": "position",
+		"dependUpgrade": "upgrade-fireball",
+		"sound": "fireball throw"
+	},
+	"spell-runes": {
+		"name": "runes",
+		"manaCost": 200,
+		"range": 10,
+		"target": "position",
+		"dependUpgrade": "upgrade-runes",
+		"sound": "touch of darkness"
+	},
+	"spell-runes-double-head": {
+		"name": "runes",
+		"manaCost": 200,
+		"range": 10,
+		"target": "position",
+		"sound": "touch of darkness"
+	},
+	"spell-death-coil": {
+		"name": "death coil",
+		"manaCost": 100,
+		"range": 10,
+		"target": "position",
+		"dependUpgrade": "upgrade-death-coil",
+		"sound": "death coil"
+	},
+	"spell-raise-dead": {
+		"name": "raise dead",
+		"manaCost": 50,
+		"range": 6,
+		"target": "position",
+		"dependUpgrade": "upgrade-raise-dead"
+	},
+	"spell-whirlwind": {
+		"name": "whirlwind",
+		"manaCost": 100,
+		"range": 12,
+		"target": "position",
+		"dependUpgrade": "upgrade-whirlwind",
+		"sound": "whirlwind"
+	}
+}

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>war2 client</title>
+
+    <!-- Phaser 4 via CDN — exposes globalThis.Phaser before the module script runs -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser/dist/phaser.min.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0d1117; overflow: hidden; }
+        #game { width: 100vw; height: 100vh; position: relative; }
+    </style>
+</head>
+<body>
+    <div id="game"></div>
+    <script type="module" src="/src/client/main.ts"></script>
+</body>
+</html>
