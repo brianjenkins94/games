@@ -39,9 +39,14 @@ function log(msg: string, cls: "ok" | "err" | "info" = "info"): void {
 window.addEventListener("error", (e) => log(`window error: ${e.message}`, "err"));
 window.addEventListener("unhandledrejection", (e) => log(`unhandled rejection: ${e.reason}`, "err"));
 
-/** Fetch a resource from the outer war2 dev server (same origin → SW passes through). */
+/** Fetch a resource from the outer server (same origin → SW passes through), under the
+ *  app base. The SW hands matched virtual paths base-stripped (`/client.html`) and
+ *  referer-forwarded paths base-included (`/games/war2/client.js`); normalise both to a
+ *  single base-prefixed path. In dev BASE_URL is "/", so this is a no-op there. */
 async function proxyToOuter(method: string, url: string, body?: any) {
-    const res = await fetch(location.origin + url, { method, body: method === "GET" || method === "HEAD" ? undefined : body });
+    const base = import.meta.env.BASE_URL;
+    const rel = url.startsWith(base) ? url.slice(base.length) : url.replace(/^\//, "");
+    const res = await fetch(location.origin + base + rel, { method, body: method === "GET" || method === "HEAD" ? undefined : body });
     const ab = await res.arrayBuffer();
     return {
         statusCode: res.status,
@@ -113,7 +118,7 @@ async function boot(): Promise<void> {
             const iframe = document.createElement("iframe");
             // Load the client UNDER the box's virtual prefix so its requests route through
             // this box (proxy/override), and so window.parent === this host (for pairing).
-            iframe.src = `/__virtual__/${box.port}/client.html`;
+            iframe.src = `__virtual__/${box.port}/client.html`;
             wrap.append(label, iframe);
             framesEl.appendChild(wrap);
 
