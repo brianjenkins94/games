@@ -35,7 +35,7 @@
 				},
 				{ "run": "pnpm config set --location=project --json allowBuilds \"{ \\\"esbuild\\\": true }\"" },
 				{ "run": "pnpm config set --location=project strict-dep-builds false" },
-				{ "run": "pnpm install" },
+				{ "env": { "PAT": "${{ secrets.PAT }}", "run": "pnpm install" } },
 				{ "run": "pnpm run build" },
 				{
 					"uses": "brianjenkins94/lib/.github/actions/pages-deploy@main",
