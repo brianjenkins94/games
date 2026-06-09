@@ -16,13 +16,15 @@
     "@types/node": "latest",
     "@typescript-eslint/eslint-plugin": "latest",
     "@typescript-eslint/parser": "latest",
+    "almostnode": "latest",
     "bitecs": "^0.4.0",
     "peerjs": "latest",
     "phaser": "^4.1.0",
     "tsup": "latest",
     "tsx": "latest",
     "typescript": "latest",
-    "vite": "latest"
+    "vite": "latest",
+    "ws": "latest"
   },
   "engines": {
     "node": ">=22.0.0",
