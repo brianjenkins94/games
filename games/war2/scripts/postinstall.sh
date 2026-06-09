@@ -4,7 +4,13 @@ CWD=$(pwd)
 
 rm -rf src/assets/*/
 
-git clone --no-checkout --depth 1 --filter=tree:0 --sparse https://github.com/brianjenkins94/assets.git
+if [[ "$CI" == "true" ]]; then
+	REMOTE="https://x-access-token:$PAT@github.com/brianjenkins94/assets.git"
+else
+	REMOTE="https://github.com/brianjenkins94/assets.git"
+fi
+
+git clone --no-checkout --depth 1 --filter=tree:0 --sparse "$REMOTE" || exit 1
 
 cd assets/
 
