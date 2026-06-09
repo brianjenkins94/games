@@ -34,6 +34,7 @@
 					}
 				},
 				{ "run": "pnpm config set --location=project --json allowBuilds \"{ \\\"esbuild\\\": true }\"" },
+				{ "run": "pnpm config set --location=project strict-dep-builds false" },
 				{ "run": "pnpm install" },
 				{ "run": "pnpm run build" },
 				{
