@@ -40,11 +40,12 @@ window.addEventListener("error", (e) => log(`window error: ${e.message}`, "err")
 window.addEventListener("unhandledrejection", (e) => log(`unhandled rejection: ${e.reason}`, "err"));
 
 /** Fetch a resource from the outer server (same origin → SW passes through), under the
- *  app base. The SW hands matched virtual paths base-stripped (`/client.html`) and
- *  referer-forwarded paths base-included (`/games/war2/client.js`); normalise both to a
- *  single base-prefixed path. In dev BASE_URL is "/", so this is a no-op there. */
+ *  deploy base. The base is derived from this host page's own location (/games/war2/ in
+ *  prod, / in dev) rather than import.meta.env.BASE_URL, which the relative build sets to
+ *  "./". Paths the SW hands us may arrive base-stripped (`/client.html`) or base-included;
+ *  normalise both to one base-prefixed path. */
 async function proxyToOuter(method: string, url: string, body?: any) {
-    const base = import.meta.env.BASE_URL;
+    const base = location.pathname.replace(/[^/]*$/, "");
     const rel = url.startsWith(base) ? url.slice(base.length) : url.replace(/^\//, "");
     const res = await fetch(location.origin + base + rel, { method, body: method === "GET" || method === "HEAD" ? undefined : body });
     const ab = await res.arrayBuffer();

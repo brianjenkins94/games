@@ -4,14 +4,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as url from "node:url";
 
-let swBase = "/";
-
 export default defineConfig({
     "experimental": {
         "renderBuiltUrl": function(filename, { type }) {
-            // Static assets are served from the separate assets repo at /assets/war2/
-            // (out of the SW's /games/war2/ scope, so they load directly). JS/CSS chunks
-            // are the app itself — leave them base-relative.
+            // Static assets live in the separate assets repo at /assets/war2/ (out of the SW's
+            // scope, so they load directly, bypassing the boxes). JS/CSS chunks are the app
+            // itself — leave them base-relative.
             if (type === "asset" && !/\.(?:js|css)$/.test(filename)) {
                 return `/assets/war2/${filename.replace(/^assets\//, "")}`;
             }
@@ -30,30 +28,29 @@ export default defineConfig({
                 }
             }
         },
-        // Emit a base-relative copy of almostnode's service worker. Its virtual-server
-        // matchers are anchored at root (`/__virtual__/…`); rewrite them to the app
-        // base (e.g. `/games/war2/__virtual__/…`) so the SW can be hosted and scoped
-        // under the base instead of needing origin-root scope (impossible on a GitHub
-        // Pages sub-path). Done in writeBundle so external-assets doesn't strip it.
-        // Only the deployed CI build needs this; dev/local builds use root paths.
+        // CI build only: make the two-box harness work under the deployed sub-path
+        // (/games/war2/) without hardcoding that path anywhere — everything is derived.
         process.env.CI && {
             "name": "patch-almostnode-sw",
-            "configResolved": function(config) { swBase = config.base; },
+            // Relative base → the app's own resources resolve *under* the box's virtual prefix,
+            // so the SW matches them directly (no referer-fallback) and the deploy path never
+            // needs to be hardcoded.
+            "config": function() { return { "base": "./" }; },
             "writeBundle": function(options) {
                 const swSrc = url.fileURLToPath(new URL("__sw__.js", import.meta.resolve("almostnode")));
-                const seg = swBase.replace(/^\//, "").replace(/\//g, "\\/"); // "games\/war2\/"
                 const sw = fs.readFileSync(swSrc, "utf8")
-                    .split("\\/__virtual__\\/").join("\\/" + seg + "__virtual__\\/")
-                    // The referer-fallback forwards *every* request from a boxed (controlled)
-                    // client to the box — including external assets at /assets/war2/, which the
-                    // box then base-prefixes into a 404. Only forward in-app paths; let the rest
-                    // (assets repo, cross-origin CDNs) pass through to the network.
-                    .replace("if (refererMatch) {", `if (refererMatch && url.pathname.startsWith("${swBase}")) {`);
+                    // Un-anchor the matcher: match `__virtual__/<port>` anywhere in the path, so
+                    // it works under any base without injecting the deploy path.
+                    .split("^\\/__virtual__").join("\\/__virtual__")
+                    // Drop the referer-fallback: with a relative base, in-app resources are
+                    // matched directly, so it would only ever (wrongly) forward external requests
+                    // (assets repo, CDNs). Disabling it lets those pass through to the network.
+                    .replace("if (refererMatch) {", "if (false) {");
                 fs.writeFileSync(path.join(options.dir, "__sw__.js"), sw);
 
                 // almostnode hardcodes the SW path + scope at the origin root
-                // (`register("/__sw__.js", { scope: "/" })`). Make both relative so it
-                // registers under the app base — a Pages sub-path can't grant root scope.
+                // (`register("/__sw__.js", { scope: "/" })`). Make both relative so it registers
+                // under the app's own dir — a Pages sub-path can't grant root scope.
                 const entry = path.join(options.dir, "index.js");
                 fs.writeFileSync(entry, fs.readFileSync(entry, "utf8")
                     .replace('"/__sw__.js"', '"__sw__.js"')
