@@ -43,7 +43,12 @@ export default defineConfig({
                 const swSrc = url.fileURLToPath(new URL("__sw__.js", import.meta.resolve("almostnode")));
                 const seg = swBase.replace(/^\//, "").replace(/\//g, "\\/"); // "games\/war2\/"
                 const sw = fs.readFileSync(swSrc, "utf8")
-                    .split("\\/__virtual__\\/").join("\\/" + seg + "__virtual__\\/");
+                    .split("\\/__virtual__\\/").join("\\/" + seg + "__virtual__\\/")
+                    // The referer-fallback forwards *every* request from a boxed (controlled)
+                    // client to the box — including external assets at /assets/war2/, which the
+                    // box then base-prefixes into a 404. Only forward in-app paths; let the rest
+                    // (assets repo, cross-origin CDNs) pass through to the network.
+                    .replace("if (refererMatch) {", `if (refererMatch && url.pathname.startsWith("${swBase}")) {`);
                 fs.writeFileSync(path.join(options.dir, "__sw__.js"), sw);
 
                 // almostnode hardcodes the SW path + scope at the origin root
