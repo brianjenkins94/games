@@ -37,12 +37,18 @@ import { openPeer, connectTo, waitForConnection, type Transport } from "../net/p
 import { startPhaser } from "../render/renderer";
 import type { HudData } from "../render/renderer";
 import { initDebugClient, sendDebugState, sendDebugCommands, setDebugCallbacks } from "../debug/client";
+import { initGameConsole } from "../debug/console";
+
+// In-game console (press ` / ~). Set up first so it captures everything below,
+// including console output and uncaught errors from imported modules.
+initGameConsole();
 
 // ── Logger ────────────────────────────────────────────────────────────────────
 
 type LogLevel = "info" | "warn" | "error";
 function log(level: LogLevel, msg: string): void {
-    window.parent.postMessage({ type: "log", level, message: msg }, "*");
+    // Route through console so it lands in both the in-game console and DevTools.
+    console[level](msg);
 }
 
 // ── Map helpers ───────────────────────────────────────────────────────────────

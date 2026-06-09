@@ -77,8 +77,6 @@ window.addEventListener("message", (e: MessageEvent) => {
     const d = e.data;
     if (!d || typeof d !== "object") return;
 
-    if (d.type === "log") return; // clients stream logs to parent; ignore here.
-
     if (d.type === "peer-ready") {
         const role = winRole.get(e.source as Window);
         if (!role) return;
