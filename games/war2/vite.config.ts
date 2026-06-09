@@ -2,11 +2,6 @@ import { defineConfig } from "vite";
 import { almostnodePlugin } from "almostnode/vite";
 
 export default defineConfig({
-    "experimental": {
-        "renderBuiltUrl": function(filename, { type }) {
-            return type === "asset" ? `/assets/war2/${filename.replace(/^assets\//, "")}` : undefined;
-        },
-    },
     "plugins": [
         almostnodePlugin(),
         {
