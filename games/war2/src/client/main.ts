@@ -38,6 +38,7 @@ import { startPhaser } from "../render/renderer";
 import type { HudData } from "../render/renderer";
 import { initDebugClient, sendDebugState, sendDebugCommands, setDebugCallbacks } from "../debug/client";
 import { initGameConsole } from "../debug/console";
+import type { PeerReadyMsg, InitMsg } from "harness/client";
 
 // In-game console (press ` / ~). Set up first so it captures everything below,
 // including console output and uncaught errors from imported modules.
@@ -242,7 +243,7 @@ function applyEnemyStateUpdate(visibleStates: UnitSnapshot[]): void {
 log("info", "opening peer...");
 const { peer: peerInstance, selfId } = await openPeer();
 log("info", `peer open  id=${selfId}`);
-window.parent.postMessage({ type: "peer-ready", selfId }, "*");
+window.parent.postMessage({ type: "peer-ready", selfId } satisfies PeerReadyMsg, "*");
 log("info", "signalled parent, waiting for init...");
 
 async function start(initRole: "host" | "peer", targetId: string): Promise<void> {
@@ -366,7 +367,8 @@ window.addEventListener("message", (e: MessageEvent) => {
     if (!d) return;
 
     if (d.type === "init") {
-        start(d.role as "host" | "peer", d.targetId as string);
+        const init = d as InitMsg;
+        start(init.role, init.targetId);
     }
 
     if (d.type === "spawn") {

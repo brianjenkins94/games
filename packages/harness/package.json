@@ -1,0 +1,25 @@
+{
+  "name": "harness",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "prepare": "vite build"
+  },
+  "exports": {
+    "./Harness": {
+      "types": "./Harness.tsx",
+      "development": "./Harness.tsx",
+      "default": "./dist/Harness.js"
+    },
+    "./client": {
+      "types": "./client.ts",
+      "development": "./client.ts",
+      "default": "./dist/client.js"
+    },
+    "./vite": {
+      "types": "./vite.ts",
+      "default": "./vite.ts"
+    }
+  }
+}
