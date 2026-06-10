@@ -18,7 +18,7 @@
     "@typescript-eslint/parser": "latest",
     "almostnode": "latest",
     "bitecs": "^0.4.0",
-    "harness": "file:../../packages/harness",
+    "harness": "file:./packages/harness",
     "jsx-async-runtime": "latest",
     "peerjs": "latest",
     "phaser": "^4.1.0",
