@@ -19,6 +19,8 @@
  * Harness.tsx, and the deploy-time SW patch lives in vite.ts.
  */
 import { VirtualFS, ViteDevServer, getServerBridge, stream } from "almostnode";
+import { createElement, jsxToString } from "jsx-async-runtime";
+import { Harness } from "./Harness";
 
 // ── Host ⇄ box pairing contract (the game client is the other half) ───────────────
 /** A box's game client posts this to the host once its peer id is known. */
@@ -34,6 +36,8 @@ export interface BoxConfig {
 }
 
 export interface BootOptions {
+    /** Title shown in the harness shell header. */
+    title: string;
     /** Client document each box loads, relative to the box prefix (e.g. "client.html"). */
     clientUrl: string;
     boxes: BoxConfig[];
@@ -42,10 +46,13 @@ export interface BootOptions {
 interface Pending { win: Window; id: string; role: "host" | "peer"; }
 
 /**
- * Boot the harness into `root` (the element holding the rendered <Harness> shell):
- * register a proxy server per box, create each box's iframe, and pair them.
+ * Render the harness shell into `root`, then boot the runtime: register a proxy server
+ * per box, create each box's iframe, and pair them. All JSX lives here (compiled by the
+ * harness's own build), so consuming games need no JSX toolchain.
  */
-export function bootHarness(root: HTMLElement, { clientUrl, boxes }: BootOptions): void {
+export async function bootHarness(root: HTMLElement, { title, clientUrl, boxes }: BootOptions): Promise<void> {
+    root.innerHTML = await jsxToString.call({}, createElement(Harness, { title }));
+
     const statusEl = root.querySelector<HTMLElement>("#status")!;
     const framesEl = root.querySelector<HTMLElement>("#frames")!;
 

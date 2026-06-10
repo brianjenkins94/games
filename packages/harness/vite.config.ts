@@ -1,12 +1,13 @@
 import { defineConfig } from "vite";
 
 /**
- * Library build for the harness's browser-side modules (Harness.tsx + client.ts) → dist/.
- * Consumers get the pre-compiled JS (see `exports` in package.json), so they don't need to
- * know about the jsx-async-runtime JSX toolchain — it lives here.
+ * Library build for the harness's browser-side runtime → dist/client.js. `client.ts` pulls
+ * in the JSX shell (Harness.tsx), so the whole rendered harness is one compiled module and
+ * consumers (which alias `harness/client` → dist/client.js) need no jsx-async-runtime
+ * toolchain — it lives here.
  *
  * `vite.ts` is deliberately NOT built: it's a node-side Vite plugin consumed at config-eval
- * time, so its `./vite` export points straight at the TypeScript source.
+ * time, so consumers import it straight from TypeScript source.
  */
 export default defineConfig({
     "esbuild": {
@@ -22,7 +23,7 @@ export default defineConfig({
         "minify": false,
         "target": "esnext",
         "lib": {
-            "entry": { "Harness": "Harness.tsx", "client": "client.ts" },
+            "entry": { "client": "client.ts" },
             "formats": ["es"],
         },
         "rollupOptions": {
