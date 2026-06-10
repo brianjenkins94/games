@@ -4,8 +4,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "npx tsx scripts/build.ts",
-    "postinstall": "npx tsx scripts/postinstall.ts",
+    "build": "npx tsx -e \"import('@brianjenkins94/util/scripts/build').then(({ build }) => build())\"",
+    "postinstall": "npx tsx -e \"import('@brianjenkins94/util/scripts/postinstall').then(({ postinstall }) => postinstall())\"",
     "purge": "find . \\( -name \"node_modules\" -or -name \"deno.lock\" -or -name \"dist\" -or -name \"package-lock.json\" \\) -prune -exec rm -rf \"{}\" +;"
   },
   "devDependencies": {

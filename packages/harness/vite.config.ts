@@ -16,8 +16,6 @@ export default defineConfig({
     },
     "build": {
         "outDir": "dist",
-        "minify": false,
-        "target": "esnext",
         "lib": {
             "entry": { "client": "client.ts" },
             "formats": ["es"],
@@ -25,7 +23,6 @@ export default defineConfig({
         "rollupOptions": {
             // Leave deps unbundled — the consuming game's build resolves them from root.
             "external": [/^almostnode/, /^jsx-async-runtime/],
-            "output": { "entryFileNames": "[name].js", "chunkFileNames": "[name].js" },
         },
     },
 });

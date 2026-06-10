@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build"
+    "build": "npx tsx ../../util/vite/build.ts"
   },
   "exports": {
     "./client": {
