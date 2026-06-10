@@ -5,7 +5,10 @@
   "scripts": {
     "postinstall": "./scripts/postinstall.sh",
     "dev": "npx tsx scripts/dev.ts",
-    "build": "npm --prefix ../../packages/harness run build && npx tsx ../../util/vite/build.ts",
+    "build": "npx tsx ../../util/vite/build.ts",
     "mcp": "node tools/mcp-inspector.mjs"
+  },
+  "dependencies": {
+    "harness": "link:../../packages/harness"
   }
 }

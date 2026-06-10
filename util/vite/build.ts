@@ -28,7 +28,6 @@ export async function buildApp(appRoot: string, repoRoot: string): Promise<void>
         resolve: { alias: { phaser: resolve(repoRoot, "util/vite/phaser-shim.ts") } },
         build: {
             outDir: resolve(repoRoot, "docs", name),
-            emptyOutDir: true,
             assetsInlineLimit: 0,
             minify: false,
             modulePreload: { polyfill: false },

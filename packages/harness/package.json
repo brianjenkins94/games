@@ -3,7 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "prepare": "vite build"
+    "build": "vite build"
+  },
+  "exports": {
+    "./client": {
+      "types": "./client.ts",
+      "default": "./dist/client.js"
+    },
+    "./vite": {
+      "types": "./vite.ts",
+      "default": "./vite.ts"
+    }
   }
 }

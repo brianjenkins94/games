@@ -38,7 +38,7 @@ import { startPhaser } from "../render/renderer";
 import type { HudData } from "../render/renderer";
 import { initDebugClient, sendDebugState, sendDebugCommands, setDebugCallbacks } from "../debug/client";
 import { initGameConsole } from "../debug/console";
-import type { PeerReadyMsg, InitMsg } from "../../../../packages/harness/client";
+import type { PeerReadyMsg, InitMsg } from "harness/client";
 
 // In-game console (press ` / ~). Set up first so it captures everything below,
 // including console output and uncaught errors from imported modules.

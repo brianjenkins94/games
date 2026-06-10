@@ -1,5 +1,5 @@
 import { __root } from "@brianjenkins94/util/env";
-import { mapAsync } from "@brianjenkins94/util/array"
+import { mapAsync, partition } from "@brianjenkins94/util/array"
 import { spawn } from "child_process";
 import * as path from "path";
 import * as url from "url";
@@ -19,7 +19,7 @@ export async function build(workspaces?) {
         })
     })).map(path.dirname);
 
-    return Object.fromEntries(await mapAsync(workspaces, function(workspace) {
+    function buildOne(workspace) {
         return new Promise(function(resolve, reject) {
             const subprocess = spawn("npm", ["run", "--if-present", "build"], {
                 "cwd": workspace,
@@ -31,7 +31,16 @@ export async function build(workspaces?) {
                 resolve([workspace, code]);
             });
         });
-    }));
+    }
+
+    // Library packages (packages/*) must all finish building before apps (games/*) start,
+    // so apps can consume their built dist. Two awaited phases — packages, then apps.
+    const [packages, apps] = partition(workspaces, (workspace) => workspace.split("/")[0] === "packages");
+
+    const packageResults = await mapAsync(packages, buildOne);
+    const appResults = await mapAsync(apps, buildOne);
+
+    return Object.fromEntries([...packageResults, ...appResults]);
 }
 
 if (import.meta.url === url.pathToFileURL(process.argv[1]).toString()) {

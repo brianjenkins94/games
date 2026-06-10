@@ -3,11 +3,11 @@ import { defineConfig } from "vite";
 /**
  * Library build for the harness's browser-side runtime → dist/client.js. `client.ts` pulls
  * in the JSX shell (Harness.tsx), so the whole rendered harness is one compiled module and
- * consumers (which alias `harness/client` → dist/client.js) need no jsx-async-runtime
- * toolchain — it lives here.
+ * consumers (which resolve `harness/client` → dist/client.js via package `exports`) need no
+ * jsx-async-runtime toolchain — it lives here.
  *
  * `vite.ts` is deliberately NOT built: it's a node-side Vite plugin consumed at config-eval
- * time, so consumers import it straight from TypeScript source.
+ * time, so its `exports` entry points straight at the TypeScript source.
  */
 export default defineConfig({
     "esbuild": {
@@ -16,10 +16,6 @@ export default defineConfig({
     },
     "build": {
         "outDir": "dist",
-        // Overwrite in place rather than wiping the dir: `prepare` builds dist at install
-        // time, and the root `pnpm run build` re-runs every package's `build` script in
-        // parallel — emptying here would race a consuming game's build reading dist.
-        "emptyOutDir": false,
         "minify": false,
         "target": "esnext",
         "lib": {
