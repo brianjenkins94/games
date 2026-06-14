@@ -1,10 +1,11 @@
 /**
  * Static shell for the two-box almostnode harness.
  *
- * jsx-async-runtime renders this to an HTML string (no events / refs / DOM). All the
- * live parts — the service worker, the per-box iframes, the peer pairing, and the
- * reload button's onclick — are wired imperatively in {@link bootHarness}, which looks
- * up `#status`, `#frames`, and `#reload-boxes` by id after this markup is mounted.
+ * The consuming game renders this to an HTML string with jsx-async-runtime (no events /
+ * refs / DOM). All the live parts — the service worker, the per-box iframes, the peer
+ * pairing, and the reload button's onclick — are wired imperatively in `wireHarness`,
+ * which looks up `#status`, `#frames`, and `#reload-boxes` by id after this markup is
+ * mounted.
  */
 const SHELL_CSS = `
 * { margin: 0; padding: 0; box-sizing: border-box; }

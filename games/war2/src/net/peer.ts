@@ -15,26 +15,10 @@ import Peer, { type DataConnection } from "peerjs";
 const IS_DEPLOYED = location.hostname === "brianjenkins94.github.io";
 const PEER_SERVER = IS_DEPLOYED ? undefined : { host: "localhost", port: 9000, path: "/" };
 
-export interface Transport {
-    send(data: ArrayBuffer): void;
-    onData: ((data: ArrayBuffer) => void) | null;
-    peerId: string;
-}
-
-function wrapConn(conn: DataConnection): Transport {
-    const t: Transport = { peerId: conn.peer, onData: null, send };
-
-    conn.on("data", (raw) => {
-        // PeerJS with serialization:"raw" delivers ArrayBuffer
-        if (t.onData && raw instanceof ArrayBuffer) t.onData(raw);
-    });
-
-    function send(data: ArrayBuffer): void {
-        conn.send(data);
-    }
-
-    return t;
-}
+// PeerJS handles signaling + connection setup only.  Game packets ride the raw
+// RTCDataChannel (conn.dataChannel) on both peers — either operated directly on
+// the main thread (relay fallback) or transferred into the sim worker — so the
+// wire bytes are identical regardless of which path each side takes.
 
 /** Open a Peer, wait for the signaling server to assign an ID. */
 export function openPeer(): Promise<{ peer: Peer; selfId: string }> {
@@ -45,20 +29,20 @@ export function openPeer(): Promise<{ peer: Peer; selfId: string }> {
     });
 }
 
-/** Host side: initiate connection to peer B. */
-export function connectTo(peer: Peer, targetId: string): Promise<Transport> {
+/** Host side: initiate connection to peer B. Resolves the open DataConnection. */
+export function connectTo(peer: Peer, targetId: string): Promise<DataConnection> {
     return new Promise((resolve, reject) => {
         const conn = peer.connect(targetId, { reliable: false, serialization: "raw" });
-        conn.once("open",  () => resolve(wrapConn(conn)));
+        conn.once("open",  () => resolve(conn));
         conn.once("error", reject);
     });
 }
 
-/** Peer side: wait for an incoming connection. */
-export function waitForConnection(peer: Peer): Promise<Transport> {
+/** Peer side: wait for an incoming connection. Resolves the open DataConnection. */
+export function waitForConnection(peer: Peer): Promise<DataConnection> {
     return new Promise((resolve) => {
         peer.once("connection", (conn: DataConnection) => {
-            conn.once("open", () => resolve(wrapConn(conn)));
+            conn.once("open", () => resolve(conn));
         });
     });
 }

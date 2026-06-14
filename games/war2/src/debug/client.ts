@@ -14,35 +14,17 @@ import type { SimWorld } from '../game/world';
 import { unitEids } from '../game/world';
 import type { Command } from '../net/protocol';
 
+// Runs in the sim worker (WebSocket works there; the sim state it serialises now
+// lives there too).  The only DOM concern — the inspector badge — is delegated to
+// the main thread via the onInspectorCount callback, so this module stays
+// worker-safe (no `document`).
+
 const DEBUG_WS_URL = 'ws://localhost:9229';
 
 let socket: WebSocket | null = null;
 let _onPause:  (() => void) | null = null;
 let _onResume: (() => void) | null = null;
-
-// ── Inspector badge ───────────────────────────────────────────────────────────
-
-function updateInspectorBadge(n: number): void {
-    const ID = 'claude-inspector-badge';
-    let badge = document.getElementById(ID);
-    if (n > 0) {
-        if (!badge) {
-            badge = document.createElement('div');
-            badge.id = ID;
-            badge.style.cssText = [
-                'position:fixed', 'top:8px', 'right:8px',
-                'background:#6d28d9', 'color:#fff',
-                'font:bold 11px/1 monospace', 'padding:4px 8px',
-                'border-radius:4px', 'z-index:9999', 'pointer-events:none',
-                'letter-spacing:0.05em',
-            ].join(';');
-            document.body.appendChild(badge);
-        }
-        badge.textContent = `🤖 Claude (${n})`;
-    } else {
-        badge?.remove();
-    }
-}
+let _onInspectorCount: ((n: number) => void) | null = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -63,7 +45,7 @@ export function initDebugClient(role: string): void {
                 if (msg.type === 'ctrl') {
                     if (msg.cmd === 'pause')           _onPause?.();
                     if (msg.cmd === 'resume')          _onResume?.();
-                    if (msg.cmd === 'inspector-count') updateInspectorBadge(msg.n as number);
+                    if (msg.cmd === 'inspector-count') _onInspectorCount?.(msg.n as number);
                 }
             } catch { /* ignore */ }
         });
@@ -79,9 +61,14 @@ export function initDebugClient(role: string): void {
  * Register callbacks so the observer can pause / resume the game simulation.
  * Call this once after role is known.
  */
-export function setDebugCallbacks(cbs: { onPause?: () => void; onResume?: () => void }): void {
-    _onPause  = cbs.onPause  ?? null;
-    _onResume = cbs.onResume ?? null;
+export function setDebugCallbacks(cbs: {
+    onPause?: () => void;
+    onResume?: () => void;
+    onInspectorCount?: (n: number) => void;
+}): void {
+    _onPause          = cbs.onPause          ?? null;
+    _onResume         = cbs.onResume         ?? null;
+    _onInspectorCount = cbs.onInspectorCount ?? null;
 }
 
 // ── Send helpers ──────────────────────────────────────────────────────────────

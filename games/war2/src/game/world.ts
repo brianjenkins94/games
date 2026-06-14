@@ -1,6 +1,6 @@
 import { createWorld, addEntity, removeEntity, addComponent, query, observe, onAdd, onRemove } from "bitecs";
 import { Position, MoveTarget, Unit, UnitId, Path, UnitAnim, Building, FP, TILE_PX, WORLD_W, WORLD_H, tileCenterFP, fpToTile } from "./components";
-import { unitFootprint, unitBuildTicks } from "./unitTypes";
+import { unitFootprint, unitBuildTicks, unitSight } from "./unitTypes";
 export type { UnitSnapshot } from "./types";
 import type { UnitSnapshot } from "./types";
 import { movementSystem, stopUnit as _stopUnit } from "./systems/movement";
@@ -9,7 +9,12 @@ import { seedRng, rngRange, getRngState, setRngState } from "./rng";
 import { initPassability, getPassability, getMapW, getMapH } from "./passability";
 import { initOccupancy, occupyTile, freeTile, isEmpty, resetOccupancy, occupyRect, freeRect, rectEmpty } from "./occupancy";
 import { getOrComputeFlowField, clearFlowFieldCache, DIR_DX, DIR_DY, UNREACHABLE } from "./flowField";
-import { inRange } from "./distance";
+import { inRange, distance } from "./distance";
+import { initVision, visionSystem, getBelievedPassability, exportExplored, importExplored, FOW_SIGHT_TILES } from "./vision";
+
+// Re-exported for callers that historically imported it from world.ts; the
+// canonical definition now lives in vision.ts (single source for the sim metric).
+export { FOW_SIGHT_TILES };
 
 export interface SimWorld extends Record<string, unknown> { tick: number; }
 
@@ -28,9 +33,6 @@ export function registerObservers(world: SimWorld, hooks: UnitLifecycle): void {
 }
 
 // ── Fog-of-war constants ──────────────────────────────────────────────────────
-
-/** Sight radius in tiles for all units (measured with the dodecagonal metric). */
-export const FOW_SIGHT_TILES = 4;
 
 // ── Unit ID counter ───────────────────────────────────────────────────────────
 // Stable identity independent of bitecs eid.
@@ -85,6 +87,8 @@ export function createSimWorld(seed: number, mapInfo?: MapInfo): SimWorld {
     if (mapInfo) {
         initPassability(mapInfo.gids, mapInfo.mapW, mapInfo.mapH, mapInfo.terrainArr);
         initOccupancy(mapInfo.mapW, mapInfo.mapH);
+        // Referee holds per-team vision for both teams (each paths on its own knowledge).
+        initVision(mapInfo.mapW, mapInfo.mapH, [0, 1]);
     }
 
     const world = createWorld() as SimWorld;
@@ -209,11 +213,12 @@ export function spawnRandom(world: SimWorld, team: number): number {
  * those, which would move the predicting player's units ahead of the host.
  */
 export function previewMoveTarget(_world: SimWorld, eid: number, txFP: number, tyFP: number): void {
-    const pass = getPassability();
+    const team = Unit.team[eid];
+    const pass = getBelievedPassability(team);   // fog-aware (matches setMoveTarget)
     const mapW = getMapW();
 
-    const goalTx = fpToTile(txFP);
-    const goalTy = fpToTile(tyFP);
+    let goalTx   = fpToTile(txFP);
+    let goalTy   = fpToTile(tyFP);
     const curTx  = Path.curTx[eid];
     const curTy  = Path.curTy[eid];
 
@@ -221,8 +226,15 @@ export function previewMoveTarget(_world: SimWorld, eid: number, txFP: number, t
 
     let dir: number;
     if (pass) {
-        if (pass[goalTy * mapW + goalTx]) return;       // goal terrain-blocked
-        const ff = getOrComputeFlowField(goalTx, goalTy);
+        if (pass[goalTy * mapW + goalTx]) {
+            // Blocked terrain — preview toward the nearest walkable tile (matches
+            // setMoveTarget so the instant facing agrees with where it'll go).
+            const near = nearestPassableTile(team, goalTx, goalTy);
+            if (!near) return;
+            [goalTx, goalTy] = near;
+            if (curTx === goalTx && curTy === goalTy) return;
+        }
+        const ff = getOrComputeFlowField(team, goalTx, goalTy);
         if (!ff) return;
         const myIdx = curTy * mapW + curTx;
         const d = ff.dirs[myIdx];
@@ -243,13 +255,51 @@ function octantFromDelta(dx: number, dy: number): number {
     return Math.round(a / (Math.PI / 4)) & 7;
 }
 
+/**
+ * Passable tile nearest to (tx,ty).  When a move is ordered onto blocked terrain
+ * (right-clicking a tree, water, a cliff…), units should still gather as close to
+ * the click as possible rather than ignore the order — so the goal is snapped to
+ * the closest walkable tile.
+ *
+ * Deterministic (safe in the authoritative sim): expands in Chebyshev rings of
+ * increasing radius and, within a ring, picks the candidate with the smallest
+ * integer dodecagon distance to the click, breaking ties by scan order.  Returns
+ * the tile itself if it is already passable, or null if the map has none.
+ */
+function nearestPassableTile(team: number, tx: number, ty: number): [number, number] | null {
+    const pass = getBelievedPassability(team);   // fog-aware: unexplored counts as passable
+    const mapW = getMapW();
+    const mapH = getMapH();
+    if (!pass) return [tx, ty];
+    const inBounds = (x: number, y: number) => x >= 0 && x < mapW && y >= 0 && y < mapH;
+    if (inBounds(tx, ty) && !pass[ty * mapW + tx]) return [tx, ty];
+
+    const maxR = Math.max(mapW, mapH);
+    for (let r = 1; r <= maxR; r++) {
+        let best: [number, number] | null = null;
+        let bestD = Infinity;
+        for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;  // ring edge only
+                const x = tx + dx, y = ty + dy;
+                if (!inBounds(x, y) || pass[y * mapW + x]) continue;        // off-map / blocked
+                const d = distance(dx, dy);
+                if (d < bestD) { bestD = d; best = [x, y]; }
+            }
+        }
+        if (best) return best;
+    }
+    return null;
+}
+
 /** Authoritative halt — clears movement/path/anim state (occupancy unchanged). */
 export function stopUnit(_world: SimWorld, eid: number): void {
     _stopUnit(eid);
 }
 
 export function setMoveTarget(_world: SimWorld, eid: number, txFP: number, tyFP: number): void {
-    const pass = getPassability();
+    const team = Unit.team[eid];
+    const pass = getBelievedPassability(team);   // fog-aware: may step into assumed-passable fog
     const mapW = getMapW();
     const mapH = getMapH();
 
@@ -261,17 +311,23 @@ export function setMoveTarget(_world: SimWorld, eid: number, txFP: number, tyFP:
         return;
     }
 
-    const goalTx = fpToTile(txFP);
-    const goalTy = fpToTile(tyFP);
+    let goalTx   = fpToTile(txFP);
+    let goalTy   = fpToTile(tyFP);
     const curTx  = Path.curTx[eid];
     const curTy  = Path.curTy[eid];
 
     if (curTx === goalTx && curTy === goalTy) return; // already there
-    if (pass[goalTy * mapW + goalTx]) return;         // goal is terrain-blocked
+    if (pass[goalTy * mapW + goalTx]) {
+        // Blocked terrain (e.g. a tree) — head for the nearest walkable tile.
+        const near = nearestPassableTile(team, goalTx, goalTy);
+        if (!near) return;
+        [goalTx, goalTy] = near;
+        if (curTx === goalTx && curTy === goalTy) return; // already on it
+    }
 
     // Pre-warm the cache — shared by every unit with this goal (the key benefit
     // of flow fields: all N selected units cost one Dijkstra, not N A* calls).
-    const ff = getOrComputeFlowField(goalTx, goalTy);
+    const ff = getOrComputeFlowField(team, goalTx, goalTy);
     if (!ff) return;
 
     // If this unit can't reach the goal at all, skip it
@@ -310,8 +366,8 @@ export function setMoveTarget(_world: SimWorld, eid: number, txFP: number, tyFP:
 
 /**
  * Returns the set of stable UnitIds visible to observerTeam.
- * Own units are always included; enemy units are included if any own unit is
- * within FOW_SIGHT_TILES of them (dodecagonal distance metric, see distance.ts).
+ * Own units are always included; an enemy unit is included if it lies within the
+ * *observing* unit's own sight radius (per-unit, unitSight; dodecagonal metric).
  */
 export function computeVisibleUids(world: SimWorld, observerTeam: number): Set<number> {
     const eids    = unitEids(world);
@@ -327,7 +383,7 @@ export function computeVisibleUids(world: SimWorld, observerTeam: number): Set<n
         if (Unit.team[e] === observerTeam) continue;
         const etx = Path.curTx[e], ety = Path.curTy[e];
         for (const m of myEids) {
-            if (inRange(Path.curTx[m] - etx, Path.curTy[m] - ety, FOW_SIGHT_TILES)) {
+            if (inRange(Path.curTx[m] - etx, Path.curTy[m] - ety, unitSight(Unit.type[m]))) {
                 visible.add(UnitId.id[e]);
                 break;
             }
@@ -336,11 +392,12 @@ export function computeVisibleUids(world: SimWorld, observerTeam: number): Set<n
     return visible;
 }
 
-/** True if tile (tx, ty) is within FOW_SIGHT_TILES of any unit owned by observerTeam. */
+/** True if tile (tx, ty) is within sight of any unit owned by observerTeam
+ *  (each unit using its own unitSight radius). */
 export function isTileVisible(world: SimWorld, observerTeam: number, tx: number, ty: number): boolean {
     for (const e of unitEids(world)) {
         if (Unit.team[e] !== observerTeam) continue;
-        if (inRange(Path.curTx[e] - tx, Path.curTy[e] - ty, FOW_SIGHT_TILES)) return true;
+        if (inRange(Path.curTx[e] - tx, Path.curTy[e] - ty, unitSight(Unit.type[e]))) return true;
     }
     return false;
 }
@@ -350,10 +407,12 @@ export function isTileVisible(world: SimWorld, observerTeam: number, tx: number,
  * receiver filters them by their own sight range in applyEnemyStateUpdate so
  * only units genuinely within LOS are spawned.
  *
- * Sending everything solves the bootstrap deadlock: neither side starts with
- * any known enemy units so proximity-based filtering on the sender side would
- * silence both peers forever.  An honest receiver never displays units it
- * can't see; the commitment scheme catches retroactive position lies.
+ * Sending everything is required for bootstrap: neither side starts with any
+ * known enemy units, so sender-side "visible to opp" filtering would compute an
+ * empty set forever (you can't tell whether the enemy sees your unit without
+ * knowing where the enemy is — the very thing fog hides), deadlocking discovery.
+ * An honest receiver never displays units it can't see; hiding positions from the
+ * wire trustlessly needs a referee (see [[fog-aware-pathfinding-requirement]]).
  */
 export function ownSnapshotsVisibleTo(world: SimWorld, myTeam: number): UnitSnapshot[] {
     return unitEids(world)
@@ -383,24 +442,6 @@ export function snapshotUnit(eid: number): UnitSnapshot {
         bh:         Building.fh[eid],
         buildLeft:  Building.buildLeft[eid],
     };
-}
-
-/**
- * FNV-1a commitment hash over positions of own units NOT currently visible to
- * the opponent, seeded with a per-tick nonce.  The opponent stores this each
- * tick; when a unit exits fog the owner sends the nonce so the receiver can
- * verify the unit's position was not fabricated after the fact.
- */
-export function hiddenUnitsHash(world: SimWorld, myTeam: number, nonce: number, visibleToOpp: Set<number>): number {
-    const hidden = unitEids(world)
-        .filter(e => Unit.team[e] === myTeam && !visibleToOpp.has(UnitId.id[e]))
-        .sort((a, b) => UnitId.id[a] - UnitId.id[b]);
-    let h = nonce >>> 0;
-    for (const e of hidden) {
-        h = Math.imul(h ^ (Position.x[e] | 0), 16777619) >>> 0;
-        h = Math.imul(h ^ (Position.y[e] | 0), 16777619) >>> 0;
-    }
-    return h;
 }
 
 // ── Hash (own-team only) ──────────────────────────────────────────────────────
@@ -449,38 +490,54 @@ function _restoreOccupancy(world: SimWorld, eid: number, snap: UnitSnapshot): vo
     }
 }
 
-/** Add a newly-revealed enemy unit and register it in the occupancy grid. */
-export function addKnownUnit(world: SimWorld, snap: UnitSnapshot): void {
+// ── Restored-unit lifecycle (from received snapshots) ────────────────────────────
+// Two flavours, differing only in `displayOnly`:
+//   • Enemies (displayOnly=true): clear MoveTarget.active so the local movement system
+//     never drives them — their Position comes purely from snapshots (otherwise the
+//     receiver double-drives them, gliding past/through others between corrections).
+//   • The guest's own units (displayOnly=false): simulated — predicted forward by the
+//     movement system between authoritative snapshots, then reconciled.
+
+/** Create an entity from a snapshot and register it in the occupancy grid. */
+function _spawnFromSnapshot(world: SimWorld, snap: UnitSnapshot, displayOnly: boolean): void {
     const eid = addEntity(world);
     addComponent(world, eid, Position);
     addComponent(world, eid, MoveTarget);
     addComponent(world, eid, Unit);
     addComponent(world, eid, UnitId);
     _applyUnitSnapshot(eid, snap);
+    if (displayOnly) MoveTarget.active[eid] = 0;
     _restoreOccupancy(world, eid, snap);
     _unitIdToEid.set(snap.uid, eid);
     setNextUnitId(snap.uid);
 }
 
-/**
- * Refresh a known enemy unit from a new snapshot.
- * Moves the occupancy registration if the unit changed tiles.
- */
-export function updateKnownUnit(eid: number, snap: UnitSnapshot): void {
+/** Overwrite an existing entity from a snapshot, moving its occupancy if the tile changed. */
+function _applyFromSnapshot(eid: number, snap: UnitSnapshot, displayOnly: boolean): void {
     const oldTx = Path.curTx[eid], oldTy = Path.curTy[eid];
     _applyUnitSnapshot(eid, snap);
+    if (displayOnly) MoveTarget.active[eid] = 0;
     if (snap.curTx !== oldTx || snap.curTy !== oldTy) {
         freeTile(oldTx, oldTy);
         occupyTile(snap.curTx, snap.curTy, eid);
     }
 }
 
+/** Add a newly-revealed enemy unit (display-only). */
+export function addKnownUnit(world: SimWorld, snap: UnitSnapshot): void { _spawnFromSnapshot(world, snap, true); }
+/** Refresh a known enemy unit from a new snapshot (display-only). */
+export function updateKnownUnit(eid: number, snap: UnitSnapshot): void { _applyFromSnapshot(eid, snap, true); }
 /** Despawn an enemy unit that has left visibility and free its tile. */
 export function removeKnownUnit(world: SimWorld, eid: number): void {
     freeTile(Path.curTx[eid], Path.curTy[eid]);
     _unitIdToEid.delete(UnitId.id[eid]);
     removeEntity(world, eid);
 }
+
+/** Create a predicted own unit from a snapshot (simulated; guest prediction). */
+export function addOwnUnit(world: SimWorld, snap: UnitSnapshot): void { _spawnFromSnapshot(world, snap, false); }
+/** Snap a diverged predicted own unit back to its authoritative snapshot. */
+export function reconcileOwnUnit(eid: number, snap: UnitSnapshot): void { _applyFromSnapshot(eid, snap, false); }
 
 /** Advance construction on all buildings (one tick of progress). */
 function buildingSystem(world: SimWorld): void {
@@ -492,6 +549,7 @@ function buildingSystem(world: SimWorld): void {
 export function stepWorld(world: SimWorld): void {
     movementSystem(world);
     buildingSystem(world);
+    visionSystem(world);   // accumulate explored tiles from post-move LOS (deterministic)
     world.tick++;
 }
 
@@ -509,6 +567,7 @@ export interface WorldSnapshot {
     nextUnitId: number;
     rngState: number;
     units: UnitSnapshot[];
+    explored: [number, number[]][];   // per-team explored maps (drive fog-aware pathing)
 }
 
 export function takeSnapshot(world: SimWorld): WorldSnapshot {
@@ -517,6 +576,7 @@ export function takeSnapshot(world: SimWorld): WorldSnapshot {
         nextUnitId: _nextUnitId,
         rngState:   getRngState(),
         units:      unitEids(world).map(snapshotUnit),
+        explored:   exportExplored(),
     };
 }
 
@@ -548,4 +608,7 @@ export function applySnapshot(world: SimWorld, snap: WorldSnapshot): void {
         _restoreOccupancy(world, eid, u);
         _unitIdToEid.set(u.uid, eid);
     }
+
+    // Restore explored terrain (and rebuild believedPass) for fog-aware pathing.
+    importExplored(snap.explored ?? []);
 }

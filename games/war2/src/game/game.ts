@@ -13,10 +13,11 @@ import {
     takeSnapshot as _takeSnapshot, applySnapshot as _applySnapshot,
     registerObservers as _registerObservers,
     consumeUnitId, eidForUnitId, setNextUnitId, initUnitIdCounter,
-    computeVisibleUids, ownSnapshotsVisibleTo, hiddenUnitsHash, isTileVisible,
+    computeVisibleUids, ownSnapshotsVisibleTo, isTileVisible,
     snapshotUnit as _snapshotUnit,
     addKnownUnit as _addKnownUnit, updateKnownUnit as _updateKnownUnit,
     removeKnownUnit as _removeKnownUnit,
+    addOwnUnit as _addOwnUnit, reconcileOwnUnit as _reconcileOwnUnit,
     type SimWorld, type UnitLifecycle, type MapInfo, type WorldSnapshot, type UnitSnapshot,
 } from "./world";
 
@@ -80,8 +81,6 @@ export interface GameInstance {
     ownSnapshotsVisibleTo(myTeam: number): UnitSnapshot[];
     /** True if tile (tx, ty) is within sight range of any unit on observerTeam. */
     isTileVisible(observerTeam: number, tx: number, ty: number): boolean;
-    /** FNV-1a commitment hash over own hidden unit positions + nonce. */
-    hiddenUnitsHash(myTeam: number, nonce: number, visibleToOpp: Set<number>): number;
     /** Hash covering only own-team units (authoritative portion of the sim). */
     hashOwn(myTeam: number): number;
     /** Snapshot a single entity's full state. */
@@ -92,6 +91,10 @@ export interface GameInstance {
     updateKnownUnit(eid: number, snap: UnitSnapshot): void;
     /** Despawn an enemy unit that has left visibility. */
     removeKnownUnit(eid: number): void;
+    /** Create a predicted own unit from a snapshot (simulated; guest prediction). */
+    addOwnUnit(snap: UnitSnapshot): void;
+    /** Snap a diverged predicted own unit back to its authoritative snapshot. */
+    reconcileOwnUnit(eid: number, snap: UnitSnapshot): void;
 }
 
 export function createGame(seed: number, mapInfo?: MapInfo): GameInstance {
@@ -114,14 +117,15 @@ export function createGame(seed: number, mapInfo?: MapInfo): GameInstance {
         eidForUnitId:           (uid)                                => eidForUnitId(uid),
         setNextUnitId:          (n)                                  => setNextUnitId(n),
         initUnitIdCounter:      (team)                               => initUnitIdCounter(team),
-        computeVisibleUids:     (observerTeam)                       => computeVisibleUids(world, observerTeam),
-        ownSnapshotsVisibleTo:  (myTeam)                             => ownSnapshotsVisibleTo(world, myTeam),
-        isTileVisible:          (observerTeam, tx, ty)               => isTileVisible(world, observerTeam, tx, ty),
-        hiddenUnitsHash:        (mt, nonce, visToOpp)                => hiddenUnitsHash(world, mt, nonce, visToOpp),
+        computeVisibleUids:       (observerTeam)                     => computeVisibleUids(world, observerTeam),
+        ownSnapshotsVisibleTo:    (myTeam)                           => ownSnapshotsVisibleTo(world, myTeam),
+        isTileVisible:            (observerTeam, tx, ty)             => isTileVisible(world, observerTeam, tx, ty),
         hashOwn:                (t)                                  => worldHashOwn(world, t),
         snapshotUnit:           (eid)                                => _snapshotUnit(eid),
         addKnownUnit:           (snap)                               => _addKnownUnit(world, snap),
         updateKnownUnit:        (eid, snap)                          => _updateKnownUnit(eid, snap),
         removeKnownUnit:        (eid)                                => _removeKnownUnit(world, eid),
+        addOwnUnit:             (snap)                               => _addOwnUnit(world, snap),
+        reconcileOwnUnit:       (eid, snap)                          => _reconcileOwnUnit(eid, snap),
     };
 }

@@ -19,7 +19,8 @@ import { query } from "bitecs";
 import { Position, MoveTarget, Unit, Path, UnitAnim, UNIT_SPD, tileCenterFP } from "../components";
 import { freeTile, occupyTile, isEmpty } from "../occupancy";
 import { getOrComputeFlowField, DIR_DX, DIR_DY, UNREACHABLE } from "../flowField";
-import { getPassability, getMapW, getMapH } from "../passability";
+import { getMapW, getMapH } from "../passability";
+import { getBelievedPassability } from "../vision";
 import { distance } from "../distance";
 
 /** Halt a unit: clear all movement and animation state in one place.
@@ -34,13 +35,25 @@ export function stopUnit(eid: number): void {
 // ±45°, ±90° — gives natural spreading without recomputing the flow field.
 const STEER = [1, 7, 2, 6, 3, 5] as const;
 
+/** 8-way facing (0=N..7=NW, clockwise) from a movement delta — matches the
+ *  DIR_DX/DIR_DY encoding.  Render-only (UnitAnim is excluded from worldHash),
+ *  so the float math here is safe for determinism. */
+function dirFromDelta(dx: number, dy: number): number {
+    const a = (Math.atan2(dy, dx) + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
+    return Math.round(a / (Math.PI / 4)) & 7;
+}
+
 export function movementSystem(world: object): void {
-    const pass = getPassability();
     const mapW = getMapW();
     const mapH = getMapH();
 
     for (const eid of query(world, [Position, MoveTarget, Unit])) {
         if (!MoveTarget.active[eid]) continue;
+
+        // Fog-aware, per the unit's own team: step into tiles its team believes
+        // passable (unexplored counts as passable until LOS reveals otherwise).
+        const team = Unit.team[eid];
+        const pass = getBelievedPassability(team);
 
         const dx    = MoveTarget.tx[eid] - Position.x[eid];
         const dy    = MoveTarget.ty[eid] - Position.y[eid];
@@ -52,6 +65,11 @@ export function movementSystem(world: object): void {
             const dist = distance(dx, dy);
             Position.x[eid] += (dx * UNIT_SPD / dist) | 0;
             Position.y[eid] += (dy * UNIT_SPD / dist) | 0;
+            // Face the way we're actually moving (render-only).  Keeps facing in
+            // sync with travel even when a render-side preview turned the unit or
+            // MoveTarget was re-parked mid-leg — otherwise the unit "moonwalks".
+            UnitAnim.dir[eid]    = dirFromDelta(dx, dy);
+            UnitAnim.moving[eid] = 1;
             continue;
         }
 
@@ -83,8 +101,8 @@ export function movementSystem(world: object): void {
             stopUnit(eid); continue;
         }
 
-        // Read flow direction for current tile
-        const ff = getOrComputeFlowField(Path.goalTx[eid], Path.goalTy[eid]);
+        // Read flow direction for current tile (this team's fog-aware field)
+        const ff = getOrComputeFlowField(team, Path.goalTx[eid], Path.goalTy[eid]);
         if (!ff) { stopUnit(eid); continue; }
 
         const flowDir = ff.dirs[cy * mapW + cx];

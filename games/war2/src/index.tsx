@@ -1,8 +1,10 @@
 /**
- * war2 host entry — combines the reusable harness (built shell + runtime) with war2's box
- * config. No JSX here: bootHarness renders its own shell, so war2 needs no JSX toolchain.
+ * war2 host entry — renders the reusable harness shell as JSX, then wires its runtime
+ * (boxes + peer pairing) onto the mounted markup. The `<Harness/>` call is why this file
+ * is .tsx: war2's esbuild is configured for jsx-async-runtime (see vite.config.ts).
  */
-import { bootHarness, type BoxConfig } from "harness/client";
+import { jsxToString } from "jsx-async-runtime";
+import { Harness, wireHarness, type BoxConfig } from "harness/client";
 
 // One virtual port per box (distinct from the real outer 5173).
 const boxes: BoxConfig[] = [
@@ -11,8 +13,5 @@ const boxes: BoxConfig[] = [
 ];
 
 const app = document.getElementById("app")!;
-await bootHarness(app, {
-    title: "war2 · two almostnode boxes (one game instance each)",
-    clientUrl: "client.html",
-    boxes,
-});
+app.innerHTML = await jsxToString.call({}, <Harness title="war2 · two almostnode boxes (one game instance each)" />);
+await wireHarness(app, { clientUrl: "client.html", boxes });

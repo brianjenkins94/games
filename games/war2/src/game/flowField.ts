@@ -18,7 +18,8 @@
  * movement system handles unit–unit avoidance.
  */
 
-import { getPassability, getMapW, getMapH } from "./passability";
+import { getMapW, getMapH } from "./passability";
+import { getBelievedPassability, takeBelievedDirty } from "./vision";
 
 // ── Direction table ───────────────────────────────────────────────────────────
 
@@ -93,8 +94,10 @@ const INF = 0x7FFFFFFF;
  * Run reverse-Dijkstra from (goalTx, goalTy) and build a per-tile direction
  * array.  Returns null if the goal tile is terrain-impassable.
  */
-export function computeFlowField(goalTx: number, goalTy: number): FlowField | null {
-    const pass = getPassability();
+export function computeFlowField(team: number, goalTx: number, goalTy: number): FlowField | null {
+    // Believed passability for THIS team: unexplored tiles are assumed passable so
+    // units path optimistically into fog and re-route on discovery (see vision.ts).
+    const pass = getBelievedPassability(team);
     const mapW = getMapW();
     const mapH = getMapH();
     if (!pass || mapW === 0) return null;
@@ -179,26 +182,31 @@ export function computeFlowField(goalTx: number, goalTy: number): FlowField | nu
 const CACHE_CAP = 16;
 const _cache    = new Map<number, FlowField>(); // goalIdx → FlowField
 
-export function getOrComputeFlowField(goalTx: number, goalTy: number): FlowField | null {
+export function getOrComputeFlowField(team: number, goalTx: number, goalTy: number): FlowField | null {
+    // Newly-explored terrain that proved blocked invalidates fields computed under
+    // the prior optimistic belief — drop them so they recompute against reality.
+    if (takeBelievedDirty(team)) clearFlowFieldCache();
+
     const mapW    = getMapW();
-    const goalIdx = goalTy * mapW + goalTx;
+    // Cache key includes team so the same goal yields each team's own field.
+    const key     = team * (mapW * getMapH()) + goalTy * mapW + goalTx;
 
     // LRU hit — move to end
-    const cached = _cache.get(goalIdx);
+    const cached = _cache.get(key);
     if (cached) {
-        _cache.delete(goalIdx);
-        _cache.set(goalIdx, cached);
+        _cache.delete(key);
+        _cache.set(key, cached);
         return cached;
     }
 
-    const ff = computeFlowField(goalTx, goalTy);
+    const ff = computeFlowField(team, goalTx, goalTy);
     if (!ff) return null;
 
     if (_cache.size >= CACHE_CAP) {
         // Evict least-recently-used (first entry in insertion-order Map)
         _cache.delete(_cache.keys().next().value!);
     }
-    _cache.set(goalIdx, ff);
+    _cache.set(key, ff);
     return ff;
 }
 

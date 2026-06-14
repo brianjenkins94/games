@@ -1,58 +1,36 @@
 /**
- * Client — runs in each iframe.
+ * Client shell (main thread) — runs in each iframe.  Host-authoritative model:
  *
- * Partial-sim model (fog-of-war with hidden information):
- *   • Each peer simulates only its OWN units.
- *   • Enemy units are represented as display-only entities, spawned / updated /
- *     despawned from STATE_UPDATE snapshots pushed by the owning peer each tick.
- *   • Commands are applied locally the tick they are issued (no echo delay).
- *   • The cross-peer hash check is gone; sims legitimately differ.
+ *   • Host spawns the referee worker (worker/referee.worker.ts) — the authoritative
+ *     sim of both teams — and plays against it in-process.
+ *   • Guest spawns a thin client worker (worker/client.worker.ts) that relays over
+ *     the data channel; the guest holds no authoritative state.
  *
- * Commitment scheme:
- *   • Each tick we compute commitHash = fnv1a(nonce ⊕ own hidden unit positions).
- *   • The opponent stores this; when a unit exits fog the owner sends the nonce
- *     so the receiver can verify the unit's position was committed before it was
- *     visible (retroactive-lie prevention).
- *
- * Unit ID spaces:
- *   • Team 0 → IDs 1 … 0x7FFFFFFF
- *   • Team 1 → IDs 0x80000001 … 0xFFFFFFFF
- *   Guarantees no collision when enemy units arrive via STATE_UPDATE.
+ * Either way this shell is the same: it bootstraps the PeerJS connection
+ * (RTCPeerConnection is main-thread only), hands the RTCDataChannel to its worker
+ * (transferred on Chromium, else relayed via postMessage), owns Phaser rendering +
+ * input drawing from the worker's per-tick fog snapshots, and owns selection +
+ * the advisory placement-ghost check (the referee validates builds authoritatively
+ * and mints all unit ids).
  */
-import { createGame }                                      from "../game/game";
-import type { MapInfo }                                    from "../game/game";
-import { Unit, UnitId }                                    from "../game/components";
-import { unitTypeId, unitTypeName }                        from "../game/unitTypes";
-import { createCommandCardController }                     from "./commandCardController";
-import { FP, TICK_MS, TILE_PX, tileCenterFP, fpToTile }   from "../game/components";
-import mapJson                                             from "../assets/maps/ladder/Plains of snow BNE.json";
-import tilesetUrl                                          from "../assets/tilesets/winter.png";
-import terrainData                                         from "../assets/terrain.json";
-import {
-    encodeStateUpdate, decodeStateUpdate,
-    PacketType, CmdType,
-    type Command, type SpawnCmd, type UnitSnapshot,
-} from "../net/protocol";
-import { openPeer, connectTo, waitForConnection, type Transport } from "../net/peer";
-import { startPhaser } from "../render/renderer";
-import type { HudData } from "../render/renderer";
-import { initDebugClient, sendDebugState, sendDebugCommands, setDebugCallbacks } from "../debug/client";
+import { createCommandCardController, type CommandCardController } from "./commandCardController";
+import { FP, TILE_PX, tileCenterFP, fpToTile } from "../game/components";
+import { unitTypeId, unitTypeName, unitFootprint } from "../game/unitTypes";
+import mapJson from "../assets/maps/ladder/Plains of snow BNE.json";
+import tilesetUrl from "../assets/tilesets/winter.png";
+import terrainData from "../assets/terrain.json";
+import { CmdType, type Command, type SpawnCmd } from "../net/protocol";
+import { openPeer, connectTo, waitForConnection } from "../net/peer";
+import { startPhaser, type GameScene, type UnitPrediction } from "../render/renderer";
 import { initGameConsole } from "../debug/console";
+import type { MainToWorker, WorkerToMain, RenderState, RenderUnit } from "../worker/ipc";
+import type { MapInfo } from "../game/world";
 import type { PeerReadyMsg, InitMsg } from "harness/client";
 
-// In-game console (press ` / ~). Set up first so it captures everything below,
-// including console output and uncaught errors from imported modules.
+// In-game console (press ` / ~). Set up first so it captures everything below.
 initGameConsole();
 
-// ── Logger ────────────────────────────────────────────────────────────────────
-
-type LogLevel = "info" | "warn" | "error";
-function log(level: LogLevel, msg: string): void {
-    // Route through console so it lands in both the in-game console and DevTools.
-    console[level](msg);
-}
-
-// ── Map helpers ───────────────────────────────────────────────────────────────
+// ── Map config ──────────────────────────────────────────────────────────────────
 
 function mapProp<T>(name: string, fallback: T): T {
     const props = (mapJson as any).properties as Array<{ name: string; value: unknown }> | undefined;
@@ -63,8 +41,6 @@ function mapProp<T>(name: string, fallback: T): T {
 function snapToTileCenter(fp: number): number {
     return tileCenterFP(fpToTile(fp));
 }
-
-// ── Game ──────────────────────────────────────────────────────────────────────
 
 const SEED = 0xc0ffee;
 
@@ -80,284 +56,256 @@ const mapInfo: MapInfo = {
     terrainArr: _terrainArr,
 };
 
-const game = createGame(SEED, mapInfo);
-
 const p0x = mapProp("p0_startX", 32), p0y = mapProp("p0_startY", 32);
 const p1x = mapProp("p1_startX", 96), p1y = mapProp("p1_startY", 96);
+const SPAWN_COUNT = 4;
 
 // ── Runtime state ─────────────────────────────────────────────────────────────
 
-let role:      "host" | "peer" = "host";
-let myTeam:    number = 0;
-let oppTeam:   number = 1;
-let transport: Transport | null = null;
-let simPaused  = false;
+let myTeam  = 0;
+let worker: Worker | null = null;
+let scene:  GameScene | null = null;
+let cardController: CommandCardController | null = null;
 
-const hud: HudData = {
-    serverTick: 0, clientTick: 0, rtt: 0, lead: 0,
-    lastHash: 0, beatAge: 0,
-};
+// Relay-mode channel (main thread keeps it); null in transfer mode.
+let relayChannel: RTCDataChannel | null = null;
 
-const selectedEids = new Set<number>();
-const pendingCmds: Command[] = [];
+// Latest snapshot-derived state used by the main thread for UI decisions.
+const latestUnits  = new Map<number, RenderUnit>();
+let   occupiedTiles = new Set<number>();
+let   passability: Uint8Array | null = null;
+let   mapTW = mapInfo.mapW, mapTH = mapInfo.mapH;
+let   selectedUids = new Set<number>();   // stable unit-ids; UI state
 
-// ── Known enemy units (display-only, from STATE_UPDATE) ───────────────────────
+// Client-side prediction: own units get an instant facing/marker the moment a
+// command is issued, dropped once the authoritative snapshot reflects the move
+// (mtActive) or after PREDICT_MS (e.g. a move the sim rejected).  Shared by
+// reference with the renderer.
+const predicted = new Map<number, UnitPrediction>();
+const PREDICT_MS = 250;
 
-const knownEnemyUids = new Set<number>();
-
-// ── Commitment scheme ─────────────────────────────────────────────────────────
-// myCommits: tick → {nonce, hash}  — kept locally, revealed on unit exit
-// oppCommits: tick → commitHash    — received from opponent, verified on reveal
-
-const COMMIT_CAP = 600; // keep 30 s of history at 20 TPS
-const myCommits  = new Map<number, { nonce: number; hash: number }>();
-const oppCommits = new Map<number, number>();
-
-function storeBounded<V>(map: Map<number, V>, tick: number, value: V): void {
-    map.set(tick, value);
-    if (map.size > COMMIT_CAP) map.delete(tick - COMMIT_CAP);
+/** 8-way facing (0=N..7=NW, clockwise) from a world-FP delta — matches the sim's
+ *  DIR encoding (movement.ts dirFromDelta / world.ts octantFromDelta). */
+function octant(dx: number, dy: number): number {
+    const a = (Math.atan2(dy, dx) + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
+    return Math.round(a / (Math.PI / 4)) & 7;
 }
 
-// ── Ping helpers ──────────────────────────────────────────────────────────────
+// ── Selection / card helpers ────────────────────────────────────────────────────
 
-let lastPingTick = 0;
+function ownSelection(): number[] {
+    return [...selectedUids].filter(uid => latestUnits.get(uid)?.team === myTeam);
+}
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+function refreshCard(): void {
+    if (!cardController) return;
+    const primary = ownSelection()[0];
+    const type = primary !== undefined ? unitTypeName(latestUnits.get(primary)!.type) : null;
+    cardController.setSelection(type);
+}
 
-function send(pkt: ArrayBuffer): void { transport?.send(pkt); }
-
-// ── Tick loop (runs on BOTH host and peer) ────────────────────────────────────
-
-function tick(): void {
-    if (simPaused) return;
-
-    // Apply own commands and advance own sim
-    const myCmds = pendingCmds.splice(0);
-    game.applyCommands(myCmds);
-    game.step();
-    sendDebugCommands(role, game.world.tick, myCmds);
-    sendDebugState(game.world, game.hashOwn(myTeam), role);
-
-    // Compute what the opponent can see (based on known opp units in our sim)
-    const visibleToOpp = game.computeVisibleUids(oppTeam);
-
-    // Generate per-tick commitment over hidden own-unit positions
-    const nonce      = (Math.random() * 0xFFFF_FFFF) | 0;
-    const commitHash = game.hiddenUnitsHash(myTeam, nonce, visibleToOpp);
-    storeBounded(myCommits, game.world.tick, { nonce, hash: commitHash });
-
-    // Build the outgoing STATE_UPDATE
-    const visibleStates = game.ownSnapshotsVisibleTo(myTeam);
-    const filteredCmds  = myCmds.filter(cmd =>
-        cmd.type !== CmdType.MOVE || cmd.unitIds.some(uid => visibleToOpp.has(uid)),
-    );
-
-    hud.clientTick = game.world.tick;
-    hud.serverTick = game.world.tick;
-    hud.lastHash   = game.hashOwn(myTeam);
-
-    if (!transport) return;
-
-    // Measure ping every 10 ticks
-    let pingTs = 0;
-    if (game.world.tick - lastPingTick >= 10) {
-        pingTs       = performance.now();
-        lastPingTick = game.world.tick;
+/** Hand a command to the worker and update the local prediction overlay. */
+function emitCommand(cmd: Command): void {
+    worker!.postMessage({ kind: "command", cmd } satisfies MainToWorker);
+    if (cmd.type === CmdType.MOVE) {
+        const now = performance.now();
+        for (const uid of cmd.unitIds) {
+            const u = latestUnits.get(uid);
+            if (u) predicted.set(uid, { dir: octant(cmd.txFP - u.x, cmd.tyFP - u.y), mtx: cmd.txFP, mty: cmd.tyFP, at: now });
+        }
+    } else if (cmd.type === CmdType.STOP) {
+        for (const uid of cmd.unitIds) predicted.delete(uid);
     }
-
-    send(encodeStateUpdate({
-        tick:          game.world.tick,
-        visibleStates,
-        commands:      filteredCmds,
-        commitHash,
-        pingTs,
-    }));
 }
 
-// ── Receive ───────────────────────────────────────────────────────────────────
-
-function onData(data: ArrayBuffer): void {
-    hud.beatAge = 0;
-
-    const type = new DataView(data).getUint8(0);
-    if (type !== PacketType.STATE_UPDATE) return;
-
-    const payload = decodeStateUpdate(data);
-
-    if (payload.pingTs > 0) {
-        hud.rtt = Math.round(performance.now() - payload.pingTs);
-    }
-
-    hud.serverTick = payload.tick;
-
-    // Store opponent's commitment for future reveal verification
-    storeBounded(oppCommits, payload.tick, payload.commitHash);
-
-    // Apply received enemy unit states (spawn / update / despawn)
-    applyEnemyStateUpdate(payload.visibleStates);
-}
-
-// ── Enemy state management ────────────────────────────────────────────────────
-
-function applyEnemyStateUpdate(visibleStates: UnitSnapshot[]): void {
-    // Only accept units genuinely within our own sight range.
-    // The sender pushes all their units; we filter here so a cheating sender
-    // can't force-spawn units at arbitrary positions in our sim.
-    // Single pass: filter + build incoming set simultaneously.
-    const inSight: UnitSnapshot[] = [];
-    const incoming = new Set<number>();
-    for (const s of visibleStates) {
-        if (game.isTileVisible(myTeam, s.curTx, s.curTy)) {
-            inSight.push(s);
-            incoming.add(s.uid);
+/** Placement-ghost validity, computed locally from the latest snapshot + static
+ *  passability.  Advisory only — the worker re-validates BUILD authoritatively. */
+function canPlaceBuildingLocal(tileX: number, tileY: number, typeId: number): boolean {
+    const [fw, fh] = unitFootprint(typeId);
+    for (let y = 0; y < fh; y++) {
+        for (let x = 0; x < fw; x++) {
+            const tx = tileX + x, ty = tileY + y;
+            if (tx < 0 || ty < 0 || tx >= mapTW || ty >= mapTH) return false;
+            const idx = ty * mapTW + tx;
+            if (passability && passability[idx]) return false;
+            if (occupiedTiles.has(idx)) return false;
         }
     }
+    return true;
+}
 
-    // Despawn units that dropped out of visibility
-    for (const uid of knownEnemyUids) {
-        if (!incoming.has(uid)) {
-            const eid = game.eidForUnitId(uid);
-            if (eid !== undefined) {
-                selectedEids.delete(eid);
-                Unit.selected[eid] = 0;
-                game.removeKnownUnit(eid);
-            }
-            knownEnemyUids.delete(uid);
+// ── Inspector badge (DOM; worker owns the debug WS and posts the count) ──────────
+
+function updateInspectorBadge(n: number): void {
+    const ID = "claude-inspector-badge";
+    let badge = document.getElementById(ID);
+    if (n > 0) {
+        if (!badge) {
+            badge = document.createElement("div");
+            badge.id = ID;
+            badge.style.cssText = [
+                "position:fixed", "top:8px", "right:8px",
+                "background:#6d28d9", "color:#fff",
+                "font:bold 11px/1 monospace", "padding:4px 8px",
+                "border-radius:4px", "z-index:9999", "pointer-events:none",
+                "letter-spacing:0.05em",
+            ].join(";");
+            document.body.appendChild(badge);
         }
+        badge.textContent = `🤖 Claude (${n})`;
+    } else {
+        badge?.remove();
     }
+}
 
-    // Spawn or refresh units that are currently visible
-    for (const snap of inSight) {
-        if (knownEnemyUids.has(snap.uid)) {
-            const eid = game.eidForUnitId(snap.uid);
-            if (eid !== undefined) game.updateKnownUnit(eid, snap);
+// ── Worker messages ─────────────────────────────────────────────────────────────
+
+function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
+    const msg = ev.data;
+    switch (msg.kind) {
+        case "ready":
+            passability = msg.passability;
+            mapTW = msg.mapW; mapTH = msg.mapH;
+            break;
+        case "render":          onRender(msg.state); break;
+        case "net-out":         relayChannel?.send(msg.data); break;   // relay mode
+        case "inspector-count": updateInspectorBadge(msg.n); break;
+    }
+}
+
+function onRender(state: RenderState): void {
+    // Refresh the snapshot-derived caches the main thread reasons over.
+    latestUnits.clear();
+    const occ = new Set<number>();
+    for (const u of state.units) {
+        latestUnits.set(u.uid, u);
+        if (u.fw > 0) {
+            const tlx = fpToTile(u.x) - (u.fw >> 1), tly = fpToTile(u.y) - (u.fh >> 1);
+            for (let y = 0; y < u.fh; y++)
+                for (let x = 0; x < u.fw; x++) occ.add((tly + y) * mapTW + (tlx + x));
         } else {
-            game.addKnownUnit(snap);
-            knownEnemyUids.add(snap.uid);
+            occ.add(fpToTile(u.y) * mapTW + fpToTile(u.x));
         }
+    }
+    occupiedTiles = occ;
+
+    // Reconcile prediction: drop once authority reflects the move (mtActive) or the
+    // unit is gone, and time out predictions the sim never acted on (rejected move).
+    const now = performance.now();
+    for (const [uid, p] of predicted) {
+        const u = latestUnits.get(uid);
+        if (!u || u.mtActive === 1 || now - p.at > PREDICT_MS) predicted.delete(uid);
+    }
+
+    // Drop any selected units that have despawned / left visibility.
+    let pruned = false;
+    for (const uid of selectedUids) {
+        if (!latestUnits.has(uid)) { selectedUids.delete(uid); pruned = true; }
+    }
+    if (pruned) refreshCard();
+
+    scene?.setRenderState(state);
+    scene?.setSelectedUids(selectedUids);
+}
+
+// ── Networking: transfer the channel to the worker, else relay ───────────────────
+
+function setupNet(dc: RTCDataChannel): void {
+    dc.binaryType = "arraybuffer";
+    try {
+        // Chromium fast path — the worker then owns send/recv directly.
+        worker!.postMessage({ kind: "channel", channel: dc } satisfies MainToWorker,
+                            [dc as unknown as Transferable]);
+        console.info("net: transferred RTCDataChannel to worker");
+    } catch {
+        // Transferable RTCDataChannel unsupported — relay raw packets through us.
+        relayChannel = dc;
+        dc.addEventListener("message", (ev) => {
+            if (ev.data instanceof ArrayBuffer)
+                worker!.postMessage({ kind: "net-in", data: ev.data } satisfies MainToWorker, [ev.data]);
+        });
+        console.info("net: channel transfer unsupported — relaying packets via main thread");
     }
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
-log("info", "opening peer...");
-const { peer: peerInstance, selfId } = await openPeer();
-log("info", `peer open  id=${selfId}`);
+console.info("opening peer...");
+const { peer, selfId } = await openPeer();
+console.info(`peer open  id=${selfId}`);
 window.parent.postMessage({ type: "peer-ready", selfId } satisfies PeerReadyMsg, "*");
-log("info", "signalled parent, waiting for init...");
+console.info("signalled parent, waiting for init...");
 
-async function start(initRole: "host" | "peer", targetId: string): Promise<void> {
-    role    = initRole;
-    myTeam  = role === "host" ? 0 : 1;
-    oppTeam = 1 - myTeam;
-
-    log("info", `init received  role=${role}  target=${targetId}`);
-
-    // Initialise unit-ID counter for our team's ID space
-    game.initUnitIdCounter(myTeam);
-
-    // Spawn only our own team's units
+async function start(role: "host" | "peer", targetId: string): Promise<void> {
+    myTeam = role === "host" ? 0 : 1;
+    const isHost = role === "host";
     const sx = myTeam === 0 ? p0x : p1x;
     const sy = myTeam === 0 ? p0y : p1y;
-    const workerType = unitTypeId(myTeam === 0 ? "unit-peasant" : "unit-peon");
-    for (let i = 0; i < 4; i++) {
-        game.spawnUnit(
-            tileCenterFP(sx + (i % 2)),
-            tileCenterFP(sy + Math.floor(i / 2)),
-            myTeam,
-            undefined,
-            workerType,
-        );
-    }
 
-    // Connect
-    if (role === "host") {
-        log("info", `connecting to ${targetId}...`);
-        transport = await connectTo(peerInstance, targetId);
-    } else {
-        log("info", "waiting for host connection...");
-        transport = await waitForConnection(peerInstance);
-    }
+    console.info(`init received  role=${role}  target=${targetId}`);
 
-    log("info", `transport open  peer=${transport.peerId}`);
-    initDebugClient(role);
-    setDebugCallbacks({
-        onPause:  () => { simPaused = true;  log("info", "sim paused by observer"); },
-        onResume: () => { simPaused = false; log("info", "sim resumed by observer"); },
-    });
-    transport.onData = onData;
+    // Host spawns the authoritative referee worker (simulates both teams); the guest
+    // spawns a thin client worker (relays over the channel — no local sim).
+    worker = new Worker(
+        new URL(isHost ? "../worker/referee.worker.ts" : "../worker/client.worker.ts", import.meta.url),
+        { type: "module" },
+    );
+    worker.onmessage = onWorkerMessage;
 
-    log("info", "starting phaser...");
-    const scene = await startPhaser(document.getElementById("game")!, { tilesetUrl, mapJson });
-    log("info", "phaser ready");
+    // The referee creates both teams' initial units; the guest worker ignores spawns.
+    const spawns = isHost ? [
+        { team: 0, sx: p0x, sy: p0y, count: SPAWN_COUNT, typeId: unitTypeId("unit-peasant") },
+        { team: 1, sx: p1x, sy: p1y, count: SPAWN_COUNT, typeId: unitTypeId("unit-peon") },
+    ] : [];
+    worker.postMessage({
+        kind: "init",
+        init: { role, myTeam, seed: SEED, mapInfo, spawns, mapW: mapInfo.mapW, mapH: mapInfo.mapH },
+    } satisfies MainToWorker);
 
-    scene.getUnitEids = () => game.unitEids();
-    scene.hud         = hud;
-    scene.myTeam      = myTeam;
+    // Establish the peer connection, then hand its channel to the worker.
+    console.info(role === "host" ? `connecting to ${targetId}...` : "waiting for host connection...");
+    const conn = role === "host" ? await connectTo(peer, targetId) : await waitForConnection(peer);
+    console.info(`connection open  peer=${conn.peer}`);
+    setupNet(conn.dataChannel);
 
-    // Centre camera on own spawn
+    // ── Rendering + input ─────────────────────────────────────────────────────
+    console.info("starting phaser...");
+    scene = await startPhaser(document.getElementById("game")!, { tilesetUrl, mapJson });
+    console.info("phaser ready");
+
+    scene.myTeam = myTeam;
     scene.cameras.main.centerOn(sx * TILE_PX, sy * TILE_PX);
 
-    // Single owner of command-card interaction state (selection type / page / armed).
-    const cardController = createCommandCardController({
-        getOwnSelection:    () => [...selectedEids].filter(e => Unit.team[e] === myTeam),
-        unitIdOf:           (eid) => UnitId.id[eid],
-        previewMove:        (eid, x, y) => game.previewMoveTarget(eid, x, y),
+    cardController = createCommandCardController({
+        getOwnSelection:    ownSelection,
         snapToTile:         snapToTileCenter,
-        emit:               (cmd) => { pendingCmds.push(cmd); },
-        render:             (card) => scene.showCommandCard(card),
-        setTargetingCursor: (on) => scene.setTargetingCursor(on),
-        log:                (m) => log("info", m),
+        emit:               emitCommand,
+        render:             (card) => scene!.showCommandCard(card),
+        setTargetingCursor: (on) => scene!.setTargetingCursor(on),
+        log:                (m) => console.info(m),
         myTeam,
-        consumeUnitId:      () => game.consumeUnitId(),
         fpToTile,
-        canPlaceBuilding:   (tx, ty, typeId) => game.canPlaceBuilding(tx, ty, typeId),
-        showPlacementGhost: (g) => scene.showPlacementGhost(g),
+        canPlaceBuilding:   canPlaceBuildingLocal,
+        showPlacementGhost: (g) => scene!.showPlacementGhost(g),
     });
 
-    // Recompute the card from the current selection (primary = first own unit).
-    const refreshCard = () => {
-        const primary = [...selectedEids].find(e => Unit.team[e] === myTeam);
-        cardController.setSelection(primary !== undefined ? unitTypeName(Unit.type[primary]) : null);
-    };
+    scene.setPrediction(predicted);   // share the live prediction map (we mutate it)
 
-    game.registerObservers({
-        onSpawn: (eid) => {
-            console.debug(`[obs] unit spawned eid=${eid} uid=${UnitId.id[eid]} team=${Unit.team[eid]}`);
-        },
-        onDespawn: (eid) => {
-            const wasSelected = selectedEids.delete(eid);
-            knownEnemyUids.delete(UnitId.id[eid]);
-            Unit.selected[eid] = 0;
-            if (wasSelected) refreshCard();
-        },
-    });
-
-    scene.onSelect = (eids) => {
-        for (const eid of game.unitEids()) Unit.selected[eid] = 0;
-        for (const eid of eids)            Unit.selected[eid] = 1;
-        selectedEids.clear();
-        eids.forEach(e => selectedEids.add(e));
+    scene.onSelect = (uids) => {
+        selectedUids = new Set(uids);
+        scene!.setSelectedUids(selectedUids);
         refreshCard();
     };
 
     // Raw input → the controller decides what it means.
-    scene.onSlot           = (index)      => cardController.slot(index);
-    scene.onPrimaryClick   = (wxFP, wyFP) => cardController.primaryClick(wxFP, wyFP);
-    scene.onSecondaryClick = (wxFP, wyFP) => cardController.secondaryClick(wxFP, wyFP);
-    scene.onEscape         = ()           => cardController.escape();
-    scene.onHover          = (wxFP, wyFP) => cardController.hoverTile(wxFP, wyFP);
+    scene.onSlot           = (index)      => cardController!.slot(index);
+    scene.onPrimaryClick   = (wxFP, wyFP) => cardController!.primaryClick(wxFP, wyFP);
+    scene.onSecondaryClick = (wxFP, wyFP) => cardController!.secondaryClick(wxFP, wyFP);
+    scene.onEscape         = ()           => cardController!.escape();
+    scene.onHotkey         = (letter)     => cardController!.hotkey(letter);
+    scene.onHover          = (wxFP, wyFP) => cardController!.hoverTile(wxFP, wyFP);
 
-    // Tick loop — both host and peer tick independently at 20 TPS
-    setInterval(tick, TICK_MS);
-
-    // Beat-age counter (detect loss of connectivity); reset to 0 in onData
-    setInterval(() => {
-        hud.beatAge++;
-        hud.lead = 0; // no lead concept in partial-sim model
-    }, TICK_MS);
-
-    log("info", `${role} tick loop started`);
+    console.info(`${role} client ready`);
 }
 
 // ── Parent messages ───────────────────────────────────────────────────────────
@@ -371,21 +319,16 @@ window.addEventListener("message", (e: MessageEvent) => {
         start(init.role, init.targetId);
     }
 
-    if (d.type === "spawn") {
-        // Each peer spawns only their own team's unit.
-        // Both iframes receive the same "spawn" message from the parent, so
-        // each side independently spawns one unit for their own team.
-        const unitId = game.consumeUnitId();
-        const mapW   = (mapJson as any).width  as number;
-        const mapH   = (mapJson as any).height as number;
-        pendingCmds.push({
+    if (d.type === "spawn" && worker) {
+        // Ask the referee to spawn one of our units at a random position (referee mints the id).
+        const mapW = mapInfo.mapW, mapH = mapInfo.mapH;
+        const cmd: SpawnCmd = {
             type:   CmdType.SPAWN,
-            unitId,
             xFP:    tileCenterFP((Math.random() * (mapW - 4) + 2) | 0),
             yFP:    tileCenterFP((Math.random() * (mapH - 4) + 2) | 0),
             team:   myTeam,
             typeId: unitTypeId(myTeam === 0 ? "unit-peasant" : "unit-peon"),
-        } satisfies SpawnCmd);
-        log("info", `spawn queued  uid=${unitId} team=${myTeam}`);
+        };
+        worker.postMessage({ kind: "command", cmd } satisfies MainToWorker);
     }
 });

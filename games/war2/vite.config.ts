@@ -3,6 +3,11 @@ import { almostnodePlugin } from "almostnode/vite";
 import { harnessPlugin } from "harness/vite";
 
 export default defineConfig({
+    // src/index.tsx composes the harness shell as JSX; render it via jsx-async-runtime.
+    "esbuild": {
+        "jsx": "automatic",
+        "jsxImportSource": "jsx-async-runtime",
+    },
     "experimental": {
         "renderBuiltUrl": function(filename, { type }) {
             // Static assets live in the separate assets repo at /assets/war2/ (out of the SW's

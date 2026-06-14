@@ -1,23 +1,34 @@
 /**
  * Command-card controller — the single owner of command-card interaction state.
  *
- * It holds the *entire* UI input-mode state machine in one place:
- *   • type  — unit-type of the current selection (drives which card to show)
- *   • page  — "root" or an open submenu (e.g. "build")
- *   • armed — an ability awaiting a target click (targeting mode)
+ * The card's modal behaviour is a *navigation stack*, like `history.pushState`:
+ * opening a submenu or arming an action pushes a frame; Escape / the Cancel
+ * button pops exactly one frame (the back button).  This makes "the same key
+ * means different things at different depths" fall out for free — a hotkey is
+ * just a click on whichever slot owns that letter in the *current* card.
  *
- * Previously `page` lived in the renderer and `armed` lived in a separate FSM,
- * so Escape/cancel had to keep two state machines consistent by hand.  Folding
- * them together removes that hazard: the renderer is now a dumb view (draws a
- * card, reports raw clicks/keys) and this controller decides what everything
- * means and what card to render.
+ *   Frame kinds (only `menu` frames nest; a transient sits on top of one):
+ *     • menu      — a card page: "root", "build", …          (pushState)
+ *     • targeting — a Move/Attack/etc. awaiting a target click (modal, on top)
+ *     • placement — a building ghost following the cursor      (modal, on top)
+ *
+ *   stack[0] is always the "root" menu.  At most one transient exists, always
+ *   on top; arming a new action *replaces* it (replaceState) rather than
+ *   nesting.  The displayed card is always the topmost MENU frame's page, so
+ *   targeting/placement leave the menu visible (matching WC2/StarCraft).
+ *
+ * Navigation that matches WC2/StarCraft:
+ *   • Escape / Cancel  → back() — pop one level (placement → build → root).
+ *   • Right-click      → cancel a transient, else issue a smart move; it never
+ *                        unwinds menus.
+ *   • A letter hotkey  → identical to clicking that slot in the current card.
  *
  * Determinism boundary: this is client intent only.  It never mutates the sim —
  * it computes cards (pure `commandCardFor`) and emits `Command`s via `emit`,
  * exactly like a right-click move.  Targeting/placement live on the render side.
  *
  * Only abilities whose sim systems exist today are fully wired (Move→MOVE,
- * Stop→STOP).  Everything else is recognised and logged "not yet implemented".
+ * Stop→STOP, Build→BUILD).  Everything else is recognised and logged.
  */
 import { commandCardFor, type CommandCard } from "../game/abilities";
 import { CmdType, type Command } from "../net/protocol";
@@ -29,15 +40,11 @@ export interface PlacementGhost {
 }
 
 export interface CardControllerDeps {
-    /** eids of the player's own currently-selected units. */
+    /** Stable unit-ids of the player's own currently-selected units. */
     getOwnSelection: () => number[];
-    /** Stable UnitId for an eid (UnitId.id[eid]). */
-    unitIdOf: (eid: number) => number;
-    /** Render-only move preview (previewMoveTarget) — instant visual turn. */
-    previewMove: (eid: number, txFP: number, tyFP: number) => void;
     /** Snap an FP world coordinate to its tile centre. */
     snapToTile: (fp: number) => number;
-    /** Queue a finalized command for the next tick. */
+    /** Hand a finalized command to the sim worker. */
     emit: (cmd: Command) => void;
     /** Push a freshly-computed card (or null) to the view. */
     render: (card: CommandCard | null) => void;
@@ -49,8 +56,6 @@ export interface CardControllerDeps {
     // ── Building placement ──────────────────────────────────────────────────────
     /** The local player's team (stamped onto BUILD commands). */
     myTeam: number;
-    /** Mint a fresh stable UnitId for a newly-placed building. */
-    consumeUnitId: () => number;
     /** FP world coordinate → tile index. */
     fpToTile: (fp: number) => number;
     /** Can a building of `typeId` be placed with footprint top-left at (tileX,tileY)? */
@@ -64,38 +69,67 @@ export interface CommandCardController {
     setSelection(unitType: string | null): void;
     /** A card slot was clicked (raw grid index). */
     slot(index: number): void;
+    /** A letter key was pressed — dispatch to the matching slot in the current
+     *  card.  Returns true if a slot owned that hotkey (i.e. it was consumed). */
+    hotkey(letter: string): boolean;
     /** Cursor moved over the map — updates the placement ghost (no-op otherwise). */
     hoverTile(wxFP: number, wyFP: number): void;
     /** Left-click on the map. Returns true if consumed by an armed ability. */
     primaryClick(wxFP: number, wyFP: number): boolean;
     /** Right-click on the map: cancel an armed ability, else issue a move. */
     secondaryClick(wxFP: number, wyFP: number): void;
-    /** Escape: cancel armed ability and return the card to its root page. */
+    /** Escape: go back one navigation level (transient → menu → root). */
     escape(): void;
     /** True while an ability is armed and waiting for a target click. */
     isTargeting(): boolean;
 }
 
+// ── Navigation frames ────────────────────────────────────────────────────────────
+
+type Frame =
+    | { kind: "menu";      page: string }
+    | { kind: "targeting"; abilityId: string }
+    | { kind: "placement"; typeId: number; fw: number; fh: number };
+
 export function createCommandCardController(deps: CardControllerDeps): CommandCardController {
-    let type:  string | null = null;
-    let page:  string = "root";
-    let armedId: string | null = null;   // target-click ability awaiting a target
-    let placing: { typeId: number; fw: number; fh: number } | null = null;  // building placement
+    let type: string | null = null;
+    // Invariant: stack[0] is always the root menu; a transient (targeting/placement)
+    // only ever sits on top, and there is at most one.
+    let stack: Frame[] = [{ kind: "menu", page: "root" }];
 
     const log = (m: string) => deps.log?.(m);
 
+    /** The transient frame on top, if any (targeting / placement). */
+    function transient(): Extract<Frame, { kind: "targeting" | "placement" }> | null {
+        const top = stack[stack.length - 1];
+        return top.kind === "menu" ? null : top;
+    }
+    /** Page of the topmost MENU frame — what the card actually shows. */
+    function activePage(): string {
+        for (let i = stack.length - 1; i >= 0; i--)
+            if (stack[i].kind === "menu") return (stack[i] as { page: string }).page;
+        return "root";  // unreachable: stack[0] is always a menu
+    }
     function currentCard(): CommandCard | null {
-        return type ? commandCardFor(type, page) : null;
+        return type ? commandCardFor(type, activePage()) : null;
     }
     function rerender(): void { deps.render(currentCard()); }
 
-    /** Clear any armed targeting / placement and reset cursor + ghost. */
-    function disarm(): void {
-        if (armedId === null && placing === null) return;
-        armedId = null;
-        placing = null;
+    /** Pop a transient frame if one is on top; clears cursor + ghost. Returns
+     *  whether one was dropped.  Does NOT re-render (the menu beneath is
+     *  unchanged — only the cursor/ghost differ). */
+    function dropTransient(): boolean {
+        if (!transient()) return false;
+        stack.pop();
         deps.setTargetingCursor?.(false);
         deps.showPlacementGhost?.(null);
+        return true;
+    }
+
+    /** Go back one level: drop a transient, else pop one menu page. */
+    function back(): void {
+        if (dropTransient()) return;            // transient → back to its menu
+        if (stack.length > 1) { stack.pop(); rerender(); }  // submenu → parent
     }
 
     /** Footprint top-left for a building centred under the cursor. */
@@ -107,93 +141,111 @@ export function createCommandCardController(deps: CardControllerDeps): CommandCa
         const sel = deps.getOwnSelection();
         if (!sel.length) return;
         const sx = deps.snapToTile(txFP), sy = deps.snapToTile(tyFP);
-        for (const eid of sel) deps.previewMove(eid, sx, sy);
-        deps.emit({ type: CmdType.MOVE, unitIds: sel.map(deps.unitIdOf), txFP: sx, tyFP: sy });
+        deps.emit({ type: CmdType.MOVE, unitIds: sel, txFP: sx, tyFP: sy });
     }
     function issueStop(): void {
         const sel = deps.getOwnSelection();
-        if (sel.length) deps.emit({ type: CmdType.STOP, unitIds: sel.map(deps.unitIdOf) });
+        if (sel.length) deps.emit({ type: CmdType.STOP, unitIds: sel });
     }
 
     return {
         setSelection(unitType: string | null): void {
             type = unitType;
-            page = "root";
-            disarm();
+            stack = [{ kind: "menu", page: "root" }];
+            deps.setTargetingCursor?.(false);
+            deps.showPlacementGhost?.(null);
             rerender();
         },
 
         slot(index: number): void {
-            const card = currentCard();
-            const ability = card?.[index];
+            const ability = currentCard()?.[index];
             if (!ability) return;
             const it = ability.interaction;
             switch (it.kind) {
-                case "submenu":      page = it.page; disarm(); rerender(); break;
-                case "cancel":       page = "root";  disarm(); rerender(); break;
+                case "submenu":
+                    dropTransient();
+                    stack.push({ kind: "menu", page: it.page });
+                    rerender();
+                    break;
+                case "cancel":
+                    back();
+                    break;
                 case "immediate":
-                    disarm();
+                    dropTransient();
                     if (ability.id === "stop") issueStop();
                     else log(`${ability.id}: not yet implemented`);
                     break;
                 case "targetGround":
                 case "targetUnit":
-                    armedId = ability.id;
+                    // Arming replaces any active transient (replaceState).
+                    dropTransient();
+                    stack.push({ kind: "targeting", abilityId: ability.id });
                     deps.setTargetingCursor?.(true);
                     break;
                 case "placement": {
-                    disarm();
+                    dropTransient();
                     const typeId = unitTypeId(it.building);
                     const [fw, fh] = unitFootprint(typeId);
-                    placing = { typeId, fw, fh };
+                    stack.push({ kind: "placement", typeId, fw, fh });
                     deps.setTargetingCursor?.(true);
                     break;
                 }
                 case "produce":
-                    disarm();
+                    dropTransient();
                     log(`${ability.id}: not yet implemented`);
                     break;
             }
         },
 
+        hotkey(letter: string): boolean {
+            const card = currentCard();
+            if (!card) return false;
+            const L = letter.toUpperCase();
+            const idx = card.findIndex(a => a !== null && a.hotkey.length === 1 &&
+                                            a.hotkey.toUpperCase() === L);
+            if (idx < 0) return false;
+            this.slot(idx);
+            return true;
+        },
+
         hoverTile(wxFP: number, wyFP: number): void {
-            if (!placing) return;
-            const [tileX, tileY] = placeOrigin(wxFP, wyFP, placing.fw, placing.fh);
+            const t = transient();
+            if (t?.kind !== "placement") return;
+            const [tileX, tileY] = placeOrigin(wxFP, wyFP, t.fw, t.fh);
             deps.showPlacementGhost?.({
-                tileX, tileY, fw: placing.fw, fh: placing.fh,
-                valid: deps.canPlaceBuilding(tileX, tileY, placing.typeId),
+                tileX, tileY, fw: t.fw, fh: t.fh,
+                valid: deps.canPlaceBuilding(tileX, tileY, t.typeId),
             });
         },
 
         primaryClick(wxFP: number, wyFP: number): boolean {
-            if (placing) {
-                const [tileX, tileY] = placeOrigin(wxFP, wyFP, placing.fw, placing.fh);
-                if (deps.canPlaceBuilding(tileX, tileY, placing.typeId)) {
-                    deps.emit({ type: CmdType.BUILD, unitId: deps.consumeUnitId(),
-                                typeId: placing.typeId, team: deps.myTeam, tileX, tileY });
-                    disarm();   // placed — exit placement mode
+            const t = transient();
+            if (t?.kind === "placement") {
+                const [tileX, tileY] = placeOrigin(wxFP, wyFP, t.fw, t.fh);
+                if (deps.canPlaceBuilding(tileX, tileY, t.typeId)) {
+                    deps.emit({ type: CmdType.BUILD, typeId: t.typeId, team: deps.myTeam, tileX, tileY });
+                    dropTransient();   // placed — back to the build menu (referee mints the id)
                 }
                 // invalid spot: stay armed so the player can pick another tile
                 return true;
             }
-            if (armedId === null) return false;
-            const id = armedId;
-            disarm();
-            if (id === "move") issueMove(wxFP, wyFP);
-            else log(`${id}: targeting not yet implemented`);
-            return true;
+            if (t?.kind === "targeting") {
+                const id = t.abilityId;
+                dropTransient();
+                if (id === "move") issueMove(wxFP, wyFP);
+                else log(`${id}: targeting not yet implemented`);
+                return true;
+            }
+            return false;
         },
 
         secondaryClick(wxFP: number, wyFP: number): void {
-            if (armedId !== null || placing !== null) { disarm(); return; }  // abort targeting/placement
-            issueMove(wxFP, wyFP);                                            // otherwise: smart move
+            if (dropTransient()) return;   // abort targeting/placement
+            issueMove(wxFP, wyFP);          // otherwise: smart move
         },
 
-        escape(): void {
-            disarm();
-            if (page !== "root") { page = "root"; rerender(); }
-        },
+        escape(): void { back(); },
 
-        isTargeting(): boolean { return armedId !== null || placing !== null; },
+        isTargeting(): boolean { return transient() !== null; },
     };
 }

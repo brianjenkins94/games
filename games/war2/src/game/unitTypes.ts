@@ -51,3 +51,10 @@ export function unitBuildTicks(id: number): number {
     const t = (unitTypeDef(id)?.["costs"] as { time?: number } | undefined)?.time;
     return typeof t === "number" ? t : 0;
 }
+
+/** Sight radius in tiles (units.json sightRange).  Falls back to 4 (the legacy
+ *  uniform radius) for unknown/none.  Measured with the dodecagonal metric. */
+export function unitSight(id: number): number {
+    const s = unitTypeDef(id)?.["sightRange"];
+    return typeof s === "number" ? s : 4;
+}

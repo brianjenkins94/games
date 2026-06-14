@@ -19,8 +19,11 @@
  * Harness.tsx, and the deploy-time SW patch lives in vite.ts.
  */
 import { VirtualFS, ViteDevServer, getServerBridge, stream } from "almostnode";
-import { createElement, jsxToString } from "jsx-async-runtime";
-import { Harness } from "./Harness";
+
+/** The harness shell as a JSX component. Render it into your host element (e.g. with
+ *  jsx-async-runtime's `jsxToString`), then call {@link wireHarness} on that element to
+ *  boot the runtime. Exposed so consuming games can compose the shell in their own JSX. */
+export { Harness } from "./Harness";
 
 // ── Host ⇄ box pairing contract (the game client is the other half) ───────────────
 /** A box's game client posts this to the host once its peer id is known. */
@@ -35,9 +38,7 @@ export interface BoxConfig {
     label: string;
 }
 
-export interface BootOptions {
-    /** Title shown in the harness shell header. */
-    title: string;
+export interface WireOptions {
     /** Client document each box loads, relative to the box prefix (e.g. "client.html"). */
     clientUrl: string;
     boxes: BoxConfig[];
@@ -46,13 +47,12 @@ export interface BootOptions {
 interface Pending { win: Window; id: string; role: "host" | "peer"; }
 
 /**
- * Render the harness shell into `root`, then boot the runtime: register a proxy server
- * per box, create each box's iframe, and pair them. All JSX lives here (compiled by the
- * harness's own build), so consuming games need no JSX toolchain.
+ * Wire the harness runtime onto an already-rendered shell: register a proxy server per
+ * box, create each box's iframe, and pair them. The {@link Harness} shell must already be
+ * mounted in `root` (so the `#status`, `#frames`, and `#reload-boxes` ids resolve) — the
+ * consuming game renders it as JSX, keeping this module free of any JSX toolchain.
  */
-export async function bootHarness(root: HTMLElement, { title, clientUrl, boxes }: BootOptions): Promise<void> {
-    root.innerHTML = await jsxToString.call({}, createElement(Harness, { title }));
-
+export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireOptions): Promise<void> {
     const statusEl = root.querySelector<HTMLElement>("#status")!;
     const framesEl = root.querySelector<HTMLElement>("#frames")!;
 

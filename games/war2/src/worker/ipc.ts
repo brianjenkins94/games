@@ -1,0 +1,104 @@
+/**
+ * Worker IPC protocol — the message contract between a main thread (client shell)
+ * and its worker.  Host-authoritative model: the host spawns the *referee* worker
+ * (referee.worker.ts, authoritative sim of both teams); the guest spawns a *thin
+ * client* worker (client.worker.ts) that just relays over the data channel.  Both
+ * mains use this same contract — postMessage commands out, receive render
+ * snapshots in — so the client shell is role-agnostic on the hot path.
+ *
+ * Workers keep ticking / doing I/O when the tab is backgrounded (main-thread
+ * timers throttle; worker timers and message handling do not).  PeerJS lives on
+ * the main thread (RTCPeerConnection isn't available in workers); the established
+ * RTCDataChannel is transferred into the worker (Chromium), else raw packets are
+ * relayed via net-in/net-out.
+ *
+ * This module is shared by both threads and must stay free of Phaser/DOM imports.
+ */
+import type { Command, UnitSnapshot } from "../net/protocol";
+import type { MapInfo } from "../game/world";
+
+// ── Render snapshot (worker → main, every tick) ──────────────────────────────────
+
+/** HUD telemetry shown in the corner overlay. */
+export interface RenderHud {
+    serverTick: number;
+    clientTick: number;
+    rtt:        number;
+    lead:       number;
+    lastHash:   number;
+    beatAge:    number;
+}
+
+/** One entity's per-tick render state.  Keyed by stable `uid` (eids are
+ *  worker-internal).  Buildings carry fw/fh > 0; mobile units have fw === 0. */
+export interface RenderUnit {
+    uid:      number;
+    type:     number;   // interned unit-type id (unitTypes.ts)
+    team:     number;
+    x:        number;   // FP world coords
+    y:        number;
+    dir:      number;
+    moving:   number;
+    mtActive: number;   // MoveTarget.active (drives the move dot — own units only)
+    mtx:      number;
+    mty:      number;
+    fw:       number;   // building footprint (tiles); 0 for mobile units
+    fh:       number;
+    buildLeft: number;
+}
+
+export interface RenderState {
+    tick:  number;
+    hud:   RenderHud;
+    units: RenderUnit[];
+}
+
+/** Build a RenderUnit from a fog-view UnitSnapshot (shared by host + guest render). */
+export function renderUnitFromSnapshot(s: UnitSnapshot): RenderUnit {
+    return {
+        uid: s.uid, type: s.type, team: s.team, x: s.x, y: s.y,
+        dir: s.dir, moving: s.moving, mtActive: s.moveActive, mtx: s.mtx, mty: s.mty,
+        fw: s.bw, fh: s.bh, buildLeft: s.buildLeft,
+    };
+}
+
+// ── Init payload ─────────────────────────────────────────────────────────────────
+
+/** One team's initial unit spawn (top-left tile, count, interned worker type). */
+export interface SpawnConfig { team: number; sx: number; sy: number; count: number; typeId: number; }
+
+export interface WorkerInit {
+    role:        "host" | "peer";
+    myTeam:      number;
+    seed:        number;
+    mapInfo:     MapInfo;
+    /** All teams' initial spawns — the referee creates them; the thin guest worker
+     *  ignores this (it doesn't simulate). */
+    spawns:      SpawnConfig[];
+    mapW:        number;
+    mapH:        number;
+}
+
+// ── Messages: main → worker ──────────────────────────────────────────────────────
+
+export type MainToWorker =
+    | { kind: "init";    init: WorkerInit }
+    /** Transferred raw data channel (Chromium fast path). */
+    | { kind: "channel"; channel: RTCDataChannel }
+    /** Relay fallback: an incoming raw packet to process. */
+    | { kind: "net-in";  data: ArrayBuffer }
+    /** A locally-issued command to queue for the next tick. */
+    | { kind: "command"; cmd: Command }
+    | { kind: "pause" }
+    | { kind: "resume" };
+
+// ── Messages: worker → main ──────────────────────────────────────────────────────
+
+export type WorkerToMain =
+    | { kind: "ready"; passability: Uint8Array | null; mapW: number; mapH: number }
+    /** Per-tick render snapshot. */
+    | { kind: "render"; state: RenderState }
+    /** Relay fallback: a raw packet to send over the channel. */
+    | { kind: "net-out"; data: ArrayBuffer }
+    /** Debug inspector badge count (worker owns the debug WS; badge is DOM). */
+    | { kind: "inspector-count"; n: number };
