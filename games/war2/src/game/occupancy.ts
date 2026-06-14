@@ -1,9 +1,11 @@
 /**
- * Occupancy grid — tracks which unit (eid) occupies each tile.
+ * Occupancy grid — tracks which BUILDING (eid) occupies each tile.
  *
- * A unit "occupies" its next waypoint tile from the moment it starts moving
- * toward it, freeing the previous tile immediately.  This gives other units
- * up-to-date information while keeping each unit on exactly one tile.
+ * Since SC-style movement, mobile units no longer reserve tiles here; they collide
+ * continuously via their boxes (see systems/movement.ts).  The grid now records only
+ * building footprints, making it the authoritative *static* obstacle map: a tile is
+ * statically blocked for movement/pathing iff terrain is impassable OR a building
+ * sits on it (see buildingAt / buildingAtIdx).
  *
  * Storage: flat Int32Array, 0 = empty, eid+1 = occupied by that entity.
  */
@@ -47,6 +49,19 @@ export function occupant(tx: number, ty: number): number {
 
 export function isEmpty(tx: number, ty: number): boolean {
     return occupant(tx, ty) === -1;
+}
+
+/** True if a building footprint covers tile (tx, ty).  Out-of-bounds counts as
+ *  blocked so callers can clamp at map edges without a separate bounds check. */
+export function buildingAt(tx: number, ty: number): boolean {
+    if (!inBounds(tx, ty)) return true;
+    return _grid![ty * _mapW + tx] !== 0;
+}
+
+/** Index-form of buildingAt for hot loops that already hold a flat tile index.
+ *  (No bounds check — caller guarantees the index is in-range.) */
+export function buildingAtIdx(i: number): boolean {
+    return _grid![i] !== 0;
 }
 
 // ── Rectangle operations (building footprints) ────────────────────────────────

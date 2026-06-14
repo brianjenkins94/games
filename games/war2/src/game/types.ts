@@ -11,7 +11,7 @@ export interface UnitSnapshot {
     x: number; y: number;
     mtx: number; mty: number; moveActive: number;
     curTx: number; curTy: number;
-    goalTx: number; goalTy: number; pathActive: number;
+    goalTx: number; goalTy: number; pathActive: number; stuckTicks: number;
     dir: number; moving: number;
     bw: number; bh: number; buildLeft: number;   // building footprint + construction ticks (0 = mobile unit)
 }

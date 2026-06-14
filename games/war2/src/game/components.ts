@@ -17,27 +17,40 @@ export function fpToTile(fp: number): number { return (fp / FP / TILE_PX) | 0; }
 const CAP = 4096;
 
 export const Position   = { x: new Int32Array(CAP), y: new Int32Array(CAP) };
+// SC-style movement: tx/ty is the FINAL goal point in FP (not a per-tile waypoint).
+// The movement system steers toward it via the flow field; `active` = 1 while moving.
 export const MoveTarget = { tx: new Int32Array(CAP), ty: new Int32Array(CAP), active: new Uint8Array(CAP) };
 // `type` is an interned unit-type id (see game/unitTypes.ts), 0 = none/unknown.
 // It is authoritative identity but never changes, so it rides in snapshots
 // (survives resync) yet is deliberately excluded from the position hash.
-export const Unit       = { team: new Uint8Array(CAP), selected: new Uint8Array(CAP), type: new Uint16Array(CAP) };
+// `movable` (local-only, not snapshotted): 1 = this peer simulates the unit and may
+// displace it via collision; 0 = display-only obstacle (an enemy known purely from
+// snapshots on the guest) — it still COLLIDES (own units route around it) but is
+// never itself moved by the local movement system.  The referee sims both teams, so
+// all of its units are movable; only the guest holds movable=0 enemies.
+export const Unit       = { team: new Uint8Array(CAP), selected: new Uint8Array(CAP), type: new Uint16Array(CAP), movable: new Uint8Array(CAP) };
 // Stable identity that travels in every SPAWN command so both sims can refer
 // to the same logical unit regardless of which bitecs eid it was assigned.
 export const UnitId     = { id: new Uint32Array(CAP) };
 
 // ── Flow-field path following ─────────────────────────────────────────────────
-// MoveTarget always points at the next tile centre.  The movement system reads
-// the flow field for the unit's goal and steers tile-by-tile.
-// curTx/curTy = tile currently occupied in the OccupancyGrid.
+// The movement system samples the flow field for goalTx/goalTy to get a heading,
+// moves continuously toward it (MoveTarget.tx/ty = final goal point), then resolves
+// unit–unit and static collisions.
+// curTx/curTy = the tile the unit currently sits in (recomputed from Position each
+//   tick) — drives flow-field and vision sampling.  For buildings it is the
+//   footprint top-left, used to re-lay occupancy on snapshot restore.
 // goalTx/goalTy = destination tile (indexes the LRU flow-field cache).
+// stuckTicks = consecutive ticks of ~no progress toward the goal; arrival logic
+//   settles a unit once this passes a threshold (replaces the old occupancy hacks).
 
 export const Path = {
-    active: new Uint8Array(CAP),   // 1 = following a flow field
-    goalTx: new Int16Array(CAP),   // destination tile x
-    goalTy: new Int16Array(CAP),   // destination tile y
-    curTx:  new Int16Array(CAP),   // tile currently occupied
-    curTy:  new Int16Array(CAP),
+    active:     new Uint8Array(CAP),   // 1 = following a flow field
+    goalTx:     new Int16Array(CAP),   // destination tile x
+    goalTy:     new Int16Array(CAP),   // destination tile y
+    curTx:      new Int16Array(CAP),   // tile the unit currently sits in
+    curTy:      new Int16Array(CAP),
+    stuckTicks: new Uint8Array(CAP),   // consecutive low-progress ticks (arrival/settle)
 };
 
 // ── Buildings ─────────────────────────────────────────────────────────────────

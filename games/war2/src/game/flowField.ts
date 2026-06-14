@@ -20,6 +20,7 @@
 
 import { getMapW, getMapH } from "./passability";
 import { getBelievedPassability, takeBelievedDirty } from "./vision";
+import { buildingAtIdx } from "./occupancy";
 
 // ── Direction table ───────────────────────────────────────────────────────────
 
@@ -106,8 +107,15 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
     goalTy = Math.max(0, Math.min(mapH - 1, goalTy));
 
     const size    = mapW * mapH;
+
+    // Combined obstacle map: a tile is blocked for pathing if terrain is impassable
+    // (per this team's belief) OR a building footprint covers it.  Mobile units are
+    // NOT in here — they're avoided by continuous collision, not by the flow field.
+    const blocked = new Uint8Array(size);
+    for (let i = 0; i < size; i++) blocked[i] = (pass[i] || buildingAtIdx(i)) ? 1 : 0;
+
     const goalIdx = goalTy * mapW + goalTx;
-    if (pass[goalIdx]) return null; // terrain-blocked goal
+    if (blocked[goalIdx]) return null; // blocked goal
 
     // cost[i] = minimum movement cost to reach goal from tile i
     const cost    = new Int32Array(size).fill(INF);
@@ -132,11 +140,11 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
             if (nx < 0 || nx >= mapW || ny < 0 || ny >= mapH) continue;
 
             const ni = ny * mapW + nx;
-            if (pass[ni]) continue;
+            if (blocked[ni]) continue;
 
-            // Diagonal: block if either orthogonal side is terrain-blocked
+            // Diagonal: block if either orthogonal side is blocked
             if (DIR_DX[d] !== 0 && DIR_DY[d] !== 0) {
-                if (pass[cy * mapW + nx] || pass[ny * mapW + cx]) continue;
+                if (blocked[cy * mapW + nx] || blocked[ny * mapW + cx]) continue;
             }
 
             const nc = c + DIR_COST[d];
@@ -154,7 +162,7 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
     for (let ty = 0; ty < mapH; ty++) {
         for (let tx = 0; tx < mapW; tx++) {
             const ti = ty * mapW + tx;
-            if (pass[ti] || ti === goalIdx || cost[ti] === INF) continue;
+            if (blocked[ti] || ti === goalIdx || cost[ti] === INF) continue;
 
             let minCost = INF, bestDir = UNREACHABLE;
             for (let d = 0; d < 8; d++) {
@@ -162,10 +170,10 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
                 const ny = ty + DIR_DY[d];
                 if (nx < 0 || nx >= mapW || ny < 0 || ny >= mapH) continue;
                 const ni = ny * mapW + nx;
-                if (pass[ni]) continue;
+                if (blocked[ni]) continue;
 
                 if (DIR_DX[d] !== 0 && DIR_DY[d] !== 0) {
-                    if (pass[ty * mapW + nx] || pass[ny * mapW + tx]) continue;
+                    if (blocked[ty * mapW + nx] || blocked[ny * mapW + tx]) continue;
                 }
 
                 if (cost[ni] < minCost) { minCost = cost[ni]; bestDir = d; }
@@ -179,7 +187,9 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
 
 // ── LRU cache ─────────────────────────────────────────────────────────────────
 
-const CACHE_CAP = 16;
+// Formation moves give each unit in a group its own goal tile (one field each), so
+// the cache must hold several groups' worth of distinct goals without thrashing.
+const CACHE_CAP = 64;
 const _cache    = new Map<number, FlowField>(); // goalIdx → FlowField
 
 export function getOrComputeFlowField(team: number, goalTx: number, goalTy: number): FlowField | null {

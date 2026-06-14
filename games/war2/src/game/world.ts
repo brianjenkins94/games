@@ -7,8 +7,9 @@ import { movementSystem, stopUnit as _stopUnit } from "./systems/movement";
 import { hashEntities } from "./hash";
 import { seedRng, rngRange, getRngState, setRngState } from "./rng";
 import { initPassability, getPassability, getMapW, getMapH } from "./passability";
-import { initOccupancy, occupyTile, freeTile, isEmpty, resetOccupancy, occupyRect, freeRect, rectEmpty } from "./occupancy";
-import { getOrComputeFlowField, clearFlowFieldCache, DIR_DX, DIR_DY, UNREACHABLE } from "./flowField";
+import { initOccupancy, resetOccupancy, occupyRect, freeRect, rectEmpty } from "./occupancy";
+import { initWalkGrid, resetWalkGrid, reserveUnit, freeUnit } from "./walkGrid";
+import { getOrComputeFlowField, clearFlowFieldCache, UNREACHABLE } from "./flowField";
 import { inRange, distance } from "./distance";
 import { initVision, visionSystem, getBelievedPassability, exportExplored, importExplored, FOW_SIGHT_TILES } from "./vision";
 
@@ -87,6 +88,8 @@ export function createSimWorld(seed: number, mapInfo?: MapInfo): SimWorld {
     if (mapInfo) {
         initPassability(mapInfo.gids, mapInfo.mapW, mapInfo.mapH, mapInfo.terrainArr);
         initOccupancy(mapInfo.mapW, mapInfo.mapH);
+        initWalkGrid(mapInfo.mapW, mapInfo.mapH);   // 8px unit-collision reservation grid
+
         // Referee holds per-team vision for both teams (each paths on its own knowledge).
         initVision(mapInfo.mapW, mapInfo.mapH, [0, 1]);
     }
@@ -115,23 +118,28 @@ export function spawnUnit(world: SimWorld, xFP: number, yFP: number, team: numbe
     MoveTarget.active[eid] = 0;
     Unit.team[eid]         = team;
     Unit.selected[eid]     = 0;
+    Unit.movable[eid]      = 1;   // locally simulated
     Unit.type[eid]         = typeId;
     UnitId.id[eid]         = uid;
     Path.active[eid]       = 0;
-    const tx = fpToTile(xFP), ty = fpToTile(yFP);
-    Path.curTx[eid]        = tx;
-    Path.curTy[eid]        = ty;
+    Path.stuckTicks[eid]   = 0;
+    Path.curTx[eid]        = fpToTile(xFP);   // current tile (recomputed each move tick)
+    Path.curTy[eid]        = fpToTile(yFP);
     UnitAnim.dir[eid]      = 4;   // default South
     UnitAnim.moving[eid]   = 0;
-    occupyTile(tx, ty, eid);
+    reserveUnit(eid);             // claim the unit's footprint on the 8px collision grid
     _unitIdToEid.set(uid, eid);
     if (unitId !== undefined) setNextUnitId(unitId); // keep counter ahead
     return eid;
 }
 
 export function despawnUnit(world: SimWorld, eid: number): void {
-    if (Building.fw[eid] > 0) freeRect(Path.curTx[eid], Path.curTy[eid], Building.fw[eid], Building.fh[eid]);
-    else                      freeTile(Path.curTx[eid], Path.curTy[eid]);
+    if (Building.fw[eid] > 0) {
+        freeRect(Path.curTx[eid], Path.curTy[eid], Building.fw[eid], Building.fh[eid]);
+        clearFlowFieldCache();   // footprint freed → cached fields routed around it are stale
+    } else {
+        freeUnit(eid);           // release the unit's footprint on the collision grid
+    }
     Path.active[eid] = 0;
     _unitIdToEid.delete(UnitId.id[eid]);
     removeEntity(world, eid);
@@ -167,6 +175,7 @@ export function spawnBuilding(world: SimWorld, tileX: number, tileY: number, tea
     MoveTarget.active[eid] = 0;
     Unit.team[eid]         = team;
     Unit.selected[eid]     = 0;
+    Unit.movable[eid]      = 0;   // buildings never move (also excluded by Building.fw guard)
     Unit.type[eid]         = typeId;
     UnitId.id[eid]         = uid;
     Path.active[eid]       = 0;
@@ -178,6 +187,7 @@ export function spawnBuilding(world: SimWorld, tileX: number, tileY: number, tea
     Building.fh[eid]        = fh;
     Building.buildLeft[eid] = unitBuildTicks(typeId);
     occupyRect(tileX, tileY, fw, fh, eid);
+    clearFlowFieldCache();   // new footprint → units must route around it now
     _unitIdToEid.set(uid, eid);
     if (unitId !== undefined) setNextUnitId(unitId);
     return eid;
@@ -299,67 +309,57 @@ export function stopUnit(_world: SimWorld, eid: number): void {
 
 export function setMoveTarget(_world: SimWorld, eid: number, txFP: number, tyFP: number): void {
     const team = Unit.team[eid];
-    const pass = getBelievedPassability(team);   // fog-aware: may step into assumed-passable fog
+    const pass = getBelievedPassability(team);   // fog-aware: may path into assumed-passable fog
     const mapW = getMapW();
-    const mapH = getMapH();
 
     if (!pass) {
         // No map loaded — direct movement fallback (pre-map mode)
         MoveTarget.tx[eid]     = txFP;
         MoveTarget.ty[eid]     = tyFP;
         MoveTarget.active[eid] = 1;
+        Path.active[eid]       = 0;
+        Path.stuckTicks[eid]   = 0;
         return;
     }
 
-    let goalTx   = fpToTile(txFP);
-    let goalTy   = fpToTile(tyFP);
-    const curTx  = Path.curTx[eid];
-    const curTy  = Path.curTy[eid];
+    let goalTx  = fpToTile(txFP);
+    let goalTy  = fpToTile(tyFP);
+    let goalXFP = txFP, goalYFP = tyFP;
 
-    if (curTx === goalTx && curTy === goalTy) return; // already there
     if (pass[goalTy * mapW + goalTx]) {
-        // Blocked terrain (e.g. a tree) — head for the nearest walkable tile.
+        // Blocked terrain (tree/water/cliff) — aim for the nearest walkable tile centre.
         const near = nearestPassableTile(team, goalTx, goalTy);
         if (!near) return;
         [goalTx, goalTy] = near;
-        if (curTx === goalTx && curTy === goalTy) return; // already on it
+        goalXFP = tileCenterFP(goalTx);
+        goalYFP = tileCenterFP(goalTy);
     }
 
-    // Pre-warm the cache — shared by every unit with this goal (the key benefit
-    // of flow fields: all N selected units cost one Dijkstra, not N A* calls).
+    const curTx = fpToTile(Position.x[eid]);
+    const curTy = fpToTile(Position.y[eid]);
+
+    // Record the goal point; the movement system steers toward it via the flow field.
+    Path.goalTx[eid]       = goalTx;
+    Path.goalTy[eid]       = goalTy;
+    MoveTarget.tx[eid]     = goalXFP;
+    MoveTarget.ty[eid]     = goalYFP;
+    Path.stuckTicks[eid]   = 0;
+
+    if (curTx === goalTx && curTy === goalTy) {
+        // Already in the goal tile — just nudge toward the exact point.
+        MoveTarget.active[eid] = 1;
+        Path.active[eid]       = 1;
+        return;
+    }
+
+    // Pre-warm the shared flow field (all N selected units cost one Dijkstra) and
+    // skip the order if this unit can't reach the goal at all.
     const ff = getOrComputeFlowField(team, goalTx, goalTy);
     if (!ff) return;
+    if (ff.dirs[curTy * mapW + curTx] === UNREACHABLE) return;
 
-    // If this unit can't reach the goal at all, skip it
-    const myIdx = curTy * mapW + curTx;
-    if (ff.dirs[myIdx] === UNREACHABLE) return;
-
-    // Record goal — movement system reads the flow field each tile arrival
-    Path.goalTx[eid] = goalTx;
-    Path.goalTy[eid] = goalTy;
-    Path.active[eid] = 1;
-
-    // Kick off immediately: free current tile, occupy first step
-    const dir = ff.dirs[myIdx];
-    const nx  = curTx + DIR_DX[dir];
-    const ny  = curTy + DIR_DY[dir];
-
-    if (nx >= 0 && nx < mapW && ny >= 0 && ny < mapH && !pass[ny * mapW + nx] && isEmpty(nx, ny)) {
-        freeTile(curTx, curTy);
-        occupyTile(nx, ny, eid);
-        Path.curTx[eid]      = nx;
-        Path.curTy[eid]      = ny;
-        MoveTarget.tx[eid]   = tileCenterFP(nx);
-        MoveTarget.ty[eid]   = tileCenterFP(ny);
-        UnitAnim.dir[eid]    = dir;   // face the direction we're stepping
-        UnitAnim.moving[eid] = 1;
-    } else {
-        // First tile is occupied or blocked — movement system retries each tick
-        MoveTarget.tx[eid]   = tileCenterFP(curTx);
-        MoveTarget.ty[eid]   = tileCenterFP(curTy);
-        UnitAnim.moving[eid] = 0;    // waiting, show idle
-    }
     MoveTarget.active[eid] = 1;
+    Path.active[eid]       = 1;
 }
 
 // ── Visibility ────────────────────────────────────────────────────────────────
@@ -436,6 +436,7 @@ export function snapshotUnit(eid: number): UnitSnapshot {
         goalTx:     Path.goalTx[eid],
         goalTy:     Path.goalTy[eid],
         pathActive: Path.active[eid],
+        stuckTicks: Path.stuckTicks[eid],
         dir:        UnitAnim.dir[eid],
         moving:     UnitAnim.moving[eid],
         bw:         Building.fw[eid],
@@ -471,6 +472,7 @@ function _applyUnitSnapshot(eid: number, snap: UnitSnapshot): void {
     Path.goalTy[eid]       = snap.goalTy;
     Path.curTx[eid]        = snap.curTx;
     Path.curTy[eid]        = snap.curTy;
+    Path.stuckTicks[eid]   = snap.stuckTicks;
     UnitAnim.dir[eid]      = snap.dir;
     UnitAnim.moving[eid]   = snap.moving;
     Building.fw[eid]        = snap.bw;
@@ -478,15 +480,16 @@ function _applyUnitSnapshot(eid: number, snap: UnitSnapshot): void {
     Building.buildLeft[eid] = snap.buildLeft;
 }
 
-/** Re-lay occupancy for a restored entity: footprint rect for buildings, else
- *  a single tile.  Buildings also need their Building component (re-)added so
- *  the construction query finds them. */
+/** Re-lay occupancy for a restored entity.  Only buildings reserve tiles now
+ *  (their footprint rect); mobile units collide continuously and reserve nothing.
+ *  Buildings also need their Building component (re-)added so the construction
+ *  query finds them. */
 function _restoreOccupancy(world: SimWorld, eid: number, snap: UnitSnapshot): void {
     if (snap.bw > 0) {
         addComponent(world, eid, Building);
         occupyRect(snap.curTx, snap.curTy, snap.bw, snap.bh, eid);
     } else {
-        occupyTile(snap.curTx, snap.curTy, eid);
+        reserveUnit(eid);   // mobile / display-only unit: claim its 8px footprint
     }
 }
 
@@ -506,30 +509,32 @@ function _spawnFromSnapshot(world: SimWorld, snap: UnitSnapshot, displayOnly: bo
     addComponent(world, eid, Unit);
     addComponent(world, eid, UnitId);
     _applyUnitSnapshot(eid, snap);
+    Unit.movable[eid] = displayOnly ? 0 : 1;
     if (displayOnly) MoveTarget.active[eid] = 0;
     _restoreOccupancy(world, eid, snap);
     _unitIdToEid.set(snap.uid, eid);
     setNextUnitId(snap.uid);
 }
 
-/** Overwrite an existing entity from a snapshot, moving its occupancy if the tile changed. */
+/** Overwrite an existing entity from a snapshot.  Mobile units hold no tile
+ *  reservation; buildings don't move, so no occupancy bookkeeping is needed here. */
 function _applyFromSnapshot(eid: number, snap: UnitSnapshot, displayOnly: boolean): void {
-    const oldTx = Path.curTx[eid], oldTy = Path.curTy[eid];
-    _applyUnitSnapshot(eid, snap);
+    const isBuilding = snap.bw > 0;
+    if (!isBuilding) freeUnit(eid);          // release footprint at the OLD position first
+    _applyUnitSnapshot(eid, snap);           // overwrites Position with the new one
+    Unit.movable[eid] = displayOnly ? 0 : 1;
     if (displayOnly) MoveTarget.active[eid] = 0;
-    if (snap.curTx !== oldTx || snap.curTy !== oldTy) {
-        freeTile(oldTx, oldTy);
-        occupyTile(snap.curTx, snap.curTy, eid);
-    }
+    if (!isBuilding) reserveUnit(eid);       // re-claim footprint at the NEW position
 }
 
 /** Add a newly-revealed enemy unit (display-only). */
 export function addKnownUnit(world: SimWorld, snap: UnitSnapshot): void { _spawnFromSnapshot(world, snap, true); }
 /** Refresh a known enemy unit from a new snapshot (display-only). */
 export function updateKnownUnit(eid: number, snap: UnitSnapshot): void { _applyFromSnapshot(eid, snap, true); }
-/** Despawn an enemy unit that has left visibility and free its tile. */
+/** Despawn an enemy unit that has left visibility (free its footprint if a building). */
 export function removeKnownUnit(world: SimWorld, eid: number): void {
-    freeTile(Path.curTx[eid], Path.curTy[eid]);
+    if (Building.fw[eid] > 0) freeRect(Path.curTx[eid], Path.curTy[eid], Building.fw[eid], Building.fh[eid]);
+    else                      freeUnit(eid);
     _unitIdToEid.delete(UnitId.id[eid]);
     removeEntity(world, eid);
 }
@@ -594,6 +599,7 @@ export function applySnapshot(world: SimWorld, snap: WorldSnapshot): void {
     _unitIdToEid.clear();
     setRngState(snap.rngState);
     resetOccupancy();
+    resetWalkGrid();
     clearFlowFieldCache();
 
     // Restore units — eids are freshly allocated (not preserved from snapshot)
@@ -604,6 +610,7 @@ export function applySnapshot(world: SimWorld, snap: WorldSnapshot): void {
         addComponent(world, eid, Unit);
         addComponent(world, eid, UnitId);
         Unit.selected[eid] = 0;   // local UI state — not in snapshot, reset explicitly
+        Unit.movable[eid]  = u.bw > 0 ? 0 : 1;   // referee restore: real units are movable
         _applyUnitSnapshot(eid, u);
         _restoreOccupancy(world, eid, u);
         _unitIdToEid.set(u.uid, eid);

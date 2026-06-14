@@ -49,9 +49,9 @@ export interface GameInstance {
     /** Remove a unit by its bitecs eid. */
     despawnUnit(eid: number): void;
 
-    /** Set the move target for a unit (authoritative — changes curTx/curTy and occupancy). */
+    /** Set a unit's goal point (authoritative — the movement system steers toward it). */
     setMoveTarget(eid: number, txFP: number, tyFP: number): void;
-    /** Visual-only preview — sets goal and animation but not occupancy.  Call on click. */
+    /** Visual-only preview — sets facing/animation but no sim state.  Call on click. */
     previewMoveTarget(eid: number, txFP: number, tyFP: number): void;
     /** Capture full deterministic sim state for snapshot+replay reconciliation. */
     takeSnapshot(): WorldSnapshot;
@@ -85,7 +85,7 @@ export interface GameInstance {
     hashOwn(myTeam: number): number;
     /** Snapshot a single entity's full state. */
     snapshotUnit(eid: number): UnitSnapshot;
-    /** Add a newly-revealed enemy unit (no occupancy registration). */
+    /** Add a newly-revealed enemy unit (display-only collider; not locally simulated). */
     addKnownUnit(snap: UnitSnapshot): void;
     /** Refresh a known enemy unit from a new snapshot. */
     updateKnownUnit(eid: number, snap: UnitSnapshot): void;

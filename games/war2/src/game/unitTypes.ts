@@ -58,3 +58,18 @@ export function unitSight(id: number): number {
     const s = unitTypeDef(id)?.["sightRange"];
     return typeof s === "number" ? s : 4;
 }
+
+// Collision-box half-extents, in PIXELS (movement scales to FP).
+// SC-style movement: ground units have an axis-aligned box that separates against
+// other units (soft) and clamps out of buildings/terrain (hard).  units.json has no
+// per-unit size today (only building `tileSize`), so default to a small uniform box;
+// a future per-type `boxSize: [w, h]` override is honoured if present.
+const DEFAULT_BOX_HALF_PX = 11;   // ~22px box, a touch under one 32px tile
+
+/** Collision-box half-extents [halfW, halfH] in PIXELS for a mobile unit type.
+ *  Buildings don't use this — they collide via their grid footprint. */
+export function unitBoxHalfPx(id: number): [number, number] {
+    const b = unitTypeDef(id)?.["boxSize"] as [number, number] | undefined;
+    if (b) return [b[0] >> 1, b[1] >> 1];
+    return [DEFAULT_BOX_HALF_PX, DEFAULT_BOX_HALF_PX];
+}

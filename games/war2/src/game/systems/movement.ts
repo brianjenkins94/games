@@ -1,43 +1,47 @@
 /**
- * Movement system — tile-by-tile flow-field following.
+ * Movement system — continuous movement on an 8px reservation grid (SC "walk tile" style).
  *
- * Each tick per active unit:
- *   1. Interpolate toward the current MoveTarget (next tile centre).
- *   2. On arrival: read the flow field for the unit's goal tile to get the
- *      next direction, check occupancy, and step forward.
+ * Units keep smooth fixed-point positions and steer along the per-team flow field, but
+ * collision is resolved by *reservation*: each unit only moves into walk cells that are
+ * free (see walkGrid.ts).  A blocked unit slides along the obstacle (axis separation) or
+ * waits — it can never overlap another unit, terrain, or a building, and no soft-body
+ * shuffle is needed.  Reservation is persistent: units hold their footprint between ticks
+ * (claimed on spawn / snapshot restore), so idle and display-only units are obstacles the
+ * movers route around for free.
  *
- * Local steering: if the preferred tile is occupied, try ±45°, ±90° offsets
- * from the flow direction before giving up for this tick.  This handles
- * formation spreading without global replan.
- *
- * If no adjacent tile is free the unit waits one tick and retries — MoveTarget
- * stays at the current tile centre so the interpolation sees dist≈0 and
- * re-enters the arrival branch immediately.
+ * Determinism: integer fixed-point throughout; magnitudes via the sqrt-free dodecagon
+ * distance().  Reservation is order-dependent but the referee processes units in a stable
+ * eid order that snapshot/replay reproduces.  UnitAnim is render-only (excluded from hash).
  */
 
 import { query } from "bitecs";
-import { Position, MoveTarget, Unit, Path, UnitAnim, UNIT_SPD, tileCenterFP } from "../components";
-import { freeTile, occupyTile, isEmpty } from "../occupancy";
+import {
+    Position, MoveTarget, Unit, Path, UnitAnim, Building,
+    UNIT_SPD, FP, fpToTile, tileCenterFP,
+} from "../components";
+import { footprintFreeAt, freeUnit, reserveUnit } from "../walkGrid";
 import { getOrComputeFlowField, DIR_DX, DIR_DY, UNREACHABLE } from "../flowField";
 import { getMapW, getMapH } from "../passability";
-import { getBelievedPassability } from "../vision";
+import { unitBoxHalfPx } from "../unitTypes";
 import { distance } from "../distance";
 
-/** Halt a unit: clear all movement and animation state in one place.
- *  Occupancy is intentionally left untouched — the unit stops on its current tile. */
+// ── Tunables ──────────────────────────────────────────────────────────────────
+const ARRIVE_FP    = 4 * FP;        // within this of the goal point → settle
+const PROGRESS_EPS = UNIT_SPD >> 1; // min progress/tick toward goal to stay "moving"
+const STUCK_LIMIT  = 12;            // ticks of ~no progress before a blocked unit settles
+
+const clampTile = (t: number, n: number) => (t < 0 ? 0 : t >= n ? n - 1 : t);
+
+/** Halt a unit: clear movement, path and animation state in one place.
+ *  The unit keeps its current walk-cell reservation (it just stops on it). */
 export function stopUnit(eid: number): void {
     MoveTarget.active[eid] = 0;
     Path.active[eid]       = 0;
+    Path.stuckTicks[eid]   = 0;
     UnitAnim.moving[eid]   = 0;
 }
 
-// Steering: clockwise offsets tried after the preferred direction fails.
-// ±45°, ±90° — gives natural spreading without recomputing the flow field.
-const STEER = [1, 7, 2, 6, 3, 5] as const;
-
-/** 8-way facing (0=N..7=NW, clockwise) from a movement delta — matches the
- *  DIR_DX/DIR_DY encoding.  Render-only (UnitAnim is excluded from worldHash),
- *  so the float math here is safe for determinism. */
+/** 8-way facing (0=N..7=NW) from a movement delta — render-only (cosmetic; never hashed). */
 function dirFromDelta(dx: number, dy: number): number {
     const a = (Math.atan2(dy, dx) + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
     return Math.round(a / (Math.PI / 4)) & 7;
@@ -47,100 +51,104 @@ export function movementSystem(world: object): void {
     const mapW = getMapW();
     const mapH = getMapH();
 
+    // Pre-map dev mode (no terrain / no walk grid): direct movement, no collision.
+    if (mapW === 0) { movePreMap(world); return; }
+
+    for (const eid of query(world, [Position, MoveTarget, Unit])) {
+        if (Building.fw[eid] > 0) continue;                 // buildings: static, never move
+
+        if (Unit.movable[eid] === 1 && MoveTarget.active[eid] === 1) {
+            stepUnit(eid, mapW, mapH);
+        }
+        // Refresh the tile the unit sits in (drives flow-field & vision sampling).
+        Path.curTx[eid] = clampTile(fpToTile(Position.x[eid]), mapW);
+        Path.curTy[eid] = clampTile(fpToTile(Position.y[eid]), mapH);
+    }
+}
+
+/** Steer one active unit one step and resolve collision by reservation. */
+function stepUnit(eid: number, mapW: number, mapH: number): void {
+    const x = Position.x[eid], y = Position.y[eid];
+    const goalX = MoveTarget.tx[eid], goalY = MoveTarget.ty[eid];
+
+    const prevDist = distance(goalX - x, goalY - y);
+    if (prevDist <= ARRIVE_FP) { stopUnit(eid); return; }
+
+    // Aim point: straight at the goal once in the goal tile, else the centre of the
+    // next tile the flow field points to.
+    const curTx = fpToTile(x), curTy = fpToTile(y);
+    const goalTx = Path.goalTx[eid], goalTy = Path.goalTy[eid];
+    let aimX = goalX, aimY = goalY;
+    if (!(curTx === goalTx && curTy === goalTy)) {
+        const ff = getOrComputeFlowField(Unit.team[eid], goalTx, goalTy);
+        if (!ff) { stopUnit(eid); return; }
+        const flowDir = ff.dirs[curTy * mapW + curTx];
+        if (flowDir !== UNREACHABLE) {
+            aimX = tileCenterFP(curTx + DIR_DX[flowDir]);
+            aimY = tileCenterFP(curTy + DIR_DY[flowDir]);
+        }
+        // UNREACHABLE → aim straight at the goal (best effort).
+    }
+
+    // One dist-normalised step toward the aim point (isotropic; clamped to not overshoot).
+    let sx = aimX - x, sy = aimY - y;
+    const d = distance(sx, sy);
+    if (d > UNIT_SPD) {
+        sx = (sx * UNIT_SPD / d) | 0;
+        sy = (sy * UNIT_SPD / d) | 0;
+    }
+
+    // Reservation move: free self, then take the largest sub-move whose cells are free
+    // (full, else slide along X or Y), then re-reserve.
+    const [hwPx, hhPx] = unitBoxHalfPx(Unit.type[eid]);
+    const hw = hwPx * FP, hh = hhPx * FP;
+    freeUnit(eid);
+    let nx = x, ny = y;
+    if (footprintFreeAt(x + sx, y + sy, hw, hh, eid)) {
+        nx = x + sx; ny = y + sy;
+    } else if (sx !== 0 && footprintFreeAt(x + sx, y, hw, hh, eid)) {
+        nx = x + sx;
+    } else if (sy !== 0 && footprintFreeAt(x, y + sy, hw, hh, eid)) {
+        ny = y + sy;
+    }
+    Position.x[eid] = nx; Position.y[eid] = ny;
+    reserveUnit(eid);
+
+    if (nx !== x || ny !== y) {
+        UnitAnim.dir[eid]    = dirFromDelta(nx - x, ny - y);
+        UnitAnim.moving[eid] = 1;
+    } else {
+        UnitAnim.moving[eid] = 0;   // blocked this tick (waiting on traffic / walled in)
+    }
+
+    // Arrival / stuck bookkeeping.
+    const newDist = distance(goalX - nx, goalY - ny);
+    if (newDist <= ARRIVE_FP) { stopUnit(eid); return; }
+    if (prevDist - newDist >= PROGRESS_EPS) {
+        Path.stuckTicks[eid] = 0;                 // still making headway
+    } else if (++Path.stuckTicks[eid] >= STUCK_LIMIT) {
+        stopUnit(eid);   // no headway for a while (jammed / crowded goal) → settle here
+    }
+}
+
+// ── Pre-map fallback (dev only) ────────────────────────────────────────────────
+function movePreMap(world: object): void {
     for (const eid of query(world, [Position, MoveTarget, Unit])) {
         if (!MoveTarget.active[eid]) continue;
-
-        // Fog-aware, per the unit's own team: step into tiles its team believes
-        // passable (unexplored counts as passable until LOS reveals otherwise).
-        const team = Unit.team[eid];
-        const pass = getBelievedPassability(team);
-
-        const dx    = MoveTarget.tx[eid] - Position.x[eid];
-        const dy    = MoveTarget.ty[eid] - Position.y[eid];
-        const dist2 = dx * dx + dy * dy;
-
-        if (dist2 > UNIT_SPD * UNIT_SPD) {
-            // Still travelling — interpolate.  Magnitude via the integer metric
-            // (no sqrt): keeps the whole sim path float-free and deterministic.
-            const dist = distance(dx, dy);
-            Position.x[eid] += (dx * UNIT_SPD / dist) | 0;
-            Position.y[eid] += (dy * UNIT_SPD / dist) | 0;
-            // Face the way we're actually moving (render-only).  Keeps facing in
-            // sync with travel even when a render-side preview turned the unit or
-            // MoveTarget was re-parked mid-leg — otherwise the unit "moonwalks".
-            UnitAnim.dir[eid]    = dirFromDelta(dx, dy);
-            UnitAnim.moving[eid] = 1;
+        let sx = MoveTarget.tx[eid] - Position.x[eid];
+        let sy = MoveTarget.ty[eid] - Position.y[eid];
+        const d = distance(sx, sy);
+        if (d <= UNIT_SPD) {
+            Position.x[eid] = MoveTarget.tx[eid];
+            Position.y[eid] = MoveTarget.ty[eid];
+            stopUnit(eid);
             continue;
         }
-
-        // ── Arrived at tile centre ────────────────────────────────────────────
-        Position.x[eid] = MoveTarget.tx[eid];
-        Position.y[eid] = MoveTarget.ty[eid];
-
-        if (!Path.active[eid]) {
-            MoveTarget.active[eid] = 0;
-            UnitAnim.moving[eid]   = 0;
-            continue;
-        }
-
-        const cx = Path.curTx[eid];
-        const cy = Path.curTy[eid];
-
-        // Reached goal?
-        if (cx === Path.goalTx[eid] && cy === Path.goalTy[eid]) {
-            stopUnit(eid); continue;
-        }
-
-        // Adjacent to an occupied goal → settle here.
-        // When units share a goal the first arrival parks on it; every other
-        // unit that is already next to it will never be able to step onto it,
-        // so orbiting/ring-around-the-rosy would occur without this check.
-        const goalTx = Path.goalTx[eid];
-        const goalTy = Path.goalTy[eid];
-        if (Math.abs(cx - goalTx) <= 1 && Math.abs(cy - goalTy) <= 1 && !isEmpty(goalTx, goalTy)) {
-            stopUnit(eid); continue;
-        }
-
-        // Read flow direction for current tile (this team's fog-aware field)
-        const ff = getOrComputeFlowField(team, Path.goalTx[eid], Path.goalTy[eid]);
-        if (!ff) { stopUnit(eid); continue; }
-
-        const flowDir = ff.dirs[cy * mapW + cx];
-        if (flowDir === UNREACHABLE) { stopUnit(eid); continue; }
-
-        // Try preferred direction, then steer alternatives
-        let stepped = false;
-        const dirsToTry = [flowDir, ...STEER.map(o => (flowDir + o) & 7)];
-
-        for (const dir of dirsToTry) {
-            const nx = cx + DIR_DX[dir];
-            const ny = cy + DIR_DY[dir];
-            if (nx < 0 || nx >= mapW || ny < 0 || ny >= mapH) continue;
-            if (pass && pass[ny * mapW + nx]) continue;                  // terrain blocked
-            if (DIR_DX[dir] !== 0 && DIR_DY[dir] !== 0) {               // diagonal: check corners
-                if (pass && (pass[cy * mapW + nx] || pass[ny * mapW + cx])) continue;
-            }
-            if (!isEmpty(nx, ny)) continue;                              // occupied
-
-            // Step into the new tile
-            freeTile(cx, cy);
-            occupyTile(nx, ny, eid);
-            Path.curTx[eid]      = nx;
-            Path.curTy[eid]      = ny;
-            MoveTarget.tx[eid]   = tileCenterFP(nx);
-            MoveTarget.ty[eid]   = tileCenterFP(ny);
-            UnitAnim.dir[eid]    = dir;
-            UnitAnim.moving[eid] = 1;
-            stepped = true;
-            break;
-        }
-
-        if (!stepped) {
-            // Fully blocked — stay at current centre and retry next tick
-            MoveTarget.tx[eid]   = tileCenterFP(cx);
-            MoveTarget.ty[eid]   = tileCenterFP(cy);
-            UnitAnim.moving[eid] = 0;
-        }
-        // MoveTarget.active stays 1 in both cases
+        sx = (sx * UNIT_SPD / d) | 0;
+        sy = (sy * UNIT_SPD / d) | 0;
+        Position.x[eid] += sx;
+        Position.y[eid] += sy;
+        UnitAnim.dir[eid]    = dirFromDelta(sx, sy);
+        UnitAnim.moving[eid] = 1;
     }
 }
