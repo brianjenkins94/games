@@ -1,29 +1,32 @@
-import { setMoveTarget, stopUnit, spawnUnit, spawnBuilding, canPlaceBuilding, eidForUnitId, type SimWorld } from "../world";
-import { Position, FP, TILE_PX } from "../components";
+import { setMoveTarget, setGatherTargets, stopUnit, spawnUnit, spawnBuilding, canPlaceBuilding, eidForUnitId, type SimWorld } from "../world";
+import { Position, Unit, FP, TILE_PX, fpToTile } from "../components";
 import { distance } from "../distance";
 import { CmdType, type Command } from "../../net/protocol";
 
-// A multi-unit MOVE keeps its formation only when the group is reasonably cohesive.
-// A more scattered selection just gathers on the click point instead (the offsets
-// would otherwise scatter units to odd spots far from where the player aimed).
-const FORMATION_SPREAD_MAX = 8 * TILE_PX * FP;   // max unit-to-centroid distance for formation
+// A cohesive multi-unit MOVE keeps its formation (each unit holds its offset from the group
+// centroid).  A scattered selection, or re-clicking the same spot, gathers into a compact block.
+const FORMATION_SPREAD_MAX = 8 * TILE_PX * FP;   // max unit-to-centroid distance to still hold formation
 
 /**
- * Apply a MOVE to one unit or, for a group, in StarCraft-style FORMATION: each unit
- * keeps its offset from the group's centroid, so the selection travels and arrives in
- * the same arrangement instead of all converging on the exact click point (the silly
- * inward-facing huddle).
- *
- * The offsets are an axis-aligned TRANSLATION — the block is NOT rotated to the travel
- * angle (that tilts the shape off the grid on diagonal moves and looks skewed; facing
- * the travel direction is a separate, cosmetic concern handled by the renderer).
- *
- * Deterministic: centroid is an integer mean of the addressed units' positions, so
- * both sims derive identical per-unit goals.  Blocked/off-map slots are snapped to the
- * nearest passable tile by setMoveTarget.
+ * Apply a MOVE.  One unit → straight to the point.  A cohesive group → FORMATION: each unit keeps
+ * its offset from the centroid (an axis-aligned translation), so the selection arrives in the same
+ * arrangement.  A too-scattered selection, or re-clicking the *same* tile with the *same* selection,
+ * → CONVERGE: setGatherTargets packs them into a compact grid-aligned block instead.
  */
 function applyMove(world: SimWorld, eids: number[], txFP: number, tyFP: number): void {
-    if (eids.length === 1) { setMoveTarget(world, eids[0], txFP, tyFP); return; }
+    const team   = Unit.team[eids[0]];
+    const tileX  = fpToTile(txFP), tileY = fpToTile(tyFP);
+    // Order-independent signature of the selection, to detect a repeat click by the same group.
+    let sig = eids.length;
+    for (const e of [...eids].sort((a, b) => a - b)) sig = (Math.imul(sig, 31) + e) | 0;
+    const memo   = (world.lastMove ??= {});
+    const prev   = memo[team];
+    const repeat = prev !== undefined && prev.tileX === tileX && prev.tileY === tileY && prev.sig === sig;
+    memo[team]   = { tileX, tileY, sig };
+
+    const dropGather = () => { if (world.gatherSlots) delete world.gatherSlots[team]; };
+
+    if (eids.length === 1) { dropGather(); setMoveTarget(world, eids[0], txFP, tyFP); return; }
 
     let sx = 0, sy = 0;
     for (const e of eids) { sx += Position.x[e]; sy += Position.y[e]; }
@@ -35,11 +38,16 @@ function applyMove(world: SimWorld, eids: number[], txFP: number, tyFP: number):
         const d = distance(Position.x[e] - cx, Position.y[e] - cy);
         if (d > maxD) maxD = d;
     }
-    const formation = maxD <= FORMATION_SPREAD_MAX;
 
+    // Repeat click, or too scattered to hold a sensible formation → converge into a block.
+    if (repeat || maxD > FORMATION_SPREAD_MAX) { setGatherTargets(world, eids, txFP, tyFP); return; }
+
+    dropGather();
     for (const e of eids) {
-        if (formation) setMoveTarget(world, e, txFP + (Position.x[e] - cx), tyFP + (Position.y[e] - cy));
-        else           setMoveTarget(world, e, txFP, tyFP);
+        // Hold formation: aim at the centroid-offset point (setMoveTarget snaps it to the tile
+        // centre).  If that tile's blocked/unreachable, collapse onto the shared destination.
+        const placed = setMoveTarget(world, e, txFP + (Position.x[e] - cx), tyFP + (Position.y[e] - cy), false);
+        if (!placed) setMoveTarget(world, e, txFP, tyFP);
     }
 }
 

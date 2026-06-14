@@ -9,7 +9,9 @@
  * Only active in dev builds; tree-shaken in production.
  */
 
-import { Position, Unit, UnitId, Path, MoveTarget, UnitAnim } from '../game/components';
+import { Position, Unit, UnitId, Path, MoveTarget, UnitAnim, fpToTile } from '../game/components';
+import { unitBoxHalfPx } from '../game/unitTypes';
+import { debugReservedRegion } from '../game/walkGrid';
 import type { SimWorld } from '../game/world';
 import { unitEids } from '../game/world';
 import type { Command } from '../net/protocol';
@@ -82,23 +84,50 @@ export function sendDebugState(world: SimWorld, hash: number, role: string): voi
     if (!ready()) return;
 
     const eids  = unitEids(world);
-    const units = eids.map(eid => ({
+    const units = eids.map(eid => {
+        const [hwPx, hhPx] = unitBoxHalfPx(Unit.type[eid]);
+        return {
         eid,
         uid:        UnitId.id[eid],
         team:       Unit.team[eid],
         px:         Position.x[eid],
         py:         Position.y[eid],
+        hw:         hwPx,
+        hh:         hhPx,
         curTx:      Path.curTx[eid],
         curTy:      Path.curTy[eid],
         goalTx:     Path.goalTx[eid],
         goalTy:     Path.goalTy[eid],
+        stuckTicks: Path.stuckTicks[eid],
         pathActive: Path.active[eid],
         moveActive: MoveTarget.active[eid],
         dir:        UnitAnim.dir[eid],
         moving:     UnitAnim.moving[eid],
-    }));
+        };
+    });
 
-    socket!.send(JSON.stringify({ type: 'state', role, tick: world.tick, hash, units }));
+    // Active gather blocks (converge moves), per team, as tile coords — lets the inspector
+    // overlay the target block and spot unfilled slots (holes).
+    const gather: Record<number, Array<[number, number]>> = {};
+    for (const [team, slots] of Object.entries(world.gatherSlots ?? {})) {
+        gather[Number(team)] = slots.map(([cx, cy]) => [fpToTile(cx), fpToTile(cy)]);
+    }
+
+    // Real walk-grid reservations in the bounding region of all units (8px cells) — so the
+    // inspector can compare actual reservations vs unit footprints and spot phantom cells.
+    let reserved: Array<[number, number, number]> = [];
+    if (units.length) {
+        let minCx = Infinity, minCy = Infinity, maxCx = -Infinity, maxCy = -Infinity;
+        for (const u of units) {
+            minCx = Math.min(minCx, Math.floor((u.px - u.hw * 1000) / 8000));
+            maxCx = Math.max(maxCx, Math.floor((u.px + u.hw * 1000) / 8000));
+            minCy = Math.min(minCy, Math.floor((u.py - u.hh * 1000) / 8000));
+            maxCy = Math.max(maxCy, Math.floor((u.py + u.hh * 1000) / 8000));
+        }
+        reserved = debugReservedRegion(minCx - 3, minCy - 3, maxCx + 3, maxCy + 3);
+    }
+
+    socket!.send(JSON.stringify({ type: 'state', role, tick: world.tick, hash, units, gatherSlots: gather, reserved }));
 }
 
 /**

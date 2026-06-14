@@ -68,6 +68,14 @@ function notifyInspectorCount() {
 }
 
 function recordState(role, msg) {
+    // Game reloaded → its tick counter restarts low.  Drop the stale session's history so
+    // "latest" doesn't keep pointing at the old game's final frame.
+    if (msg.tick < latestTick - 1) {
+        stateHistory.clear();
+        cmdHistory.length = 0;
+        latestTick = 0;
+        console.log(`[debug] tick reset (${msg.tick}) — cleared stale session history`);
+    }
     if (!stateHistory.has(msg.tick)) stateHistory.set(msg.tick, {});
     stateHistory.get(msg.tick)[role] = msg;
     if (msg.tick > latestTick) latestTick = msg.tick;

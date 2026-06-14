@@ -2,7 +2,7 @@
   "mcpServers": {
     "war2": {
       "command": "node",
-      "args": ["tools/mcp-inspector.mjs"]
+      "args": ["games/war2/tools/mcp-inspector.mjs"]
     }
   }
 }

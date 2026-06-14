@@ -12,6 +12,7 @@
  * object-insertion order.  id 0 is reserved for "unknown / none".
  */
 import unitsJson from "../assets/units.json";
+import { TILE_PX } from "./components";
 
 export const UNIT_TYPE_NONE = 0;
 
@@ -60,11 +61,11 @@ export function unitSight(id: number): number {
 }
 
 // Collision-box half-extents, in PIXELS (movement scales to FP).
-// SC-style movement: ground units have an axis-aligned box that separates against
-// other units (soft) and clamps out of buildings/terrain (hard).  units.json has no
-// per-unit size today (only building `tileSize`), so default to a small uniform box;
-// a future per-type `boxSize: [w, h]` override is honoured if present.
-const DEFAULT_BOX_HALF_PX = 11;   // ~22px box, a touch under one 32px tile
+// Per-unit collision size is explicit data: units.json `boxSize` [w, h] in pixels.
+// Engine-agnostic on purpose — WC2 ground units are 32×32 (one tile) and ships/flyers
+// 64×64, while StarCraft units use their own sub-tile boxes; none of it is derived from
+// the tile footprint here.  Anything without a boxSize falls back to one tile.
+const DEFAULT_BOX_HALF_PX = TILE_PX >> 1;   // one 32px tile
 
 /** Collision-box half-extents [halfW, halfH] in PIXELS for a mobile unit type.
  *  Buildings don't use this — they collide via their grid footprint. */

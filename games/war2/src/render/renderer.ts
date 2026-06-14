@@ -27,7 +27,7 @@ import { ChunkRenderer, TILE_PX } from "./ChunkRenderer";
 import iconsUrl   from "../assets/graphics/tilesets/winter/icons.png";
 import iconsJson  from "../assets/icons.json";
 import type { CommandCard } from "../game/abilities";
-import { unitTypeName, unitBuildTicks, unitSight } from "../game/unitTypes";
+import { unitTypeName, unitBuildTicks, unitSight, unitBoxHalfPx } from "../game/unitTypes";
 // Data-driven sprite registry — all unit/building/construction art resolution.
 import { allSheets, sheetForType, unitFrame, buildingDraw } from "./sprites";
 
@@ -61,8 +61,14 @@ const CAM_SPEED  = 8;    // pixels per frame
 //   high (≥TICK_MS·0.06 ≈ 30) → effectively continuous/smooth
 const INTERP_SUBSTEPS = 2;
 
-const SEL_COLOR  = 0xffff00;
-const SEL_RADIUS = 18;   // selection ring radius in world pixels
+// Cap on how fast the displayed sprite catches up to its authoritative position, in px/ms.
+// A unit walks ~0.06 px/ms, so normal movement keeps up exactly (no feel change).  A settle
+// *snap* (movement.ts) catches up at this rate: tuned so the tiny arrival hops (≤4px) resolve
+// in ~one frame (crisp, no visible "slide") while the rare large hop still glides a touch
+// instead of teleporting (~6px/frame at 60fps).  Render-only; never hashed.
+const MAX_CATCHUP_PX_PER_MS = 0.25;
+
+const SEL_COLOR  = 0x00ff00;
 
 export type HudData = RenderHud;
 
@@ -126,6 +132,9 @@ export class GameScene extends Phaser.Scene {
     // Previous snapshot's positions (uid → world FP) and the wall-clock time the
     // current snapshot arrived, so update() can smooth 20 Hz sim → 60 fps render.
     private prevPos = new Map<number, { x: number; y: number }>();
+    // Smoothed display position (uid → world px); eases toward the interpolated target so a
+    // one-tick settle snap glides instead of teleporting.
+    private dispPos = new Map<number, { x: number; y: number }>();
     private snapAt  = 0;
 
     // ── Prediction: own-unit facing/marker overlay (uid → prediction) ────────────
@@ -600,7 +609,7 @@ export class GameScene extends Phaser.Scene {
         this.uiGfx.strokeRect(0, mmTop, MINIMAP_SZ, MINIMAP_SZ);
     }
 
-    override update(): void {
+    override update(_time: number, delta: number): void {
         // ── Terrain chunks ────────────────────────────────────────────────────
         this.chunkRenderer?.update(this.cameras.main);
 
@@ -634,6 +643,7 @@ export class GameScene extends Phaser.Scene {
         // (1 = snap to the latest snapshot, no interpolation).
         const raw        = Math.min(1, (performance.now() - this.snapAt) / TICK_MS);
         const t          = INTERP_SUBSTEPS <= 1 ? 1 : Math.round(raw * INTERP_SUBSTEPS) / INTERP_SUBSTEPS;
+        const maxCatchup = MAX_CATCHUP_PX_PER_MS * delta;   // per-frame display catch-up cap (px)
         const currentSet = new Set(units.map(u => u.uid));
 
         // Destroy sprites for units / buildings that no longer exist
@@ -641,6 +651,7 @@ export class GameScene extends Phaser.Scene {
             if (!currentSet.has(uid)) {
                 sprite.destroy();
                 this.unitSprites.delete(uid);
+                this.dispPos.delete(uid);
             }
         }
         for (const [uid, sprite] of this.buildingSprites) {
@@ -654,10 +665,17 @@ export class GameScene extends Phaser.Scene {
             // Buildings render as their own sprite (separate pool, no walk cycle).
             if (u.fw > 0) { this.drawBuilding(u); continue; }
 
-            // Position: lerp from the previous snapshot toward this one.
+            // Position: lerp from the previous snapshot toward this one, then ease the displayed
+            // sprite toward that target at a capped speed so a one-tick settle snap glides in.
             const prev = this.prevPos.get(u.uid);
-            const px = (prev ? prev.x + (u.x - prev.x) * t : u.x) / FP;
-            const py = (prev ? prev.y + (u.y - prev.y) * t : u.y) / FP;
+            const tgx = (prev ? prev.x + (u.x - prev.x) * t : u.x) / FP;
+            const tgy = (prev ? prev.y + (u.y - prev.y) * t : u.y) / FP;
+            let disp = this.dispPos.get(u.uid);
+            if (!disp) { disp = { x: tgx, y: tgy }; this.dispPos.set(u.uid, disp); }
+            const ddx = tgx - disp.x, ddy = tgy - disp.y, dd = Math.hypot(ddx, ddy);
+            if (dd > maxCatchup) { disp.x += ddx * maxCatchup / dd; disp.y += ddy * maxCatchup / dd; }
+            else                 { disp.x = tgx; disp.y = tgy; }
+            const px = disp.x, py = disp.y;
 
             // Facing/animation: a pending local prediction overrides the snapshot
             // (instant turn) until the authoritative state catches up.
@@ -686,8 +704,10 @@ export class GameScene extends Phaser.Scene {
 
             // ── Selection ring ────────────────────────────────────────────────
             if (this.selectedUids.has(u.uid)) {
+                // Box matches the unit's own collision size (32×32 ground, 64×64 ships/flyers).
+                const [shw, shh] = unitBoxHalfPx(u.type);
                 this.gfx.lineStyle(1.5, SEL_COLOR, 1);
-                this.gfx.strokeCircle(px, py, SEL_RADIUS);
+                this.gfx.strokeRect(px - shw, py - shh, shw * 2, shh * 2);
             }
 
             // ── Move-target dot ────────────────────────────────────────────────

@@ -16,6 +16,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -40,6 +44,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -59,6 +67,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"canTargetLand": true,
@@ -88,6 +100,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -112,6 +128,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-arrow",
@@ -139,6 +159,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-lightning",
@@ -168,6 +192,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -193,6 +221,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -216,6 +248,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-arrow",
@@ -246,6 +282,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"missile": "missile-arrow",
 		"canTargetLand": true,
@@ -273,6 +313,10 @@
 		"tileSize": [
 			2,
 			2
+		],
+		"boxSize": [
+			64,
+			64
 		],
 		"type": "fly",
 		"missile": "missile-griffon-hammer",
@@ -302,6 +346,10 @@
 			2,
 			2
 		],
+		"boxSize": [
+			64,
+			64
+		],
 		"type": "fly",
 		"missile": "missile-griffon-hammer",
 		"canTargetLand": true,
@@ -329,6 +377,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-lightning",
@@ -358,6 +410,10 @@
 			2,
 			2
 		],
+		"boxSize": [
+			64,
+			64
+		],
 		"type": "naval",
 		"seaUnit": true,
 		"rightMouseAction": "harvest",
@@ -380,6 +436,10 @@
 		"tileSize": [
 			2,
 			2
+		],
+		"boxSize": [
+			64,
+			64
 		],
 		"type": "naval",
 		"seaUnit": true,
@@ -404,6 +464,10 @@
 		"tileSize": [
 			2,
 			2
+		],
+		"boxSize": [
+			64,
+			64
 		],
 		"type": "naval",
 		"missile": "missile-small-cannon",
@@ -434,6 +498,10 @@
 			2,
 			2
 		],
+		"boxSize": [
+			64,
+			64
+		],
 		"type": "naval",
 		"missile": "missile-big-cannon",
 		"canTargetLand": true,
@@ -460,6 +528,10 @@
 		"tileSize": [
 			2,
 			2
+		],
+		"boxSize": [
+			64,
+			64
 		],
 		"type": "naval",
 		"missile": "missile-submarine-missile",
@@ -494,6 +566,10 @@
 			2,
 			2
 		],
+		"boxSize": [
+			64,
+			64
+		],
 		"type": "fly",
 		"airUnit": true,
 		"detectCloak": true,
@@ -516,6 +592,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"canTargetLand": true,
@@ -541,6 +621,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"canTargetLand": true,
@@ -568,6 +652,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -593,6 +681,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"canTargetLand": true,
@@ -1274,6 +1366,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -1298,6 +1394,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -1321,6 +1421,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"canTargetLand": true,
@@ -1350,6 +1454,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -1374,6 +1482,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-axe",
@@ -1401,6 +1513,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-touch-of-death",
@@ -1430,6 +1546,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -1455,6 +1575,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -1478,6 +1602,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-axe",
@@ -1506,6 +1634,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-touch-of-death",
@@ -1536,6 +1668,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -1560,6 +1696,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"canTargetLand": true,
@@ -1587,6 +1727,10 @@
 			2,
 			2
 		],
+		"boxSize": [
+			64,
+			64
+		],
 		"type": "naval",
 		"seaUnit": true,
 		"rightMouseAction": "harvest",
@@ -1609,6 +1753,10 @@
 		"tileSize": [
 			2,
 			2
+		],
+		"boxSize": [
+			64,
+			64
 		],
 		"type": "naval",
 		"seaUnit": true,
@@ -1633,6 +1781,10 @@
 		"tileSize": [
 			2,
 			2
+		],
+		"boxSize": [
+			64,
+			64
 		],
 		"type": "naval",
 		"missile": "missile-small-cannon",
@@ -1663,6 +1815,10 @@
 			2,
 			2
 		],
+		"boxSize": [
+			64,
+			64
+		],
 		"type": "naval",
 		"missile": "missile-big-cannon",
 		"canTargetLand": true,
@@ -1688,6 +1844,10 @@
 		"tileSize": [
 			2,
 			2
+		],
+		"boxSize": [
+			64,
+			64
 		],
 		"type": "fly",
 		"missile": "missile-dragon-breath",
@@ -1717,6 +1877,10 @@
 			2,
 			2
 		],
+		"boxSize": [
+			64,
+			64
+		],
 		"type": "fly",
 		"missile": "missile-dragon-breath",
 		"canTargetLand": true,
@@ -1745,6 +1909,10 @@
 		"tileSize": [
 			2,
 			2
+		],
+		"boxSize": [
+			64,
+			64
 		],
 		"type": "naval",
 		"missile": "missile-turtle-missile",
@@ -1779,6 +1947,10 @@
 			2,
 			2
 		],
+		"boxSize": [
+			64,
+			64
+		],
 		"type": "fly",
 		"airUnit": true,
 		"detectCloak": true,
@@ -1795,6 +1967,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "fly",
 		"airUnit": true,
@@ -1817,6 +1993,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"canTargetLand": true,
@@ -1843,6 +2023,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"canTargetLand": true,
 		"canAttack": true,
@@ -1866,6 +2050,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-touch-of-death",
@@ -1895,6 +2083,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "land",
 		"missile": "missile-axe",
 		"canTargetLand": true,
@@ -1917,6 +2109,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"canTargetLand": true,
@@ -2671,6 +2867,10 @@
 			1,
 			1
 		],
+		"boxSize": [
+			32,
+			32
+		],
 		"type": "fly",
 		"missile": "missile-daemon-fire",
 		"canTargetLand": true,
@@ -2693,6 +2893,10 @@
 		"tileSize": [
 			1,
 			1
+		],
+		"boxSize": [
+			32,
+			32
 		],
 		"type": "land",
 		"missile": "missile-critter-explosion",

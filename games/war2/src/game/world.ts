@@ -17,7 +17,20 @@ import { initVision, visionSystem, getBelievedPassability, exportExplored, impor
 // canonical definition now lives in vision.ts (single source for the sim metric).
 export { FOW_SIGHT_TILES };
 
-export interface SimWorld extends Record<string, unknown> { tick: number; }
+export interface SimWorld extends Record<string, unknown> {
+    tick: number;
+    /** Last MOVE per team — target tile + a signature of the selected unit set.  A repeat
+     *  click by the *same* selection on the *same* tile converges the group on the point
+     *  instead of holding formation (see systems/commands.ts).  Keying on the selection
+     *  lets a player cycle control groups onto one spot, each getting its own first-click
+     *  formation. */
+    lastMove?: Record<number, { tileX: number; tileY: number; sig: number }>;
+    /** Active gather target block per team (slot centres, fixed-point).  Set by a converge
+     *  move; a settling unit of this team claims the nearest still-free slot so the block
+     *  fills in contiguously with no holes (see systems/movement.ts).  Cleared by any
+     *  non-converge move for the team. */
+    gatherSlots?: Record<number, Array<[number, number]>>;
+}
 
 // ── Observers (bitecs 0.4) ────────────────────────────────────────────────────
 // Use onAdd/onRemove to react to unit lifecycle rather than polling.
@@ -307,7 +320,20 @@ export function stopUnit(_world: SimWorld, eid: number): void {
     _stopUnit(eid);
 }
 
-export function setMoveTarget(_world: SimWorld, eid: number, txFP: number, tyFP: number): void {
+/**
+ * Issue a move order. Returns whether an order was actually applied: `false` means
+ * the unit got no order (no reachable passable tile near the goal, or — when
+ * `snapBlocked` is false — the requested tile is itself blocked).
+ *
+ * `snapBlocked` (default true): if the goal tile is impassable, retarget the nearest
+ * walkable tile.  A formation move passes `false` for the per-unit slot so a blocked
+ * slot is *rejected* (caller collapses that unit onto the shared destination) instead
+ * of scatter-snapping it to some random nearby pocket and shredding the formation.
+ */
+export function setMoveTarget(
+    _world: SimWorld, eid: number, txFP: number, tyFP: number,
+    snapBlocked = true,
+): boolean {
     const team = Unit.team[eid];
     const pass = getBelievedPassability(team);   // fog-aware: may path into assumed-passable fog
     const mapW = getMapW();
@@ -319,21 +345,26 @@ export function setMoveTarget(_world: SimWorld, eid: number, txFP: number, tyFP:
         MoveTarget.active[eid] = 1;
         Path.active[eid]       = 0;
         Path.stuckTicks[eid]   = 0;
-        return;
+        return true;
     }
 
     let goalTx  = fpToTile(txFP);
     let goalTy  = fpToTile(tyFP);
-    let goalXFP = txFP, goalYFP = tyFP;
 
     if (pass[goalTy * mapW + goalTx]) {
-        // Blocked terrain (tree/water/cliff) — aim for the nearest walkable tile centre.
+        // Blocked terrain (tree/water/cliff). For a formation slot, reject so the caller
+        // can fall back to the group destination; otherwise aim for the nearest tile centre.
+        if (!snapBlocked) return false;
         const near = nearestPassableTile(team, goalTx, goalTy);
-        if (!near) return;
+        if (!near) return false;
         [goalTx, goalTy] = near;
-        goalXFP = tileCenterFP(goalTx);
-        goalYFP = tileCenterFP(goalTy);
     }
+
+    // Always rest on the goal *tile centre*, never an arbitrary sub-tile point.  Units are
+    // tile-sized, so a resting unit fills its tile; aiming at the centre means it lands
+    // grid-aligned rather than off-centre (which is what leaves sub-tile gaps in a group).
+    const goalXFP = tileCenterFP(goalTx);
+    const goalYFP = tileCenterFP(goalTy);
 
     const curTx = fpToTile(Position.x[eid]);
     const curTy = fpToTile(Position.y[eid]);
@@ -349,17 +380,107 @@ export function setMoveTarget(_world: SimWorld, eid: number, txFP: number, tyFP:
         // Already in the goal tile — just nudge toward the exact point.
         MoveTarget.active[eid] = 1;
         Path.active[eid]       = 1;
-        return;
+        return true;
     }
 
     // Pre-warm the shared flow field (all N selected units cost one Dijkstra) and
     // skip the order if this unit can't reach the goal at all.
     const ff = getOrComputeFlowField(team, goalTx, goalTy);
-    if (!ff) return;
-    if (ff.dirs[curTy * mapW + curTx] === UNREACHABLE) return;
+    if (!ff) return false;
+    if (ff.dirs[curTy * mapW + curTx] === UNREACHABLE) return false;
 
     MoveTarget.active[eid] = 1;
     Path.active[eid]       = 1;
+    return true;
+}
+
+/**
+ * Gather a group tightly around a point: each unit is given its own tile-centred slot in a
+ * compact spiral of passable tiles around the destination, so the selection packs into a
+ * neat grid-aligned block instead of all piling onto the exact click point.  Slots are one
+ * tile apart, which matches a 32px unit box, so they settle cleanly without fighting the
+ * walk-grid reservation.
+ *
+ * Assignment minimises total travel: units sorted by distance to the centre seed the
+ * centre-out slots (radial, so near units fill the middle), then bounded 2-opt swaps undo
+ * any remaining crossings.  Minimising distance == non-crossing paths, which means far less
+ * jostling en route, so units actually reach their slots instead of stuck-settling short —
+ * the block comes out tidy.
+ *
+ * Used for "converge" moves (re-click the same spot, or a too-scattered selection) — see
+ * systems/commands.ts.  Deterministic: spiral order, passability, the distance sort and the
+ * strict-improvement 2-opt (eid tie-breaks) are all pure functions of shared state.
+ */
+export function setGatherTargets(world: SimWorld, eids: number[], txFP: number, tyFP: number): void {
+    const team = Unit.team[eids[0]];
+    const pass = getBelievedPassability(team);
+    const mapW = getMapW(), mapH = getMapH();
+    if (!pass) { for (const e of eids) setMoveTarget(world, e, txFP, tyFP); return; }
+
+    const inBounds = (x: number, y: number) => x >= 0 && x < mapW && y >= 0 && y < mapH;
+    const passable = (x: number, y: number) => inBounds(x, y) && !pass[y * mapW + x];
+
+    // Centre the cluster on passable ground.
+    let ctx = fpToTile(txFP), cty = fpToTile(tyFP);
+    if (!passable(ctx, cty)) {
+        const near = nearestPassableTile(team, ctx, cty);
+        if (near) [ctx, cty] = near;
+    }
+
+    // Slot block, near-square so the group packs into a tidy rectangle (4 → 2×2, 9 → 3×3)
+    // rather than a spread line.  Fill the rectangle's passable tiles first, then — if blocked
+    // terrain left us short — expand outward ring by ring to make up the count.
+    const count = eids.length;
+    const cols  = Math.round(Math.sqrt(count)) || 1;
+    const rows  = Math.ceil(count / cols);
+    const left = ctx - ((cols - 1) >> 1), top = cty - ((rows - 1) >> 1);
+    const inRect = (x: number, y: number) => x >= left && x < left + cols && y >= top && y < top + rows;
+
+    const scx: number[] = [], scy: number[] = [];   // slot centres (fixed-point)
+    for (let ry = 0; ry < rows; ry++) for (let rx = 0; rx < cols; rx++) {
+        if (passable(left + rx, top + ry)) { scx.push(tileCenterFP(left + rx)); scy.push(tileCenterFP(top + ry)); }
+    }
+    const maxR = Math.max(mapW, mapH);
+    for (let r = 1; r <= maxR && scx.length < count; r++) {
+        for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;     // ring edge only
+                if (inRect(ctx + dx, cty + dy)) continue;                      // already considered
+                if (passable(ctx + dx, cty + dy)) { scx.push(tileCenterFP(ctx + dx)); scy.push(tileCenterFP(cty + dy)); }
+            }
+        }
+    }
+    if (scx.length === 0) { for (const e of eids) setMoveTarget(world, e, txFP, tyFP); return; }
+
+    // Publish the slot block so settling units can claim the nearest still-free slot — this
+    // is what fills the block with no holes even when a unit can't reach its assigned slot.
+    (world.gatherSlots ??= {})[team] = scx.map((cx, i) => [cx, scy[i]]);
+
+    // Far-first fill: the slot FURTHEST from the group is assigned to its NEAREST unit, then the
+    // next-furthest, and so on.  A leading unit thus heads to the far slot through the still-empty
+    // block while the rest fill in behind it — so no unit ever has to cross an already-filled row
+    // to reach a far slot (which was the "walled-out straggler" bug).
+    let gcx = 0, gcy = 0;
+    for (const e of eids) { gcx += Position.x[e]; gcy += Position.y[e]; }
+    gcx = (gcx / eids.length) | 0; gcy = (gcy / eids.length) | 0;
+
+    const slotByFar = scx.map((_, i) => i).sort((a, b) =>
+        (distance(scx[b] - gcx, scy[b] - gcy) - distance(scx[a] - gcx, scy[a] - gcy)) || (a - b));
+
+    const remaining = [...eids];
+    const n = Math.min(eids.length, scx.length);
+    for (let k = 0; k < n; k++) {
+        const s = slotByFar[k];
+        let bi = 0, bd = Infinity;                                  // nearest unassigned unit to slot s
+        for (let i = 0; i < remaining.length; i++) {
+            const e = remaining[i];
+            const d = distance(Position.x[e] - scx[s], Position.y[e] - scy[s]);
+            if (d < bd || (d === bd && e < remaining[bi])) { bd = d; bi = i; }
+        }
+        const e = remaining.splice(bi, 1)[0];
+        if (!setMoveTarget(world, e, scx[s], scy[s])) setMoveTarget(world, e, txFP, tyFP);
+    }
+    for (const e of remaining) setMoveTarget(world, e, txFP, tyFP);  // more units than slots → centre
 }
 
 // ── Visibility ────────────────────────────────────────────────────────────────
