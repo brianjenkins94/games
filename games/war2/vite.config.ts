@@ -25,7 +25,12 @@ export default defineConfig({
             "name": "external-assets",
             "generateBundle": function(options, bundle) {
                 for (const key of Object.keys(bundle)) {
-                    if (bundle[key].type === "asset") {
+                    // Externalise only *real* static assets (images/json/etc.), which
+                    // ship from the separate assets repo. Keep emitted JS/CSS — notably
+                    // module-worker chunks (referee/client.worker), which Vite emits as
+                    // `type: "asset"` but are app code that must be written to disk.
+                    // Mirrors the `renderBuiltUrl` filter above.
+                    if (bundle[key].type === "asset" && !/\.(?:js|css)$/.test(key)) {
                         delete bundle[key];
                     }
                 }

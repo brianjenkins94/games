@@ -246,10 +246,13 @@ async function start(role: "host" | "peer", targetId: string): Promise<void> {
 
     // Host spawns the authoritative referee worker (simulates both teams); the guest
     // spawns a thin client worker (relays over the channel — no local sim).
-    worker = new Worker(
-        new URL(isHost ? "../worker/referee.worker.ts" : "../worker/client.worker.ts", import.meta.url),
-        { type: "module" },
-    );
+    // NOTE: each `new URL(...)` must take a *static string literal* — Vite's worker
+    // bundler only rewrites/emits the worker chunk when the path is statically
+    // analyzable. A ternary inside `new URL(...)` is silently left untransformed
+    // (ships the raw `.ts` path → 404 at runtime), so branch at the Worker level.
+    worker = isHost
+        ? new Worker(new URL("../worker/referee.worker.ts", import.meta.url), { type: "module" })
+        : new Worker(new URL("../worker/client.worker.ts", import.meta.url), { type: "module" });
     worker.onmessage = onWorkerMessage;
 
     // The referee creates both teams' initial units; the guest worker ignores spawns.
