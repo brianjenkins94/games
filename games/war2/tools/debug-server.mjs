@@ -24,6 +24,8 @@
  *   commands       → { from?, to? }  command log slice
  *   divergence     → { from?, to? }  first tick where hashes differ
  *   history_range  → min/max/count of stored ticks
+ *   trace          → { uid|uids, from?, to? }  tile-change segments of a unit's trajectory
+ *   summarize      → { tick? }  auto-analysis of a MOVE (outcomes + stacks; default: last move)
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
@@ -163,6 +165,104 @@ function runQuery(query, params) {
                 maxTick:   ticks[ticks.length-1] ?? null,
                 tickCount: ticks.length,
             };
+        }
+
+        // Compress a unit's host trajectory to tile-change segments over [from,to] (default: since
+        // the last command).  One round-trip replaces a fan of get_unit calls.  Each segment:
+        // { start, end, tx, ty, goal:[gx,gy]|null, maxStuck, active }.
+        case 'trace': {
+            const uids = params.uids ?? (params.uid != null ? [params.uid] : []);
+            const from = params.from ?? (cmdHistory.length ? cmdHistory[cmdHistory.length - 1].tick : 0);
+            const to   = params.to   ?? latestTick;
+            const units = {};
+            for (const uid of uids) {
+                const segs = [];
+                let cur = null;
+                for (let t = from; t <= to; t++) {
+                    const u = stateHistory.get(t)?.host?.units?.find(x => x.uid === uid);
+                    if (!u) continue;
+                    const active = !!u.moveActive;
+                    if (!cur || cur.tx !== u.curTx || cur.ty !== u.curTy || cur.active !== active) {
+                        cur = { start: t, end: t, tx: u.curTx, ty: u.curTy, active,
+                                goal: u.pathActive ? [u.goalTx, u.goalTy] : null, maxStuck: u.stuckTicks ?? 0 };
+                        segs.push(cur);
+                    } else {
+                        cur.end = t;
+                        cur.maxStuck = Math.max(cur.maxStuck, u.stuckTicks ?? 0);
+                        if (u.pathActive) cur.goal = [u.goalTx, u.goalTy];
+                    }
+                }
+                units[uid] = segs;
+            }
+            return { from, to, units };
+        }
+
+        // Auto-analyse a MOVE: for each involved unit, start→assigned-goal→settle, whether it reached
+        // its goal, max stall, whether it backed off (rubber-band), and group-level stack detection.
+        // Defaults to the last MOVE command; pass { tick } to pick a specific one.
+        case 'summarize': {
+            const moves = cmdHistory.filter(c => c.commands?.some(x => x.type === 1)
+                && (params.tick == null || c.tick === params.tick));
+            const cmd = moves[moves.length - 1];
+            if (!cmd) return { error: 'no MOVE command in history' };
+            const mv = cmd.commands.find(x => x.type === 1);
+            const T  = cmd.tick;
+            const cheb = (ax, ay, bx, by) => Math.max(Math.abs(ax - bx), Math.abs(ay - by));
+            const units = [];
+            for (const uid of mv.unitIds) {
+                let start = null, goal = null, settle = null, settleTick = null, maxStuck = 0, minDist = Infinity, last = null, wasActive = false;
+                for (let t = T; t <= latestTick; t++) {
+                    const u = stateHistory.get(t)?.host?.units?.find(x => x.uid === uid);
+                    if (!u) continue;
+                    if (!start) start = [u.curTx, u.curTy];
+                    if (u.pathActive) goal = [u.goalTx, u.goalTy];
+                    maxStuck = Math.max(maxStuck, u.stuckTicks ?? 0);
+                    if (goal) minDist = Math.min(minDist, cheb(u.curTx, u.curTy, goal[0], goal[1]));
+                    last = [u.curTx, u.curTy];
+                    if (u.moveActive) wasActive = true;
+                    // Stop at THIS move's settle — don't follow the unit into a later command's goal.
+                    if (wasActive && !u.moveActive) { settle = [u.curTx, u.curTy]; settleTick = t; break; }
+                }
+                settle = settle ?? last;
+                const finalDist = goal && settle ? cheb(settle[0], settle[1], goal[0], goal[1]) : null;
+                units.push({ uid, start, goal, settle, settleTick,
+                    reached: !!(goal && settle && finalDist === 0),
+                    finalDist, maxStuck,
+                    backedOff: finalDist != null && minDist !== Infinity && finalDist > minDist });
+            }
+            const byTile = {};
+            for (const u of units) { const k = (u.settle ?? []).join(','); (byTile[k] ??= []).push(u.uid); }
+            return {
+                cmdTick: T,
+                target: [Math.floor(mv.txFP / 32000), Math.floor(mv.tyFP / 32000)],
+                units,
+                reached: units.filter(u => u.reached).length,
+                stacks: Object.entries(byTile).filter(([, us]) => us.length > 1).map(([tile, uids]) => ({ tile, uids })),
+                rubberbanded: units.filter(u => u.backedOff).map(u => u.uid),
+            };
+        }
+
+        case 'region': {
+            // Units within a tile box around (tx,ty), with pairwise DIAMOND clearances — one call
+            // instead of get_map (whole map) + N×get_unit.  clear = L1(centres) − (rA+rB); <0 = overlap.
+            const tick = params.tick ?? latestTick;
+            const slot = stateHistory.get(tick) ?? {};
+            const all  = slot.host?.units ?? [];
+            const { tx, ty } = params;
+            const rad  = params.r ?? 4;
+            const team = params.team;
+            const inBox = all.filter(u =>
+                (team == null || u.team === team)
+                && Math.abs(u.curTx - tx) <= rad && Math.abs(u.curTy - ty) <= rad);
+            const pairs = [];
+            for (let i = 0; i < inBox.length; i++) for (let j = i + 1; j < inBox.length; j++) {
+                const a = inBox[i], b = inBox[j];
+                const l1  = Math.round((Math.abs(a.px - b.px) + Math.abs(a.py - b.py)) / 1000);
+                const sum = (a.hw ?? 16) + (b.hw ?? 16);                // diamond L1 radius = box/2 = hw
+                pairs.push({ a: a.uid, b: b.uid, l1, clear: l1 - sum });
+            }
+            pairs.sort((p, q) => p.clear - q.clear);                    // tightest / overlapping first
+            return { tick, center: [tx, ty], radius: rad, units: inBox, pairs };
         }
 
         default:

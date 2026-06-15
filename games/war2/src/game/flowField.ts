@@ -13,9 +13,11 @@
  * Diagonal moves that would clip a blocked corner are excluded from both the
  * Dijkstra and the direction-selection pass, so units never cut corners.
  *
- * Occupancy is NOT included in the flow field — it changes every tick and
- * would require constant recomputation.  Per-unit local steering in the
- * movement system handles unit–unit avoidance.
+ * Obstacles here are ONLY the slow-changing ones: impassable terrain and building footprints.
+ * Units are deliberately NOT in the flow field — they change every tick and would thrash the
+ * cache.  Long-range navigation around terrain is this layer; routing around *units* is the
+ * short-range local search (localPath.ts), and incidental jostling is the continuous collision
+ * in the movement system.  (Two-tier pathing: cheap cached terrain field + bounded local search.)
  */
 
 import { getMapW, getMapH } from "./passability";
@@ -39,7 +41,7 @@ export interface FlowField {
 
 // ── Min-heap (key=cost, val=tileIndex) ───────────────────────────────────────
 
-class MinHeap {
+export class MinHeap {
     private keys: Int32Array;
     private vals: Int32Array;
     private n = 0;
@@ -50,6 +52,7 @@ class MinHeap {
     }
 
     get size() { return this.n; }
+    clear(): void { this.n = 0; }
 
     push(key: number, val: number): void {
         let i = this.n++;

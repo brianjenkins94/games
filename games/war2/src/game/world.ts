@@ -1,6 +1,6 @@
 import { createWorld, addEntity, removeEntity, addComponent, query, observe, onAdd, onRemove } from "bitecs";
-import { Position, MoveTarget, Unit, UnitId, Path, UnitAnim, Building, FP, TILE_PX, WORLD_W, WORLD_H, tileCenterFP, fpToTile } from "./components";
-import { unitFootprint, unitBuildTicks, unitSight } from "./unitTypes";
+import { Position, MoveTarget, Unit, UnitId, Path, UnitAnim, Building, FP, TILE_PX, WALK_PX, WORLD_W, WORLD_H, tileCenterFP, fpToTile, snapWalkFP } from "./components";
+import { unitFootprint, unitBuildTicks, unitSight, unitRadiusPx } from "./unitTypes";
 export type { UnitSnapshot } from "./types";
 import type { UnitSnapshot } from "./types";
 import { movementSystem, stopUnit as _stopUnit } from "./systems/movement";
@@ -8,7 +8,9 @@ import { hashEntities } from "./hash";
 import { seedRng, rngRange, getRngState, setRngState } from "./rng";
 import { initPassability, getPassability, getMapW, getMapH } from "./passability";
 import { initOccupancy, resetOccupancy, occupyRect, freeRect, rectEmpty } from "./occupancy";
-import { initWalkGrid, resetWalkGrid, reserveUnit, freeUnit } from "./walkGrid";
+import { initWalkGrid, resetWalkGrid, reserveUnit, freeUnit, footprintSoftFreeAt } from "./walkGrid";
+import { initPathObstacles, markIdleDirty, isIdleDirty, clearIdleDirty, resetIdleGrids, addIdleTile, addIdleCSpace } from "./pathObstacles";
+import { initLocalPath } from "./localPath";
 import { getOrComputeFlowField, clearFlowFieldCache, UNREACHABLE } from "./flowField";
 import { inRange, distance } from "./distance";
 import { initVision, visionSystem, getBelievedPassability, exportExplored, importExplored, FOW_SIGHT_TILES } from "./vision";
@@ -102,6 +104,8 @@ export function createSimWorld(seed: number, mapInfo?: MapInfo): SimWorld {
         initPassability(mapInfo.gids, mapInfo.mapW, mapInfo.mapH, mapInfo.terrainArr);
         initOccupancy(mapInfo.mapW, mapInfo.mapH);
         initWalkGrid(mapInfo.mapW, mapInfo.mapH);   // 8px unit-collision reservation grid
+        initPathObstacles(mapInfo.mapW, mapInfo.mapH);   // per-team settled-unit grid for pathing
+        initLocalPath(mapInfo.mapW, mapInfo.mapH);        // scratch for the short-range unit-aware A*
 
         // Referee holds per-team vision for both teams (each paths on its own knowledge).
         initVision(mapInfo.mapW, mapInfo.mapH, [0, 1]);
@@ -141,6 +145,7 @@ export function spawnUnit(world: SimWorld, xFP: number, yFP: number, team: numbe
     UnitAnim.dir[eid]      = 4;   // default South
     UnitAnim.moving[eid]   = 0;
     reserveUnit(eid);             // claim the unit's footprint on the 8px collision grid
+    markIdleDirty();              // a new idle unit joins the path-obstacle set
     _unitIdToEid.set(uid, eid);
     if (unitId !== undefined) setNextUnitId(unitId); // keep counter ahead
     return eid;
@@ -154,6 +159,7 @@ export function despawnUnit(world: SimWorld, eid: number): void {
         freeUnit(eid);           // release the unit's footprint on the collision grid
     }
     Path.active[eid] = 0;
+    markIdleDirty();             // a unit left the path-obstacle set
     _unitIdToEid.delete(UnitId.id[eid]);
     removeEntity(world, eid);
 }
@@ -332,9 +338,10 @@ export function stopUnit(_world: SimWorld, eid: number): void {
  */
 export function setMoveTarget(
     _world: SimWorld, eid: number, txFP: number, tyFP: number,
-    snapBlocked = true,
+    snapBlocked = true, avoidUnits = false,
 ): boolean {
     const team = Unit.team[eid];
+    markIdleDirty();   // this unit is (un)settling → its tile leaves/joins the path-obstacle set
     const pass = getBelievedPassability(team);   // fog-aware: may path into assumed-passable fog
     const mapW = getMapW();
 
@@ -348,23 +355,51 @@ export function setMoveTarget(
         return true;
     }
 
-    let goalTx  = fpToTile(txFP);
-    let goalTy  = fpToTile(tyFP);
+    // Rest on the 8px collision grid (snapWalkFP), not the 32px tile centre — so a unit can anchor
+    // at a sub-tile position while still landing grid-clean (a 32px box on the 8px grid = 4 whole
+    // cells).  The goal *tile* (for the flow field + passability) is derived from the snapped point.
+    let goalXFP = snapWalkFP(txFP);
+    let goalYFP = snapWalkFP(tyFP);
+    let goalTx  = fpToTile(goalXFP);
+    let goalTy  = fpToTile(goalYFP);
 
     if (pass[goalTy * mapW + goalTx]) {
-        // Blocked terrain (tree/water/cliff). For a formation slot, reject so the caller
-        // can fall back to the group destination; otherwise aim for the nearest tile centre.
+        // Blocked terrain (tree/water/cliff). For a formation slot, reject so the caller can fall
+        // back to the group destination; otherwise aim for the nearest passable tile *centre*.
         if (!snapBlocked) return false;
         const near = nearestPassableTile(team, goalTx, goalTy);
         if (!near) return false;
         [goalTx, goalTy] = near;
+        goalXFP = tileCenterFP(goalTx);
+        goalYFP = tileCenterFP(goalTy);
     }
 
-    // Always rest on the goal *tile centre*, never an arbitrary sub-tile point.  Units are
-    // tile-sized, so a resting unit fills its tile; aiming at the centre means it lands
-    // grid-aligned rather than off-centre (which is what leaves sub-tile gaps in a group).
-    const goalXFP = tileCenterFP(goalTx);
-    const goalYFP = tileCenterFP(goalTy);
+    // Correct the destination off any *settled* unit sitting on it (avoidUnits = a standalone move; group
+    // moves spread via the formation/gather slot logic instead).  Rather than letting the unit walk onto
+    // an occupied tile and resolve the overlap at settle (which dwells then pops), retarget the nearest
+    // tile whose footprint is clear up front, so it paths to a clean rest spot.  Ignores *moving* units
+    // (they clear) — only parked units relocate the goal.
+    if (avoidUnits) {
+        const rad = unitRadiusPx(Unit.type[eid]) * FP;
+        if (!footprintSoftFreeAt(goalXFP, goalYFP, rad, eid)) {
+            const STEP = TILE_PX * FP;
+            const mapH = getMapH();
+            search:
+            for (let r = 1; r <= 6; r++) {
+                for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+                    const fx = goalXFP + dx * STEP, fy = goalYFP + dy * STEP;
+                    const tx = fpToTile(fx), ty = fpToTile(fy);
+                    if (tx < 0 || ty < 0 || tx >= mapW || ty >= mapH) continue;
+                    if (pass[ty * mapW + tx]) continue;                        // blocked terrain
+                    if (footprintSoftFreeAt(fx, fy, rad, eid)) {
+                        goalXFP = fx; goalYFP = fy; goalTx = tx; goalTy = ty;
+                        break search;
+                    }
+                }
+            }
+        }
+    }
 
     const curTx = fpToTile(Position.x[eid]);
     const curTy = fpToTile(Position.y[eid]);
@@ -395,21 +430,111 @@ export function setMoveTarget(
 }
 
 /**
+ * Greedily map a set of units onto a set of slot centres and issue the moves.  Slots are filled in
+ * an order chosen by `fill`, each going to its nearest still-unassigned unit:
+ *   "far"  — furthest slot from the group first.  A *translating* formation thus has its leading
+ *            edge claim the deepest slots, so the block unrolls into place without units crossing.
+ *   "near" — nearest slot first.  A *converging* cluster barely shuffles (minimal total travel).
+ * Surplus units (more units than slots) fall back to the click point; an unreachable slot too.
+ * Deterministic: distance sort + nearest-unit pick are pure, with eid tie-breaks.
+ */
+function assignUnitsToSlots(
+    world: SimWorld, eids: number[], slots: Array<[number, number]>,
+    fill: "far" | "near", txFP: number, tyFP: number,
+): void {
+    let gcx = 0, gcy = 0;
+    for (const e of eids) { gcx += Position.x[e]; gcy += Position.y[e]; }
+    gcx = (gcx / eids.length) | 0; gcy = (gcy / eids.length) | 0;
+
+    // Sub-tile anchor: the slots are tile-centred, but shift the whole block by how far the click sat
+    // from its own tile centre (snapped to the 8px grid, clamped to ±8px so each unit stays in its
+    // passable slot tile).  This anchors the formation where you clicked, not on the 32px lattice.
+    const cap = WALK_PX * FP;
+    const clamp = (v: number) => v < -cap ? -cap : v > cap ? cap : v;
+    const shiftX = clamp(snapWalkFP(txFP) - tileCenterFP(fpToTile(txFP)));
+    const shiftY = clamp(snapWalkFP(tyFP) - tileCenterFP(fpToTile(tyFP)));
+
+    const sign = fill === "far" ? -1 : 1;   // "far" → descending distance from the group centroid
+    const order = slots.map((_, i) => i).sort((a, b) =>
+        sign * (distance(slots[a][0] - gcx, slots[a][1] - gcy) - distance(slots[b][0] - gcx, slots[b][1] - gcy)) || (a - b));
+
+    const remaining = [...eids];
+    const n = Math.min(eids.length, slots.length);
+    for (let k = 0; k < n; k++) {
+        const sx = slots[order[k]][0] + shiftX, sy = slots[order[k]][1] + shiftY;
+        let bi = 0, bd = Infinity;                                  // nearest unassigned unit to this slot
+        for (let i = 0; i < remaining.length; i++) {
+            const e = remaining[i];
+            const d = distance(Position.x[e] - sx, Position.y[e] - sy);
+            if (d < bd || (d === bd && e < remaining[bi])) { bd = d; bi = i; }
+        }
+        const e = remaining.splice(bi, 1)[0];
+        if (!setMoveTarget(world, e, sx, sy)) setMoveTarget(world, e, txFP, tyFP);
+    }
+    for (const e of remaining) setMoveTarget(world, e, txFP, tyFP);  // more units than slots → centre
+}
+
+/**
+ * Hold formation while keeping every unit on passable, *distinct* ground.  The slot block is the
+ * group's arrangement (each unit's centroid offset) translated to the click point — an axis-aligned
+ * translation, so the shape is preserved.  A slot on impassable terrain (or colliding with another)
+ * reflows outward to the nearest free passable tile, so the block deforms *locally* around the
+ * obstacle instead of collapsing onto the click point.  Units are then assigned furthest-slot-first
+ * so a translating formation unrolls into place without crossing (see assignUnitsToSlots).
+ *
+ * Deterministic: centroid, passability and the spiral search are pure functions of shared state,
+ * built in eid order (claims are order-dependent but reproduced by replay).
+ */
+export function setFormationTargets(world: SimWorld, eids: number[], txFP: number, tyFP: number): void {
+    const team = Unit.team[eids[0]];
+    const pass = getBelievedPassability(team);
+    const mapW = getMapW(), mapH = getMapH();
+    if (!pass) { for (const e of eids) setMoveTarget(world, e, txFP, tyFP); return; }
+
+    const passable = (x: number, y: number) =>
+        x >= 0 && x < mapW && y >= 0 && y < mapH && !pass[y * mapW + x];
+
+    let sx = 0, sy = 0;
+    for (const e of eids) { sx += Position.x[e]; sy += Position.y[e]; }
+    const cx = (sx / eids.length) | 0, cy = (sy / eids.length) | 0;
+
+    // Build the formation slots: each unit's offset tile, reflowed to the nearest free passable tile.
+    const claimed = new Set<number>();
+    const slots: Array<[number, number]> = [];
+    const maxR = Math.max(mapW, mapH);
+    for (const e of eids) {
+        const dtx = fpToTile(txFP + (Position.x[e] - cx));
+        const dty = fpToTile(tyFP + (Position.y[e] - cy));
+        for (let r = 0; r <= maxR; r++) {
+            let placed = false;
+            for (let dy = -r; dy <= r && !placed; dy++) for (let dx = -r; dx <= r; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;       // ring edge only
+                const gx = dtx + dx, gy = dty + dy, key = gy * mapW + gx;
+                if (passable(gx, gy) && !claimed.has(key)) {
+                    claimed.add(key); slots.push([tileCenterFP(gx), tileCenterFP(gy)]); placed = true; break;
+                }
+            }
+            if (placed) break;
+        }
+    }
+    if (slots.length === 0) { for (const e of eids) setMoveTarget(world, e, txFP, tyFP); return; }
+
+    assignUnitsToSlots(world, eids, slots, "far", txFP, tyFP);
+}
+
+/**
  * Gather a group tightly around a point: each unit is given its own tile-centred slot in a
  * compact spiral of passable tiles around the destination, so the selection packs into a
  * neat grid-aligned block instead of all piling onto the exact click point.  Slots are one
  * tile apart, which matches a 32px unit box, so they settle cleanly without fighting the
  * walk-grid reservation.
  *
- * Assignment minimises total travel: units sorted by distance to the centre seed the
- * centre-out slots (radial, so near units fill the middle), then bounded 2-opt swaps undo
- * any remaining crossings.  Minimising distance == non-crossing paths, which means far less
- * jostling en route, so units actually reach their slots instead of stuck-settling short —
- * the block comes out tidy.
+ * Slots are filled nearest-first (assignUnitsToSlots "near"): each unit takes the closest slot, so
+ * a converging cluster barely shuffles — minimal travel, minimal jostling, a tidy block.
  *
  * Used for "converge" moves (re-click the same spot, or a too-scattered selection) — see
- * systems/commands.ts.  Deterministic: spiral order, passability, the distance sort and the
- * strict-improvement 2-opt (eid tie-breaks) are all pure functions of shared state.
+ * systems/commands.ts.  Deterministic: spiral order, passability and the nearest-first assignment
+ * (eid tie-breaks) are all pure functions of shared state.
  */
 export function setGatherTargets(world: SimWorld, eids: number[], txFP: number, tyFP: number): void {
     const team = Unit.team[eids[0]];
@@ -452,35 +577,8 @@ export function setGatherTargets(world: SimWorld, eids: number[], txFP: number, 
     }
     if (scx.length === 0) { for (const e of eids) setMoveTarget(world, e, txFP, tyFP); return; }
 
-    // Publish the slot block so settling units can claim the nearest still-free slot — this
-    // is what fills the block with no holes even when a unit can't reach its assigned slot.
-    (world.gatherSlots ??= {})[team] = scx.map((cx, i) => [cx, scy[i]]);
-
-    // Far-first fill: the slot FURTHEST from the group is assigned to its NEAREST unit, then the
-    // next-furthest, and so on.  A leading unit thus heads to the far slot through the still-empty
-    // block while the rest fill in behind it — so no unit ever has to cross an already-filled row
-    // to reach a far slot (which was the "walled-out straggler" bug).
-    let gcx = 0, gcy = 0;
-    for (const e of eids) { gcx += Position.x[e]; gcy += Position.y[e]; }
-    gcx = (gcx / eids.length) | 0; gcy = (gcy / eids.length) | 0;
-
-    const slotByFar = scx.map((_, i) => i).sort((a, b) =>
-        (distance(scx[b] - gcx, scy[b] - gcy) - distance(scx[a] - gcx, scy[a] - gcy)) || (a - b));
-
-    const remaining = [...eids];
-    const n = Math.min(eids.length, scx.length);
-    for (let k = 0; k < n; k++) {
-        const s = slotByFar[k];
-        let bi = 0, bd = Infinity;                                  // nearest unassigned unit to slot s
-        for (let i = 0; i < remaining.length; i++) {
-            const e = remaining[i];
-            const d = distance(Position.x[e] - scx[s], Position.y[e] - scy[s]);
-            if (d < bd || (d === bd && e < remaining[bi])) { bd = d; bi = i; }
-        }
-        const e = remaining.splice(bi, 1)[0];
-        if (!setMoveTarget(world, e, scx[s], scy[s])) setMoveTarget(world, e, txFP, tyFP);
-    }
-    for (const e of remaining) setMoveTarget(world, e, txFP, tyFP);  // more units than slots → centre
+    // Converging in place → fill the NEAREST slot first, so units barely shuffle (minimal travel).
+    assignUnitsToSlots(world, eids, scx.map((cx, i) => [cx, scy[i]]), "near", txFP, tyFP);
 }
 
 // ── Visibility ────────────────────────────────────────────────────────────────
@@ -672,7 +770,30 @@ function buildingSystem(world: SimWorld): void {
     }
 }
 
+/**
+ * Rebuild the per-team settled-unit obstacle grid (read by the short-range local A*, localPath.ts)
+ * when the idle set has changed.  Cheap no-op when nothing settled/moved since the last call.  This
+ * deliberately does NOT touch the flow-field cache — the flow field is terrain-only, so units never
+ * invalidate it (that separation is what keeps pathing cheap under combat churn).
+ */
+export function refreshPathObstacles(world: SimWorld): void {
+    if (!isIdleDirty()) return;
+    resetIdleGrids();
+    const mapW = getMapW();
+    const MOVER_R = TILE_PX >> 1;   // assume a ~tile mover for the shared C-space (land units)
+    for (const eid of unitEids(world)) {
+        if (Building.fw[eid] > 0 || Unit.movable[eid] !== 1) continue;   // buildings / display-only
+        if (MoveTarget.active[eid] === 1) continue;                       // moving → not an obstacle
+        const team = Unit.team[eid];
+        addIdleTile(team, Path.curTy[eid] * mapW + Path.curTx[eid]);
+        // 8px C-space: a mover's centre may not come within (mover r + this unit's r) of this centre.
+        addIdleCSpace(team, Position.x[eid] / FP, Position.y[eid] / FP, MOVER_R + unitRadiusPx(Unit.type[eid]));
+    }
+    clearIdleDirty();
+}
+
 export function stepWorld(world: SimWorld): void {
+    refreshPathObstacles(world);   // settled-unit obstacle grid current before movers path this tick
     movementSystem(world);
     buildingSystem(world);
     visionSystem(world);   // accumulate explored tiles from post-move LOS (deterministic)
@@ -721,6 +842,8 @@ export function applySnapshot(world: SimWorld, snap: WorldSnapshot): void {
     setRngState(snap.rngState);
     resetOccupancy();
     resetWalkGrid();
+    resetIdleGrids();
+    markIdleDirty();   // rebuild the path-obstacle grid from the restored units on next path
     clearFlowFieldCache();
 
     // Restore units — eids are freshly allocated (not preserved from snapshot)

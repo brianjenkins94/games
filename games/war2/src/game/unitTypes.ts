@@ -68,9 +68,23 @@ export function unitSight(id: number): number {
 const DEFAULT_BOX_HALF_PX = TILE_PX >> 1;   // one 32px tile
 
 /** Collision-box half-extents [halfW, halfH] in PIXELS for a mobile unit type.
- *  Buildings don't use this — they collide via their grid footprint. */
+ *  Buildings don't use this — they collide via their grid footprint.
+ *  NOTE: unit↔unit collision is now CIRCULAR (see unitRadiusPx); this box is kept for the selection
+ *  ring and the terrain-footprint sweep (a unit may not stand where its box overlaps blocked ground). */
 export function unitBoxHalfPx(id: number): [number, number] {
     const b = unitTypeDef(id)?.["boxSize"] as [number, number] | undefined;
     if (b) return [b[0] >> 1, b[1] >> 1];
     return [DEFAULT_BOX_HALF_PX, DEFAULT_BOX_HALF_PX];
+}
+
+// Unit↔unit collision is a DIAMOND (L1 ball); this returns its L1 "radius" in PIXELS = the cardinal
+// reach (N/S/E/W).  Full tile size: the diamond is inscribed in the tile (cardinal reach = tile edge),
+// so at rest units pack flush (touch edge-to-edge at 32px tile spacing) and look fully tile-filling.
+// Threading a tile-diagonal pinch is impossible at the full radius (zero corridor) — it's handled by
+// movement.ts's SQUEEZE tier (a temporarily smaller footprint, SQUEEZE_FP); the resting size and the
+// threading ability are decoupled, so we keep the fullest look here.
+export function unitRadiusPx(id: number): number {
+    const b = unitTypeDef(id)?.["boxSize"] as [number, number] | undefined;
+    const w = b ? b[0] : TILE_PX;
+    return w >> 1;   // 32 → 16 (inscribed in the tile), 64 (ships) → 32
 }

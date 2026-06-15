@@ -1,4 +1,4 @@
-import { setMoveTarget, setGatherTargets, stopUnit, spawnUnit, spawnBuilding, canPlaceBuilding, eidForUnitId, type SimWorld } from "../world";
+import { setMoveTarget, setFormationTargets, setGatherTargets, stopUnit, spawnUnit, spawnBuilding, canPlaceBuilding, eidForUnitId, type SimWorld } from "../world";
 import { Position, Unit, FP, TILE_PX, fpToTile } from "../components";
 import { distance } from "../distance";
 import { CmdType, type Command } from "../../net/protocol";
@@ -26,7 +26,7 @@ function applyMove(world: SimWorld, eids: number[], txFP: number, tyFP: number):
 
     const dropGather = () => { if (world.gatherSlots) delete world.gatherSlots[team]; };
 
-    if (eids.length === 1) { dropGather(); setMoveTarget(world, eids[0], txFP, tyFP); return; }
+    if (eids.length === 1) { dropGather(); setMoveTarget(world, eids[0], txFP, tyFP, true, true); return; }
 
     let sx = 0, sy = 0;
     for (const e of eids) { sx += Position.x[e]; sy += Position.y[e]; }
@@ -43,12 +43,9 @@ function applyMove(world: SimWorld, eids: number[], txFP: number, tyFP: number):
     if (repeat || maxD > FORMATION_SPREAD_MAX) { setGatherTargets(world, eids, txFP, tyFP); return; }
 
     dropGather();
-    for (const e of eids) {
-        // Hold formation: aim at the centroid-offset point (setMoveTarget snaps it to the tile
-        // centre).  If that tile's blocked/unreachable, collapse onto the shared destination.
-        const placed = setMoveTarget(world, e, txFP + (Position.x[e] - cx), tyFP + (Position.y[e] - cy), false);
-        if (!placed) setMoveTarget(world, e, txFP, tyFP);
-    }
+    // Hold formation (centroid-offset translation); slots on impassable terrain reflow onto nearby
+    // passable ground rather than collapsing onto the click point — see setFormationTargets.
+    setFormationTargets(world, eids, txFP, tyFP);
 }
 
 /**

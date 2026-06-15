@@ -14,7 +14,7 @@
  * and mints all unit ids).
  */
 import { createCommandCardController, type CommandCardController } from "./commandCardController";
-import { FP, TILE_PX, tileCenterFP, fpToTile } from "../game/components";
+import { FP, TILE_PX, tileCenterFP, fpToTile, snapWalkFP } from "../game/components";
 import { unitTypeId, unitTypeName, unitFootprint } from "../game/unitTypes";
 import mapJson from "../assets/maps/ladder/Plains of snow BNE.json";
 import tilesetUrl from "../assets/tilesets/winter.png";
@@ -38,8 +38,10 @@ function mapProp<T>(name: string, fallback: T): T {
     return p !== undefined ? (p.value as T) : fallback;
 }
 
-function snapToTileCenter(fp: number): number {
-    return tileCenterFP(fpToTile(fp));
+// Snap a move click to the 8px collision grid, not the 32px tile centre — so a group can anchor
+// where you clicked (sub-tile), not only on the tile lattice.  The sim re-snaps to 8px anyway.
+function snapClickFP(fp: number): number {
+    return snapWalkFP(fp);
 }
 
 const SEED = 0xc0ffee;
@@ -281,7 +283,7 @@ async function start(role: "host" | "peer", targetId: string): Promise<void> {
 
     cardController = createCommandCardController({
         getOwnSelection:    ownSelection,
-        snapToTile:         snapToTileCenter,
+        snapToTile:         snapClickFP,
         emit:               emitCommand,
         render:             (card) => scene!.showCommandCard(card),
         setTargetingCursor: (on) => scene!.setTargetingCursor(on),

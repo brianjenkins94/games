@@ -9,7 +9,10 @@
  * Tools:
  *   get_status        connection state, tick, history availability
  *   get_state         full unit table at a tick (default: latest)
+ *   get_map           compact spatial diagnostic / ASCII view
  *   get_unit          single unit on host + peer at a tick
+ *   trace_unit        tile-change trajectory of a unit over a range (compact; default: last move)
+ *   summarize_move    auto-analysis of a MOVE — outcomes, stalls, stacks (default: last move)
  *   get_diff          host vs peer field comparison at a tick
  *   list_commands     command log slice by tick range
  *   find_divergence   first tick in range where hashes diverge
@@ -113,6 +116,22 @@ function fmtUnit(u) {
         pathActive: !!u.pathActive,
         moveActive: !!u.moveActive,
     };
+}
+
+function fmtRegion(raw) {
+    if (!raw || !raw.units) return 'no data';
+    const lines = [`region @t${raw.tick} centre(${raw.center[0]},${raw.center[1]}) r${raw.radius} — ${raw.units.length} units`];
+    for (const u of raw.units) {
+        const f = fmtUnit(u);
+        const g = f.goal ? ` →goal(${f.goal[0]},${f.goal[1]})` : '';
+        const mv = f.moveActive ? `mv dir${f.dir} stuck${f.stuck}` : 'settled';
+        lines.push(`  uid${f.uid} tile(${f.tile[0]},${f.tile[1]}) off(${f.offCentre[0]},${f.offCentre[1]}) ${mv}${g}`);
+    }
+    if (raw.pairs?.length) {
+        lines.push('  pairs (L1px / clearance; <0 = overlap):');
+        for (const p of raw.pairs) lines.push(`    ${p.a}–${p.b}: ${p.l1}px  clear ${p.clear >= 0 ? '+' : ''}${p.clear}`);
+    }
+    return lines.join('\n');
 }
 
 function fmtState(blob) {
@@ -261,6 +280,42 @@ function renderWalkMap(blob, teamFilter, ascii) {
     return out.join('\n');
 }
 
+/** Compact text for a `trace` result: one line per tile-change segment, with dwell + max stall. */
+function fmtTrace(res) {
+    const lines = [];
+    for (const [uid, segs] of Object.entries(res.units ?? {})) {
+        if (!segs.length) { lines.push(`uid${uid}: (no data in ${res.from}–${res.to})`); continue; }
+        lines.push(`uid${uid} (t${res.from}–${res.to}):`);
+        for (const s of segs) {
+            const span  = s.start === s.end ? `t${s.start}` : `t${s.start}–${s.end}`;
+            const dwell = s.end - s.start + 1;
+            const goal  = s.goal ? ` →(${s.goal[0]},${s.goal[1]})` : '';
+            const stall = s.maxStuck ? ` stuck≤${s.maxStuck}` : '';
+            const flag  = !s.active ? ' SETTLED' : dwell >= 20 ? `  [dwell ${dwell}t]` : '';
+            lines.push(`  ${span} (${s.tx},${s.ty})${goal}${stall}${flag}`);
+        }
+    }
+    return lines.join('\n') || '(no units traced)';
+}
+
+/** Compact text for a `summarize` result: per-unit outcome + group stacks/rubber-bands. */
+function fmtSummary(res) {
+    if (res.error) return res.error;
+    const lines = [`move @t${res.cmdTick} → target(${res.target[0]},${res.target[1]}), ${res.units.length} units, ${res.reached} reached goal:`];
+    for (const u of res.units) {
+        const start  = u.start  ? `(${u.start[0]},${u.start[1]})` : '(?)';
+        const goal   = u.goal   ? `(${u.goal[0]},${u.goal[1]})`   : '(none)';
+        const settle = u.settle ? `(${u.settle[0]},${u.settle[1]})` : '(?)';
+        const at     = u.settleTick ? `@t${u.settleTick}` : 'still moving';
+        const verdict = u.reached ? '✓reached' : `✗short(${u.finalDist})`;
+        const extra  = `${u.backedOff ? ' RUBBER-BAND' : ''}${u.maxStuck ? ` maxStuck${u.maxStuck}` : ''}`;
+        lines.push(`  uid${u.uid} ${start}→goal${goal}  settled ${settle} ${at} ${verdict}${extra}`);
+    }
+    if (res.stacks.length) lines.push(`STACKS: ${res.stacks.map(s => `(${s.tile}){${s.uids.map(u => 'uid' + u).join(',')}}`).join('  ')}`);
+    if (res.rubberbanded.length) lines.push(`rubber-banded: ${res.rubberbanded.map(u => 'uid' + u).join(', ')}`);
+    return lines.join('\n');
+}
+
 // ── MCP server ────────────────────────────────────────────────────────────────
 
 const server = new Server(
@@ -306,6 +361,42 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
                     tick: { type: 'number', description: 'Tick to inspect (omit = latest)' },
                 },
                 required: ['uid'],
+            },
+        },
+        {
+            name:        'get_region',
+            description: 'Units within a tile box around (tx,ty), plus pairwise DIAMOND clearances (L1 centre distance minus summed radii; negative = overlap, tightest listed first). One call instead of get_map + several get_unit — use this to inspect a mover and its neighbours/flankers and see real clearances (the box-based get_map "overlaps" is wrong for the diamond collision).',
+            inputSchema: {
+                type:       'object',
+                properties: {
+                    tx:   { type: 'number', description: 'Centre tile X' },
+                    ty:   { type: 'number', description: 'Centre tile Y' },
+                    r:    { type: 'number', description: 'Box radius in tiles (default 4)' },
+                    team: { type: 'number', description: 'Only this team (omit = all)' },
+                    tick: { type: 'number', description: 'Tick to inspect (omit = latest)' },
+                },
+                required: ['tx', 'ty'],
+            },
+        },
+        {
+            name:        'trace_unit',
+            description: 'Compact trajectory of one or more units (host) over a tick range, compressed to tile-change segments with dwell time and max stall. Defaults to since the last command → latest. Use this instead of many get_unit calls to follow a move.',
+            inputSchema: {
+                type:       'object',
+                properties: {
+                    uids: { type: 'array', items: { type: 'number' }, description: 'Unit IDs to trace (or use uid)' },
+                    uid:  { type: 'number', description: 'Single unit ID (shorthand for uids:[uid])' },
+                    from: { type: 'number', description: 'Start tick (omit = last command tick)' },
+                    to:   { type: 'number', description: 'End tick (omit = latest)' },
+                },
+            },
+        },
+        {
+            name:        'summarize_move',
+            description: 'Auto-analyse a MOVE command: per-unit start→assigned-goal→settle tile, whether each reached its goal or settled short, max stall, rubber-band (backed off after getting close), and group-level stack detection. Defaults to the last MOVE; pass tick to pick one. Start here when asked to check a move.',
+            inputSchema: {
+                type: 'object',
+                properties: { tick: { type: 'number', description: 'Command tick to summarize (omit = last MOVE)' } },
             },
         },
         {
@@ -382,6 +473,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const raw = await query('unit', { uid: args.uid, ...(args.tick != null ? { tick: args.tick } : {}) });
                 return ok({ tick: raw.tick, uid: raw.uid, host: fmtUnit(raw.host), peer: fmtUnit(raw.peer) });
             }
+
+            case 'get_region': {
+                const raw = await query('region', args);
+                return { content: [{ type: 'text', text: fmtRegion(raw) }] };
+            }
+
+            case 'trace_unit': {
+                const params = {};
+                if (args.uids != null) params.uids = args.uids;
+                if (args.uid  != null) params.uid  = args.uid;
+                if (args.from != null) params.from = args.from;
+                if (args.to   != null) params.to   = args.to;
+                return { content: [{ type: 'text', text: fmtTrace(await query('trace', params)) }] };
+            }
+
+            case 'summarize_move':
+                return { content: [{ type: 'text', text: fmtSummary(await query('summarize', args.tick != null ? { tick: args.tick } : {})) }] };
 
             case 'get_diff':
                 return ok(await query('diff', args.tick != null ? { tick: args.tick } : {}));

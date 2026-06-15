@@ -7,12 +7,18 @@ export const TICK_MS  = 50;           // 20 TPS
 export const UNIT_SPD = 3 * FP;       // 3 px / tick  (~10.7 ticks per 32-px tile)
 export const MAX_LEAD = 6;            // host can run this many ticks ahead of peer
 export const TILE_PX  = 32;          // pixels per tile
+export const WALK_PX  = 8;           // collision cell size; rest positions snap to THIS grid (not 32px)
 
 /** Convert a tile coordinate to the FP world position of its centre. */
 export function tileCenterFP(t: number): number { return t * TILE_PX * FP + (TILE_PX >> 1) * FP; }
 
 /** Convert an FP world position to the tile it falls in. */
 export function fpToTile(fp: number): number { return (fp / FP / TILE_PX) | 0; }
+
+/** Snap an FP world position to the nearest 8px collision-cell boundary.  A 32px box whose centre
+ *  sits on this grid occupies exactly 4 whole cells (no straddling), so units rest cleanly here —
+ *  4× finer than the 32px tile grid, which lets a formation anchor at sub-tile positions. */
+export function snapWalkFP(fp: number): number { const w = WALK_PX * FP; return Math.round(fp / w) * w; }
 
 const CAP = 4096;
 
