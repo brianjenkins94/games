@@ -19,6 +19,7 @@
  * Harness.tsx, and the deploy-time SW patch lives in vite.ts.
  */
 import { VirtualFS, ViteDevServer, getServerBridge, stream } from "almostnode";
+import { VtWindow } from "window";
 
 /** The harness shell as a JSX component. Render it into your host element (e.g. with
  *  jsx-async-runtime's `jsxToString`), then call {@link wireHarness} on that element to
@@ -30,12 +31,23 @@ export { Harness } from "./Harness";
 export interface PeerReadyMsg { type: "peer-ready"; selfId: string; }
 /** The host posts this back to pair the two boxes once both are ready. */
 export interface InitMsg { type: "init"; role: "host" | "peer"; targetId: string; }
+/** A box's game client posts this to the host once its renderer is up — the host
+ *  uses it to minimize a windowed box only AFTER it has initialized at full size
+ *  (minimizing first hides the iframe, so the renderer would boot at 0×0). */
+export interface ClientReadyMsg { type: "client-ready"; }
 
 /** One box: a virtual port (distinct from the real outer dev port), a role, a label. */
 export interface BoxConfig {
     port: number;
     role: "host" | "peer";
     label: string;
+    /** Mount this box in a floating VtWindow (draggable / minimizable / detachable)
+     *  instead of inline in #frames.  Defaults to inline. */
+    windowed?: boolean;
+    /** For a windowed box: collapse it to the minimized strip once every box's
+     *  renderer is up (kept available but out of the way for debugging).  Requires
+     *  `windowed`.  Defaults to staying open. */
+    startMinimized?: boolean;
 }
 
 export interface WireOptions {
@@ -49,12 +61,19 @@ interface Pending { win: Window; id: string; role: "host" | "peer"; }
 /**
  * Wire the harness runtime onto an already-rendered shell: register a proxy server per
  * box, create each box's iframe, and pair them. The {@link Harness} shell must already be
- * mounted in `root` (so the `#status`, `#frames`, and `#reload-boxes` ids resolve) — the
- * consuming game renders it as JSX, keeping this module free of any JSX toolchain.
+ * mounted in `root` (so `#status` resolves) — the consuming game renders it as JSX, keeping
+ * this module free of any JSX toolchain.
  */
 export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireOptions): Promise<void> {
     const statusEl = root.querySelector<HTMLElement>("#status")!;
-    const framesEl = root.querySelector<HTMLElement>("#frames")!;
+
+    // Inline (non-windowed) boxes go in a #frames row, created on first use so the
+    // default page stays just the log + floating windows.
+    let framesEl: HTMLElement | null = null;
+    const ensureFrames = (): HTMLElement => {
+        if (!framesEl) { framesEl = document.createElement("div"); framesEl.id = "frames"; root.appendChild(framesEl); }
+        return framesEl;
+    };
 
     function log(msg: string, cls: "ok" | "err" | "info" = "info"): void {
         const line = document.createElement("div");
@@ -106,9 +125,13 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
     // ── Box pairing (peer-ready → init) ───────────────────────────────────────────
     const ready: Pending[] = [];
     const winRole = new Map<Window, "host" | "peer">();
+    // Windows flagged startMinimized — collapsed once every box's renderer is up
+    // (see client-ready), so all boxes initialize at full size first.
+    const minimizeWhenReady: VtWindow[] = [];
+    const clientReady = new Set<Window>();
 
     window.addEventListener("message", (e: MessageEvent) => {
-        const d = e.data as Partial<PeerReadyMsg> | null;
+        const d = e.data as { type?: string; selfId?: string } | null;
         if (!d || typeof d !== "object") return;
 
         if (d.type === "peer-ready") {
@@ -117,6 +140,14 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
             ready.push({ win: e.source as Window, id: d.selfId as string, role });
             log(`${role} peer-ready id=${d.selfId}`, "ok");
             if (ready.length === 2) pair();
+        } else if (d.type === "client-ready") {
+            clientReady.add(e.source as Window);
+            // Wait until EVERY box's renderer is up before collapsing the
+            // start-minimized ones, so all boxes initialize under the same full-size
+            // conditions (no boot-time asymmetry from one being hidden early).
+            if (clientReady.size >= boxes.length) {
+                for (const win of minimizeWhenReady) win.minimize(true);
+            }
         }
     });
 
@@ -136,34 +167,51 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
             await bridge.initServiceWorker();
             log("service worker ready", "ok");
 
+            let windowOffset = 0;
             for (const box of boxes) {
                 bridge.registerServer(new GameProxyServer(new VirtualFS(), { port: box.port }), box.port);
 
-                const wrap = document.createElement("div");
-                wrap.className = "box-wrap";
-                const label = document.createElement("span");
-                label.className = "box-label";
-                label.textContent = box.label;
                 const iframe = document.createElement("iframe");
                 // Load the client UNDER the box's virtual prefix so its requests route through
                 // this box (proxy/override), and so window.parent === this host (for pairing).
                 iframe.src = `__virtual__/${box.port}/${clientUrl}`;
-                wrap.append(label, iframe);
-                framesEl.appendChild(wrap);
+
+                if (box.windowed) {
+                    // Floating, draggable, minimizable, detachable window.  preserveFocusOrder
+                    // MUST be off — raising by re-append would reload the iframe (drops the box).
+                    const win = new VtWindow(
+                        { title: box.label, body: iframe },
+                        {
+                            // Below the status log (#status is ~120px tall at the top).
+                            top: 150 + windowOffset, left: 60 + windowOffset, width: 560, height: 440,
+                            preserveFocusOrder: false, detachable: true, autoMount: true,
+                            // No close — hiding a box with no way back would orphan it.
+                            closable: false,
+                        },
+                    );
+                    // Defer minimize until every box has booted (client-ready) — booting
+                    // while minimized (display:none) would init the canvas at 0×0.
+                    if (box.startMinimized) minimizeWhenReady.push(win);
+                    windowOffset += 40;
+                } else {
+                    const wrap = document.createElement("div");
+                    wrap.className = "box-wrap";
+                    const label = document.createElement("span");
+                    label.className = "box-label";
+                    label.textContent = box.label;
+                    wrap.append(label, iframe);
+                    ensureFrames().appendChild(wrap);
+                }
 
                 iframe.addEventListener("load", () => winRole.set(iframe.contentWindow!, box.role));
                 // set role mapping eagerly too (load may fire after peer-ready in some browsers)
                 winRole.set(iframe.contentWindow!, box.role);
-                log(`box ${box.port} (${box.role}) → /__virtual__/${box.port}/${clientUrl}`, "ok");
+                log(`box ${box.port} (${box.role})${box.windowed ? " [windowed]" : ""} → /__virtual__/${box.port}/${clientUrl}`, "ok");
             }
         } catch (err) {
             log(`BOOT FAILED: ${(err as Error)?.stack ?? err}`, "err");
         }
     }
-
-    // ── Host-driven reload (all boxes) ────────────────────────────────────────────
-    const reloadBtn = root.querySelector<HTMLButtonElement>("#reload-boxes")!;
-    reloadBtn.onclick = () => { ready.length = 0; location.reload(); };
 
     log("almostnode: starting boxes…");
     void boot();

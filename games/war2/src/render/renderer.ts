@@ -31,12 +31,10 @@ import { unitTypeName, unitBuildTicks, unitSight, unitBoxHalfPx } from "../game/
 // Data-driven sprite registry — all unit/building/construction art resolution.
 import { allSheets, sheetForType, unitFrame, buildingDraw } from "./sprites";
 
-// The HUD is a translucent 3×3 "tic-tac-toe" grid overlaid on top of a
-// full-screen game.  UI gives the chrome thickness of each edge in px; the
-// centre cell (1fr × 1fr) is the transparent, click-through viewport.
-//   top-centre    → resource bar      mid-left/right → rails
-//   bottom-left   → minimap           bottom-centre  → portrait + stats
-//   bottom-right  → command card
+// The HUD is a translucent holy-grail overlay declared in client.html (markup +
+// CSS); this module only wires the dynamic bits (see wireHud).  UI gives the
+// chrome thickness of each edge in px and must match the --ui-* CSS variables in
+// client.html — the minimap math below reads it.
 const UI = { top: 32, right: 150, bottom: 120, left: 120 };
 const MINIMAP_SZ  = UI.left;  // minimap is a square filling the bottom-left cell
 
@@ -82,13 +80,18 @@ export class GameScene extends Phaser.Scene {
     private uiGfx!:  Phaser.GameObjects.Graphics;
     private hudEl!: HTMLDivElement;
 
-    // The translucent 3×3 HUD grid overlay and its content cells.
-    private frameEl!: HTMLDivElement;
+    // Refs into the static HUD markup (client.html), grabbed in wireHud().
     private resourceCell!: HTMLDivElement;   // top-centre: gold / lumber / oil / food
     private portraitCell!: HTMLDivElement;   // bottom-centre: selected-unit portrait + stats
-    // Perimeter cells that capture pointer events — flipped to pointer-events:none
+    // Chrome panels that capture pointer events — flipped to pointer-events:none
     // during a drag-select so the drag keeps tracking across them.
     private interactiveCells: HTMLDivElement[] = [];
+
+    // Collapsible right-edge tweak panel.  tweakBodyEl is where future dev
+    // controls get mounted; toggling .open animates it (CSS) and shrinks the frame.
+    private tweakPaneEl!: HTMLDivElement;
+    private tweakBodyEl!: HTMLDivElement;
+    private tweakOpen = false;
 
     // Command card (DOM grid living in the bottom-right cell). View only — the
     // controller decides what card to show and what slot clicks mean.
@@ -286,88 +289,42 @@ export class GameScene extends Phaser.Scene {
         });
 
         // ── DOM HUD ───────────────────────────────────────────────────────────
-        const container = this.game.canvas.parentElement!;
-        container.style.position = "relative";
-
-        this.buildFrame(container);
-
-        // Debug telemetry — floats over the frame (top-left), pointer-events:none.
-        this.hudEl = document.createElement("div");
-        Object.assign(this.hudEl.style, {
-            position: "absolute", top: "6px", left: "6px",
-            background: "rgba(0,0,0,0.55)", color: "#cfc",
-            fontFamily: "monospace", fontSize: "11px",
-            padding: "6px 10px", borderRadius: "4px",
-            lineHeight: "1.7", pointerEvents: "none", whiteSpace: "pre",
-        });
-        container.appendChild(this.hudEl);
+        this.wireHud();
     }
 
-    // ── 3×3 HUD grid ─────────────────────────────────────────────────────────────
+    // ── HUD wiring ─────────────────────────────────────────────────────────────
 
-    /** Build the translucent tic-tac-toe overlay: a full-screen CSS grid whose
-     *  centre cell is click-through and whose perimeter cells hold the HUD.  The
-     *  minimap cell is also click-through so Phaser keeps drawing/handling it. */
-    private buildFrame(container: HTMLElement): void {
-        const frame = document.createElement("div");
-        Object.assign(frame.style, {
-            position: "absolute", inset: "0", display: "grid",
-            gridTemplateColumns: `${UI.left}px 1fr ${UI.right}px`,
-            gridTemplateRows:    `${UI.top}px 1fr ${UI.bottom}px`,
-            pointerEvents: "none",   // container passes through; cells opt back in
-        });
+    /** Grab refs into the static HUD markup (client.html) and attach the few
+     *  dynamic behaviours: the tweak-panel toggle, the right-click guard, and the
+     *  list of chrome panels flipped click-through during a drag-select.  The
+     *  layout itself is entirely declarative HTML/CSS. */
+    private wireHud(): void {
+        this.resourceCell = document.querySelector<HTMLDivElement>("#hud-resources")!;
+        this.portraitCell = document.querySelector<HTMLDivElement>("#hud-portrait")!;
+        this.cardEl       = document.querySelector<HTMLDivElement>("#hud-card")!;
+        this.hudEl        = document.querySelector<HTMLDivElement>("#hud-telemetry")!;
+        this.tweakPaneEl  = document.querySelector<HTMLDivElement>("#hud-tweak")!;
+        this.tweakBodyEl  = document.querySelector<HTMLDivElement>("#hud-tweak-body")!;
 
-        const CELL_BG = "rgba(17,17,34,0.55)";
-        // grid auto-places children row-major: indices 0-8 map to the 3×3 layout.
-        const cells: HTMLDivElement[] = [];
-        for (let i = 0; i < 9; i++) {
-            const c = document.createElement("div");
-            const passThrough = i === 4 || i === 6;   // centre viewport + minimap
-            Object.assign(c.style, {
-                position: "relative", boxSizing: "border-box",
-                pointerEvents: passThrough ? "none" : "auto",
-                background: passThrough ? "transparent" : CELL_BG,
-            });
-            if (!passThrough) {
-                c.style.border = "1px solid rgba(120,140,200,0.25)";
-                this.interactiveCells.push(c);
-            }
-            frame.appendChild(c);
-            cells.push(c);
-        }
+        // Chrome panels capture pointer events; flipped click-through during a drag.
+        this.interactiveCells = Array.from(
+            document.querySelectorAll<HTMLDivElement>(".hud-chrome"),
+        );
 
         // Right-click on the chrome shouldn't pop the browser context menu.
-        frame.addEventListener("contextmenu", e => e.preventDefault());
+        document.querySelector("#hud")!
+            .addEventListener("contextmenu", e => e.preventDefault());
 
-        // Resource bar (top-centre) — placeholder until the sim tracks resources.
-        this.resourceCell = cells[1];
-        Object.assign(this.resourceCell.style, {
-            display: "flex", alignItems: "center", justifyContent: "center",
-            gap: "18px", color: "#dd4", fontFamily: "monospace", fontSize: "12px",
-        });
-        this.resourceCell.textContent = "GOLD —   LUMBER —   OIL —   FOOD —";
+        // Tweak-panel toggle (collapsed by default; .open is added/removed here).
+        this.tweakPaneEl.querySelector(".hud-tweak-handle")!
+            .addEventListener("click", () => this.setTweakOpen(!this.tweakOpen));
+    }
 
-        // Portrait + stats (bottom-centre) — populated in a later phase.
-        this.portraitCell = cells[7];
-        Object.assign(this.portraitCell.style, {
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#9ab", fontFamily: "monospace", fontSize: "11px",
-        });
-
-        // Command card (bottom-right): the icon grid lives centred in this cell.
-        const cardCell = cells[8];
-        Object.assign(cardCell.style, {
-            display: "flex", alignItems: "center", justifyContent: "center",
-        });
-        this.cardEl = document.createElement("div");
-        Object.assign(this.cardEl.style, {
-            display: "none", gridTemplateColumns: `repeat(3, ${ICON_W}px)`,
-            gridAutoRows: `${ICON_H}px`, gap: "4px",
-        });
-        cardCell.appendChild(this.cardEl);
-
-        container.appendChild(frame);
-        this.frameEl = frame;
+    /** Show/hide the tweak pane — CSS animates the width (and shrinks the frame). */
+    private setTweakOpen(open: boolean): void {
+        this.tweakOpen = open;
+        this.tweakPaneEl.classList.toggle("open", open);
+        (this.tweakPaneEl.firstElementChild as HTMLElement).textContent = open ? "›" : "‹";
     }
 
     /** Enter/leave drag-select mode.  While dragging, the perimeter cells stop

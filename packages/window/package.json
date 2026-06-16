@@ -1,0 +1,11 @@
+{
+  "name": "window",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./window.ts",
+      "default": "./window.ts"
+    }
+  }
+}

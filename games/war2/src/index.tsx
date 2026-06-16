@@ -8,10 +8,12 @@ import { Harness, wireHarness, type BoxConfig } from "harness/client";
 
 // One virtual port per box (distinct from the real outer 5173).
 const boxes: BoxConfig[] = [
-    { port: 5273, role: "host", label: "BOX A · host" },
-    { port: 5274, role: "peer", label: "BOX B · peer" },
+    // Both boxes run in floating windows.  The host stays open; the peer starts
+    // minimized once both have initialized — available for debugging, out of the way.
+    { port: 5273, role: "host", label: "BOX A · host", windowed: true },
+    { port: 5274, role: "peer", label: "BOX B · peer", windowed: true, startMinimized: true },
 ];
 
 const app = document.getElementById("app")!;
-app.innerHTML = await jsxToString.call({}, <Harness title="war2 · two almostnode boxes (one game instance each)" />);
+app.innerHTML = await jsxToString.call({}, <Harness />);
 await wireHarness(app, { clientUrl: "client.html", boxes });

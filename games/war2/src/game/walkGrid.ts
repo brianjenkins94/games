@@ -1,30 +1,21 @@
 /**
- * Walk grid — an 8px reservation grid for unit collision (StarCraft "walk tile" style).
+ * Walk grid — the 8px spatial layer for unit collision.  Units keep smooth fixed-point positions.
  *
- * Units keep smooth pixel (fixed-point) positions, but each mobile unit *reserves* the
- * fine 8px cells its collision box covers.  A unit may only move to a position whose
- * cells are free — so units rest one-per-tile and never need to shuffle apart; a blocked
- * unit slides along or waits.
+ * Two distinct jobs:
+ *   • TERRAIN (static): a cell is blocked if its 32px tile is impassable or holds a building
+ *     (`staticBlocked`, 4 cells per tile).  Movers may never cross it.
+ *   • UNITS (dynamic): unit↔unit collision is a DIAMOND (L1 ball, radius `unitRadiusPx`), tested as
+ *     exact L1 distance vs summed radii — NOT cell occupancy.  The `_grid` (`cell = eid+1`) is just a
+ *     BROAD-PHASE index: each unit stamps the cells around it so a query can gather nearby candidate
+ *     eids cheaply, then the precise per-pair L1 test runs.  (A diamond is slim on the diagonals, so
+ *     two units on diagonally-adjacent tiles leave a gap a third can thread.)
  *
- * A *moving* unit reserves an OCTAGON, not a square: it drops the 4 corner cells of its
- * footprint (ground units move in 8 directions, and the shape matches).  A full-box move
- * check then finds those corners free, so two units can slip diagonally past each other's
- * corners — a deliberate slight hack-through of space a square wouldn't fit.  A *settled*
- * unit, by contrast, reserves its FULL box (reserveUnit's `octagon` defaults off): the corner
- * loophole is only for passing, never for coming to REST overlapping a neighbour — so the
- * settle check (footprintSoftFreeAt) has no hole and units never park on top of each other.
- * Terrain always blocks the full box (it's the static layer, checked over every cell).
+ * Checks: `footprintFreeAt` (terrain + all units), `footprintSoftFreeAt` (terrain + SETTLED units;
+ * passes movers), `footprintStaticFreeAt` (terrain only); `separateFrom` de-penetrates a unit jammed
+ * inside a settled one.  Mobile units AND display-only enemy units reserve; buildings don't (static layer).
  *
- * Two layers of obstruction:
- *   • static  — impassable terrain or a building footprint, derived on the fly from
- *               the 32px passability + building occupancy (4 walk cells per tile).
- *   • dynamic — `_grid[cell] = eid+1` for the unit currently reserving that cell
- *               (0 = free).  Mobile units AND display-only enemy units reserve;
- *               buildings do not (they're covered by the static layer).
- *
- * Determinism: pure integer; reservation is order-dependent (first unit processed
- * claims a contested cell) but the referee processes units in a stable eid order and
- * snapshot/replay restores that order, so it reproduces exactly.
+ * Determinism: pure integer; the broad-phase scan + L1 tests are order-independent, and reservation
+ * order (referee's stable eid order, reproduced by snapshot/replay) only affects who-claims-a-cell ties.
  */
 import { FP, TILE_PX, UNIT_SPD, Position, Unit, MoveTarget } from "./components";
 import { getPassability } from "./passability";
@@ -171,29 +162,6 @@ export function separateFrom(xFP: number, yFP: number, rFP: number, selfEid: num
     if (m > UNIT_SPD) { px = Math.trunc(px * UNIT_SPD / m); py = Math.trunc(py * UNIT_SPD / m); }
     _sep[0] = px; _sep[1] = py;
     return _sep;
-}
-
-/** If a box is blocked, identify *what* by: returns the eid of the first unit reserving a
- *  cell it overlaps (a soft, possibly-transient obstruction), or -1 if it's blocked by a
- *  hard obstruction (map edge / terrain / building) or not blocked at all.  Lets movement
- *  tell traffic that will clear from a wall it should give up against. */
-export function firstUnitBlockerAt(xFP: number, yFP: number, hwFP: number, hhFP: number, selfEid: number): number {
-    const wx0 = Math.floor((xFP - hwFP) / WALK_FP);
-    const wx1 = Math.floor((xFP + hwFP - 1) / WALK_FP);
-    const wy0 = Math.floor((yFP - hhFP) / WALK_FP);
-    const wy1 = Math.floor((yFP + hhFP - 1) / WALK_FP);
-    if (wx0 < 0 || wy0 < 0 || wx1 >= _wW || wy1 >= _wH) return -1;   // map edge → hard
-
-    const self = selfEid + 1;
-    let unit = -1;
-    for (let wy = wy0; wy <= wy1; wy++) {
-        for (let wx = wx0; wx <= wx1; wx++) {
-            if (staticBlocked(wx, wy)) return -1;                   // terrain/building → hard
-            const v = _grid![wy * _wW + wx];
-            if (v !== 0 && v !== self && unit === -1) unit = v - 1; // remember first unit blocker
-        }
-    }
-    return unit;
 }
 
 /** DEBUG: the dynamic reservations in a cell rectangle, as [cellX, cellY, ownerEid].  Lets the

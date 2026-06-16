@@ -5,6 +5,9 @@
   "scripts": {
     "build": "npx tsx ../../util/vite/build.ts"
   },
+  "dependencies": {
+    "window": "link:../window"
+  },
   "exports": {
     "./client": {
       "types": "./client.ts",

@@ -25,7 +25,7 @@ import { startPhaser, type GameScene, type UnitPrediction } from "../render/rend
 import { initGameConsole } from "../debug/console";
 import type { MainToWorker, WorkerToMain, RenderState, RenderUnit } from "../worker/ipc";
 import type { MapInfo } from "../game/world";
-import type { PeerReadyMsg, InitMsg } from "harness/client";
+import type { PeerReadyMsg, InitMsg, ClientReadyMsg } from "harness/client";
 
 // In-game console (press ` / ~). Set up first so it captures everything below.
 initGameConsole();
@@ -311,6 +311,9 @@ async function start(role: "host" | "peer", targetId: string): Promise<void> {
     scene.onHover          = (wxFP, wyFP) => cardController!.hoverTile(wxFP, wyFP);
 
     console.info(`${role} client ready`);
+    // Tell the host the renderer is up (so a windowed box can now minimize safely —
+    // booting while minimized would init the canvas at 0×0).
+    window.parent.postMessage({ type: "client-ready" } satisfies ClientReadyMsg, "*");
 }
 
 // ── Parent messages ───────────────────────────────────────────────────────────

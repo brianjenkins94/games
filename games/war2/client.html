@@ -8,13 +8,170 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser/dist/phaser.min.js"></script>
 
     <style>
+        :root {
+            /* Holy-grail chrome thickness per edge.  NOTE: these four must stay in
+               sync with UI{} in src/render/renderer.ts (the minimap math reads them). */
+            --ui-top: 32px;
+            --ui-right: 150px;
+            --ui-bottom: 120px;
+            --ui-left: 120px;
+
+            --tweak-w: 260px;       /* tweak-panel body width when open */
+            --tweak-handle: 22px;   /* grab-spine width (always visible) */
+
+            --icon-w: 46px;         /* matches icons.json frameWidth  */
+            --icon-h: 38px;         /* matches icons.json frameHeight */
+
+            --chrome-bg: rgba(17, 17, 34, 0.55);
+            --chrome-line: rgba(120, 140, 200, 0.25);
+            --hud-fg: #9ab;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #0d1117; overflow: hidden; }
-        #game { width: 100vw; height: 100vh; position: relative; }
+
+        #root { position: relative; width: 100vw; height: 100vh; }
+        #game { position: absolute; inset: 0; }   /* Phaser mounts the canvas here */
+
+        /* HUD overlay — pointer-events:none so the world (canvas) receives input;
+           chrome panels opt back in.  pointer-events is inherited, so transparent
+           regions (centre, rails, minimap) stay click-through automatically. */
+        #hud {
+            position: absolute; inset: 0; z-index: 1;
+            display: flex;                       /* [ frame (flex:1) | tweak panel ] */
+            pointer-events: none;
+            font-family: monospace; color: var(--hud-fg);
+        }
+
+        /* 3×3 holy-grail frame; its 1fr centre column shrinks as the tweak grows. */
+        .hud-frame {
+            flex: 1 1 0; min-width: 0; height: 100%;
+            display: grid;
+            grid-template-columns: var(--ui-left) 1fr var(--ui-right);
+            grid-template-rows: var(--ui-top) 1fr var(--ui-bottom);
+            grid-template-areas:
+                "top    top      top"
+                "mleft  centre   mright"
+                "mmap   bcentre  card";
+        }
+
+        .hud-chrome {
+            background: var(--chrome-bg);
+            border: 1px solid var(--chrome-line);
+            pointer-events: auto;
+        }
+
+        /* Top row: one contiguous bar, content floated left / centre / right. */
+        .hud-top {
+            grid-area: top;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px; padding: 0 12px; font-size: 12px;
+        }
+        .hud-top-mid { color: #dd4; }
+
+        /* Middle row — reserved side rails + the split centre (all click-through). */
+        .hud-mleft  { grid-area: mleft; }
+        .hud-mright { grid-area: mright; }
+        .hud-centre { grid-area: centre; display: grid; grid-template-rows: 1fr 1fr; }
+        .hud-centre > div:first-child { border-bottom: 1px solid rgba(120, 140, 200, 0.15); }
+
+        /* Bottom row. */
+        .hud-minimap { grid-area: mmap; }   /* click-through; Phaser draws the minimap */
+        .hud-bottom-centre {
+            grid-area: bcentre;
+            display: grid; grid-template-rows: 1fr 3fr;   /* status strip (¼) over portrait (¾) */
+        }
+        .hud-status { border-bottom: 1px solid var(--chrome-line); }
+        .hud-portrait {
+            display: flex; align-items: center; justify-content: center; font-size: 11px;
+        }
+        .hud-card-cell {
+            grid-area: card;
+            display: flex; align-items: center; justify-content: center;
+        }
+        /* The command-card grid; JS fills/toggles it (display:grid when shown). */
+        .hud-card {
+            display: none;
+            grid-template-columns: repeat(3, var(--icon-w));
+            grid-auto-rows: var(--icon-h);
+            gap: 4px;
+        }
+
+        /* Full-height collapsible tweak panel — animating its width shrinks .hud-frame. */
+        .hud-tweak {
+            flex: 0 0 auto; height: 100%;
+            display: flex; overflow: hidden;
+            width: var(--tweak-handle);
+            transition: width 0.18s ease;
+        }
+        .hud-tweak.open { width: calc(var(--tweak-handle) + var(--tweak-w)); }
+        .hud-tweak-handle {
+            flex: 0 0 var(--tweak-handle); height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(17, 17, 34, 0.85);
+            border-left: 1px solid var(--chrome-line);
+            cursor: pointer; pointer-events: auto;
+            font-size: 12px; user-select: none;
+        }
+        .hud-tweak-body {
+            flex: 0 0 var(--tweak-w); height: 100%;
+            background: var(--chrome-bg);
+            border-left: 1px solid var(--chrome-line);
+            padding: 10px 12px; overflow-y: auto;
+            pointer-events: auto; font-size: 11px;
+        }
+
+        /* Debug telemetry — floats top-left over the world. */
+        #hud-telemetry {
+            position: absolute; top: 6px; left: 6px;
+            background: rgba(0, 0, 0, 0.55); color: #cfc;
+            font-size: 11px; padding: 6px 10px; border-radius: 4px;
+            line-height: 1.7; white-space: pre; pointer-events: none;
+        }
     </style>
 </head>
 <body>
-    <div id="game"></div>
+    <div id="root">
+        <div id="game"></div>
+
+        <div id="hud">
+            <div class="hud-frame">
+                <!-- Top row: one contiguous bar (left / centre / right). -->
+                <div class="hud-top hud-chrome">
+                    <div class="hud-top-left">war2</div>
+                    <div id="hud-resources" class="hud-top-mid">GOLD —   LUMBER —   OIL —   FOOD —</div>
+                    <div class="hud-top-right"></div>
+                </div>
+
+                <!-- Middle row: reserved rails + split centre (click-through). -->
+                <div class="hud-mleft"></div>
+                <div class="hud-centre">
+                    <div></div>
+                    <div></div>
+                </div>
+                <div class="hud-mright"></div>
+
+                <!-- Bottom row: minimap | status+portrait | command card. -->
+                <div class="hud-minimap"></div>
+                <div class="hud-bottom-centre hud-chrome">
+                    <div class="hud-status"></div>
+                    <div id="hud-portrait" class="hud-portrait"></div>
+                </div>
+                <div class="hud-card-cell hud-chrome">
+                    <div id="hud-card" class="hud-card"></div>
+                </div>
+            </div>
+
+            <!-- Full-height collapsible tweak panel. -->
+            <div id="hud-tweak" class="hud-tweak">
+                <div class="hud-tweak-handle">‹</div>
+                <div id="hud-tweak-body" class="hud-tweak-body">Tweaks</div>
+            </div>
+
+            <div id="hud-telemetry"></div>
+        </div>
+    </div>
+
     <script type="module" src="/src/client/main.ts"></script>
 </body>
 </html>

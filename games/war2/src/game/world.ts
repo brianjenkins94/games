@@ -9,7 +9,7 @@ import { seedRng, rngRange, getRngState, setRngState } from "./rng";
 import { initPassability, getPassability, getMapW, getMapH } from "./passability";
 import { initOccupancy, resetOccupancy, occupyRect, freeRect, rectEmpty } from "./occupancy";
 import { initWalkGrid, resetWalkGrid, reserveUnit, freeUnit, footprintSoftFreeAt } from "./walkGrid";
-import { initPathObstacles, markIdleDirty, isIdleDirty, clearIdleDirty, resetIdleGrids, addIdleTile, addIdleCSpace } from "./pathObstacles";
+import { initPathObstacles, markIdleDirty, isIdleDirty, clearIdleDirty, resetIdleGrids, addIdleCSpace } from "./pathObstacles";
 import { initLocalPath } from "./localPath";
 import { getOrComputeFlowField, clearFlowFieldCache, UNREACHABLE } from "./flowField";
 import { inRange, distance } from "./distance";
@@ -779,15 +779,12 @@ function buildingSystem(world: SimWorld): void {
 export function refreshPathObstacles(world: SimWorld): void {
     if (!isIdleDirty()) return;
     resetIdleGrids();
-    const mapW = getMapW();
     const MOVER_R = TILE_PX >> 1;   // assume a ~tile mover for the shared C-space (land units)
     for (const eid of unitEids(world)) {
         if (Building.fw[eid] > 0 || Unit.movable[eid] !== 1) continue;   // buildings / display-only
         if (MoveTarget.active[eid] === 1) continue;                       // moving → not an obstacle
-        const team = Unit.team[eid];
-        addIdleTile(team, Path.curTy[eid] * mapW + Path.curTx[eid]);
         // 8px C-space: a mover's centre may not come within (mover r + this unit's r) of this centre.
-        addIdleCSpace(team, Position.x[eid] / FP, Position.y[eid] / FP, MOVER_R + unitRadiusPx(Unit.type[eid]));
+        addIdleCSpace(Unit.team[eid], Position.x[eid] / FP, Position.y[eid] / FP, MOVER_R + unitRadiusPx(Unit.type[eid]));
     }
     clearIdleDirty();
 }
