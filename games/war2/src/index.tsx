@@ -5,6 +5,8 @@
  */
 import { jsxToString } from "jsx-async-runtime";
 import { Harness, wireHarness, type BoxConfig } from "harness/client";
+import { mountMetrics } from "metrics";
+import { forwardMetricsToDebug } from "./debug/metricsForward";
 
 // One virtual port per box (distinct from the real outer 5173).
 const boxes: BoxConfig[] = [
@@ -17,3 +19,12 @@ const boxes: BoxConfig[] = [
 const app = document.getElementById("app")!;
 app.innerHTML = await jsxToString.call({}, <Harness />);
 await wireHarness(app, { clientUrl: "client.html", boxes });
+
+// Realtime perf dashboard — each box's client shell forwards perf samples here via
+// postMessage; mountMetrics charts host vs guest (fps, sim tick, latency, wire).
+const metrics = document.createElement("div");
+app.appendChild(metrics);
+mountMetrics(metrics);
+
+// Mirror the same samples onto the debug WS so the MCP inspector can query perf (dev only).
+forwardMetricsToDebug();

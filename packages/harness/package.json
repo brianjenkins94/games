@@ -10,7 +10,7 @@
   },
   "exports": {
     "./client": {
-      "types": "./client.ts",
+      "types": "./client.tsx",
       "default": "./dist/client.js"
     },
     "./vite": {

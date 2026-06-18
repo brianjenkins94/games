@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 /**
  * almostnode in-browser host controller — the reusable two-box netcode harness.
  *
@@ -19,6 +20,7 @@
  * Harness.tsx, and the deploy-time SW patch lives in vite.ts.
  */
 import { VirtualFS, ViteDevServer, getServerBridge, stream } from "almostnode";
+import { render } from "preact";
 import { VtWindow } from "window";
 
 /** The harness shell as a JSX component. Render it into your host element (e.g. with
@@ -61,14 +63,12 @@ interface Pending { win: Window; id: string; role: "host" | "peer"; }
 /**
  * Wire the harness runtime onto an already-rendered shell: register a proxy server per
  * box, create each box's iframe, and pair them. The {@link Harness} shell must already be
- * mounted in `root` (so `#status` resolves) — the consuming game renders it as JSX, keeping
- * this module free of any JSX toolchain.
+ * mounted in `root` — the consuming game renders it as JSX, keeping this module free of any
+ * JSX toolchain.
  */
 export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireOptions): Promise<void> {
-    const statusEl = root.querySelector<HTMLElement>("#status")!;
-
     // Inline (non-windowed) boxes go in a #frames row, created on first use so the
-    // default page stays just the log + floating windows.
+    // default page stays just the floating windows (+ whatever the host mounts itself).
     let framesEl: HTMLElement | null = null;
     const ensureFrames = (): HTMLElement => {
         if (!framesEl) { framesEl = document.createElement("div"); framesEl.id = "frames"; root.appendChild(framesEl); }
@@ -76,13 +76,8 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
     };
 
     function log(msg: string, cls: "ok" | "err" | "info" = "info"): void {
-        const line = document.createElement("div");
-        line.className = cls;
-        line.textContent = `${new Date().toISOString().slice(11, 23)}  ${msg}`;
-        statusEl.appendChild(line);
-        statusEl.scrollTop = statusEl.scrollHeight;
         // eslint-disable-next-line no-console
-        console.log(`[almostnode] ${msg}`);
+        (cls === "err" ? console.error : console.log)(`[almostnode] ${msg}`);
     }
     window.addEventListener("error", (e) => log(`window error: ${e.message}`, "err"));
     window.addEventListener("unhandledrejection", (e) => log(`unhandled rejection: ${e.reason}`, "err"));
@@ -125,9 +120,9 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
     // ── Box pairing (peer-ready → init) ───────────────────────────────────────────
     const ready: Pending[] = [];
     const winRole = new Map<Window, "host" | "peer">();
-    // Windows flagged startMinimized — collapsed once every box's renderer is up
-    // (see client-ready), so all boxes initialize at full size first.
-    const minimizeWhenReady: VtWindow[] = [];
+    // Callbacks that minimize a startMinimized window — run once every box's
+    // renderer is up (see client-ready), so all boxes initialize at full size first.
+    const minimizeWhenReady: Array<() => void> = [];
     const clientReady = new Set<Window>();
 
     window.addEventListener("message", (e: MessageEvent) => {
@@ -146,7 +141,7 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
             // start-minimized ones, so all boxes initialize under the same full-size
             // conditions (no boot-time asymmetry from one being hidden early).
             if (clientReady.size >= boxes.length) {
-                for (const win of minimizeWhenReady) win.minimize(true);
+                for (const minimize of minimizeWhenReady) minimize();
             }
         }
     });
@@ -177,21 +172,30 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
                 iframe.src = `__virtual__/${box.port}/${clientUrl}`;
 
                 if (box.windowed) {
-                    // Floating, draggable, minimizable, detachable window.  preserveFocusOrder
-                    // MUST be off — raising by re-append would reload the iframe (drops the box).
-                    const win = new VtWindow(
-                        { title: box.label, body: iframe },
-                        {
-                            // Below the status log (#status is ~120px tall at the top).
-                            top: 150 + windowOffset, left: 60 + windowOffset, width: 560, height: 440,
-                            preserveFocusOrder: false, detachable: true, autoMount: true,
-                            // No close — hiding a box with no way back would orphan it.
-                            closable: false,
-                        },
-                    );
+                    // Floating, draggable, minimizable, detachable VtWindow (Preact).  The
+                    // iframe is the body; the component appends it once and never recreates
+                    // it (recreating reloads it, dropping the box's P2P connection).
+                    const container = document.createElement("div");
+                    document.body.appendChild(container);
+                    // Cascade the floating boxes down from near the top of the page.
+                    const winTop = 150 + windowOffset, winLeft = 60 + windowOffset;
+                    let minimized = false;
+                    const draw = (): void => {
+                        render(
+                            <VtWindow
+                                title={box.label} body={iframe}
+                                top={winTop} left={winLeft} width={560} height={440}
+                                detachable closable={false}   // closing would orphan the box
+                                minimized={minimized}
+                                onMinimizedChange={(m) => { minimized = m; draw(); }}
+                            />,
+                            container,
+                        );
+                    };
+                    draw();
                     // Defer minimize until every box has booted (client-ready) — booting
                     // while minimized (display:none) would init the canvas at 0×0.
-                    if (box.startMinimized) minimizeWhenReady.push(win);
+                    if (box.startMinimized) minimizeWhenReady.push(() => { minimized = true; draw(); });
                     windowOffset += 40;
                 } else {
                     const wrap = document.createElement("div");

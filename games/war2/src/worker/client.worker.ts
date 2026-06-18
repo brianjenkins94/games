@@ -27,7 +27,7 @@ import {
 } from "../net/protocol";
 import {
     renderUnitFromSnapshot,
-    type MainToWorker, type WorkerToMain, type RenderState, type RenderUnit, type RenderHud, type WorkerInit,
+    type MainToWorker, type WorkerToMain, type RenderState, type RenderUnit, type MetricsSample, type WorkerInit,
 } from "./ipc";
 
 const post = (msg: WorkerToMain, transfer?: Transferable[]) =>
@@ -45,12 +45,20 @@ let myTeam = 1;
 let simPaused = false;
 let started = false;
 
-const hud: RenderHud = { serverTick: 0, clientTick: 0, rtt: 0, lead: 0, lastHash: 0, beatAge: 0 };
+// Perf probes (flushed to the host page ~4 Hz, off the render hot path).
+const METRICS_MS = 250;
+let rtt        = 0;   // ms round-trip to the referee (heartbeat-refreshed)
+let serverTick = 0;   // last authoritative tick seen
+let clientTick = 0;   // local predictive tick
+let tickMs     = 0;   // duration of the most recent predictive step
+let bytesIn    = 0;   // from the channel, accumulated since the last flush
+let bytesOut   = 0;   // to the channel, accumulated since the last flush
 
 let channel: RTCDataChannel | null = null;
 
 function sendToReferee(cmds: Command[]): void {
     const ab = encodeClientCommand({ cmds, pingTs: performance.now() });
+    bytesOut += ab.byteLength;
     if (channel && channel.readyState === "open") channel.send(ab);
     else post({ kind: "net-out", data: ab }, [ab]);   // relay through host main
 }
@@ -58,11 +66,11 @@ function sendToReferee(cmds: Command[]): void {
 // ── Authoritative reconciliation ────────────────────────────────────────────────
 
 function onBytes(ab: ArrayBuffer): void {
+    bytesIn += ab.byteLength;
     if (packetType(ab) !== PacketType.STATE_UPDATE) return;
     const p = decodeStateUpdate(ab);
-    if (p.pingTs > 0) hud.rtt = Math.round(performance.now() - p.pingTs);
-    hud.serverTick = p.tick;
-    hud.beatAge = 0;
+    if (p.pingTs > 0) rtt = Math.round(performance.now() - p.pingTs);
+    serverTick = p.tick;
 
     // Apply the units in this packet (full set on a keyframe, changed/new on a delta).
     const seen = new Set<number>();
@@ -107,8 +115,10 @@ function onBytes(ab: ArrayBuffer): void {
 
 function tick(): void {
     if (simPaused || !started) return;
+    const t0 = performance.now();
     game.step();                       // advance predicted own units along the real flow field
-    hud.clientTick = game.world.tick;
+    clientTick = game.world.tick;
+    tickMs = performance.now() - t0;
     post({ kind: "render", state: buildRenderState() });
 }
 
@@ -116,7 +126,15 @@ function buildRenderState(): RenderState {
     // Own units (predicted) + enemies (display-only) both live in the local game.
     const units: RenderUnit[] = [];
     for (const eid of game.unitEids()) units.push(renderUnitFromSnapshot(game.snapshotUnit(eid)));
-    return { tick: game.world.tick, hud: { ...hud }, units };
+    return { tick: game.world.tick, units };
+}
+
+function emitMetrics(): void {
+    let units = 0;
+    for (const _ of game.unitEids()) units++;
+    const sample: MetricsSample = { tickMs, rtt, lead: serverTick - clientTick, units, bytesIn, bytesOut };
+    bytesIn = bytesOut = 0;
+    post({ kind: "metrics", sample });
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -129,7 +147,7 @@ function start(init: WorkerInit): void {
 
     setInterval(tick, TICK_MS);
     setInterval(() => sendToReferee([]), 500);   // heartbeat keeps RTT fresh
-    setInterval(() => { hud.beatAge++; }, TICK_MS);
+    setInterval(emitMetrics, METRICS_MS);
 }
 
 self.onmessage = (ev: MessageEvent<MainToWorker>) => {

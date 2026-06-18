@@ -4,10 +4,12 @@
  * Roles:
  *   "host" / "peer"   — game instances (browser)
  *   "inspector"       — MCP server (tools/mcp-inspector.mjs)
+ *   "metrics"         — host page's perf bridge (src/debug/metricsForward.ts)
  *
  * Protocol (all JSON):
  *   game → server      { type:"state",  role, tick, hash, units:[...] }
  *   game → server      { type:"cmds",   role, tick, commands:[...] }
+ *   metrics → server   { type:"metrics", role:"host"|"peer", t, fields:{...} }
  *   inspector → server { type:"hello",  role:"inspector" }
  *   inspector → server { type:"query",  id, query, ...params }
  *   inspector → server { type:"ctrl",   cmd:"pause"|"resume" }
@@ -18,6 +20,8 @@
  *
  * Supported queries:
  *   status         → connection/tick summary
+ *   metrics        → per-box perf: snapshot (latest + windowed summary) or a selected
+ *                    slice { last?, sinceMs?, from?, to?, fields?, raw?, aggregate? }
  *   state          → { tick? }  full unit state at tick (default: latest)
  *   unit           → { uid, tick? }  single unit on host + peer
  *   diff           → { tick? }  host vs peer field diff
@@ -45,6 +49,17 @@ const stateHistory = new Map();
 
 /** [{ tick, role, commands }] */
 const cmdHistory = [];
+
+/** game-role ("host"/"peer") → [{ t, fields }, …] ring buffer of perf samples, pushed by
+ *  the host page's metrics bridge (src/debug/metricsForward.ts) at ~4 Hz.  Trimmed to
+ *  METRICS_CAP and cleared on session reset, so it holds the current game's recent history. */
+const metricsHistory = {};
+const METRICS_CAP = 600;             // ~150 s per box at 4 Hz
+const METRICS_WINDOW_MS = 30_000;    // default snapshot window (matches the on-page charts)
+/** The current metrics-bridge socket.  A fresh bridge `hello` means the host page was
+ *  (re)loaded → new session: we drop prior perf history and ignore any lingering older
+ *  bridge, so get_metrics only ever reflects the most-recently-loaded page (see hello). */
+let metricsWs = null;
 
 let latestTick = 0;
 
@@ -75,12 +90,43 @@ function recordState(role, msg) {
     if (msg.tick < latestTick - 1) {
         stateHistory.clear();
         cmdHistory.length = 0;
+        for (const role of Object.keys(metricsHistory)) delete metricsHistory[role];
         latestTick = 0;
         console.log(`[debug] tick reset (${msg.tick}) — cleared stale session history`);
     }
     if (!stateHistory.has(msg.tick)) stateHistory.set(msg.tick, {});
     stateHistory.get(msg.tick)[role] = msg;
     if (msg.tick > latestTick) latestTick = msg.tick;
+}
+
+/** Keep only `names` (if given) from a flat fields bag. */
+function pickFields(fields, names) {
+    if (!names) return fields;
+    const out = {};
+    for (const n of names) if (n in fields) out[n] = fields[n];
+    return out;
+}
+
+/** Per-field {last,min,max,avg,p95,n} over a set of samples — compresses a noisy window
+ *  (tickMs, per-sample bytes) into something a single read can reason about. */
+function summarizeMetrics(samples, names) {
+    const fieldNames = names ?? [...new Set(samples.flatMap(s => Object.keys(s.fields)))];
+    const out = {};
+    for (const name of fieldNames) {
+        const vals = samples.map(s => s.fields[name]).filter(v => typeof v === 'number');
+        if (!vals.length) continue;
+        const sorted = [...vals].sort((a, b) => a - b);
+        const sum = vals.reduce((a, b) => a + b, 0);
+        out[name] = {
+            last: vals[vals.length - 1],
+            min:  sorted[0],
+            max:  sorted[sorted.length - 1],
+            avg:  Math.round((sum / vals.length) * 100) / 100,
+            p95:  sorted[Math.floor(0.95 * (sorted.length - 1))],
+            n:    vals.length,
+        };
+    }
+    return out;
 }
 
 // ── Query handlers ────────────────────────────────────────────────────────────
@@ -96,7 +142,52 @@ function runQuery(query, params) {
                 minTick:    ticks[0]              ?? null,
                 maxTick:    ticks[ticks.length-1] ?? null,
                 inspectors: inspectorCount(),
+                // per box: how many perf samples are buffered (history available to get_metrics)
+                metrics:    Object.fromEntries(Object.entries(metricsHistory).map(([r, a]) => [r, a.length])),
             };
+        }
+
+        // Realtime perf per box (host/peer).  Default (no params): a snapshot — the latest
+        // sample + a summary over the last METRICS_WINDOW_MS.  Selection params return an
+        // arbitrary slice of history; `raw`/`aggregate` and `fields` shape the output.
+        //   last:N        last N samples           sinceMs:X   samples within the last X ms
+        //   from,to       absolute ms range        fields:[…]  restrict to these field names
+        //   raw:true      include raw samples      aggregate:true  summary only (no raw)
+        // bytesIn/bytesOut are bytes-per-sample (~250ms); tickMs is vs the ~50ms sim budget;
+        // rtt/lead are guest-only (host plays in-process → 0).
+        case 'metrics': {
+            const now = Date.now();
+            const names = Array.isArray(params.fields) && params.fields.length ? params.fields : null;
+            const hasSel = params.last != null || params.sinceMs != null || params.from != null || params.to != null;
+            const includeRaw = params.raw === true || (hasSel && params.aggregate !== true);
+
+            const out = {};
+            for (const [role, all] of Object.entries(metricsHistory)) {
+                if (!all.length) continue;
+
+                let selected;
+                if (params.last != null)         selected = all.slice(-params.last);
+                else if (params.sinceMs != null) selected = all.filter(s => s.t >= now - params.sinceMs);
+                else if (params.from != null || params.to != null) {
+                    const lo = params.from ?? -Infinity, hi = params.to ?? Infinity;
+                    selected = all.filter(s => s.t >= lo && s.t <= hi);
+                } else {
+                    selected = all.filter(s => s.t >= now - METRICS_WINDOW_MS);   // default snapshot window
+                }
+
+                const latest = all[all.length - 1];
+                const entry = {
+                    latest: { t: latest.t, ageMs: now - latest.t, fields: pickFields(latest.fields, names) },
+                    window: {
+                        n:      selected.length,
+                        spanMs: selected.length ? selected[selected.length - 1].t - selected[0].t : 0,
+                        summary: summarizeMetrics(selected, names),
+                    },
+                };
+                if (includeRaw) entry.samples = selected.map(s => ({ t: s.t, fields: pickFields(s.fields, names) }));
+                out[role] = entry;
+            }
+            return { now, window: hasSel ? 'selection' : `last ${METRICS_WINDOW_MS / 1000}s`, metrics: out };
         }
 
         case 'state': {
@@ -304,6 +395,13 @@ wss.on('connection', (ws) => {
                     tickCount: ticks.length,
                 }));
             }
+
+            if (role === 'metrics') {
+                // Fresh bridge ⇒ the host page was (re)loaded.  Adopt it as the current
+                // source and drop the previous page's perf history.
+                metricsWs = ws;
+                for (const r of Object.keys(metricsHistory)) delete metricsHistory[r];
+            }
             return;
         }
 
@@ -314,6 +412,17 @@ wss.on('connection', (ws) => {
 
         if (msg.type === 'cmds' && (role === 'host' || role === 'peer')) {
             cmdHistory.push({ tick: msg.tick, role, commands: msg.commands });
+            return;
+        }
+
+        // Host page's metrics bridge: one connection (role "metrics") relays both boxes'
+        // perf samples, each tagged with its game-role ("host"/"peer").  Ignore a lingering
+        // older bridge after a refresh — only the most-recent one feeds the buffer.
+        if (msg.type === 'metrics' && role === 'metrics') {
+            if (ws !== metricsWs) return;
+            const buf = (metricsHistory[msg.role] ??= []);
+            buf.push({ t: msg.t, fields: msg.fields });
+            if (buf.length > METRICS_CAP) buf.splice(0, buf.length - METRICS_CAP);
             return;
         }
 

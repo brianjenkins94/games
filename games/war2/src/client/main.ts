@@ -23,7 +23,7 @@ import { CmdType, type Command, type SpawnCmd } from "../net/protocol";
 import { openPeer, connectTo, waitForConnection } from "../net/peer";
 import { startPhaser, type GameScene, type UnitPrediction } from "../render/renderer";
 import { initGameConsole } from "../debug/console";
-import type { MainToWorker, WorkerToMain, RenderState, RenderUnit } from "../worker/ipc";
+import type { MainToWorker, WorkerToMain, RenderState, RenderUnit, MetricsSample } from "../worker/ipc";
 import type { MapInfo } from "../game/world";
 import type { PeerReadyMsg, InitMsg, ClientReadyMsg } from "harness/client";
 
@@ -65,6 +65,7 @@ const SPAWN_COUNT = 4;
 // ── Runtime state ─────────────────────────────────────────────────────────────
 
 let myTeam  = 0;
+let selfRole: "host" | "peer" = "host";   // labels this box's metrics on the host page
 let worker: Worker | null = null;
 let scene:  GameScene | null = null;
 let cardController: CommandCardController | null = null;
@@ -170,9 +171,24 @@ function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
             mapTW = msg.mapW; mapTH = msg.mapH;
             break;
         case "render":          onRender(msg.state); break;
+        case "metrics":         onMetrics(msg.sample); break;
         case "net-out":         relayChannel?.send(msg.data); break;   // relay mode
         case "inspector-count": updateInspectorBadge(msg.n); break;
     }
+}
+
+/** Forward a worker perf sample to the host page (this box's parent), tagged with our
+ *  role and stamped with fps/frameMs — the only signals the worker can't see itself.
+ *  The metrics package on the host page charts host vs guest from these. */
+function onMetrics(sample: MetricsSample): void {
+    const frameMs = scene?.frameMs ?? 0;
+    const fps = frameMs > 0 ? Math.round(1000 / frameMs) : 0;
+    const fields: Record<string, number> = { ...sample, fps, frameMs: Math.round(frameMs * 10) / 10 };
+    // JS heap — Chromium-only (`performance.memory` is main-thread + Chromium); absent
+    // elsewhere, so the heap chart simply has no data on Firefox/Safari.
+    const mem = (performance as { memory?: { usedJSHeapSize: number } }).memory;
+    if (mem) fields.heap = Math.round(mem.usedJSHeapSize / 1048576 * 10) / 10;   // MB
+    window.parent.postMessage({ type: "metrics", role: selfRole, t: Date.now(), fields }, "*");
 }
 
 function onRender(state: RenderState): void {
@@ -240,6 +256,7 @@ console.info("signalled parent, waiting for init...");
 
 async function start(role: "host" | "peer", targetId: string): Promise<void> {
     myTeam = role === "host" ? 0 : 1;
+    selfRole = role;
     const isHost = role === "host";
     const sx = myTeam === 0 ? p0x : p1x;
     const sy = myTeam === 0 ? p0y : p1y;

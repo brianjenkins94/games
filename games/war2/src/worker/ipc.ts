@@ -19,16 +19,6 @@ import type { MapInfo } from "../game/world";
 
 // ── Render snapshot (worker → main, every tick) ──────────────────────────────────
 
-/** HUD telemetry shown in the corner overlay. */
-export interface RenderHud {
-    serverTick: number;
-    clientTick: number;
-    rtt:        number;
-    lead:       number;
-    lastHash:   number;
-    beatAge:    number;
-}
-
 /** One entity's per-tick render state.  Keyed by stable `uid` (eids are
  *  worker-internal).  Buildings carry fw/fh > 0; mobile units have fw === 0. */
 export interface RenderUnit {
@@ -49,8 +39,23 @@ export interface RenderUnit {
 
 export interface RenderState {
     tick:  number;
-    hud:   RenderHud;
     units: RenderUnit[];
+}
+
+// ── Metrics sample (worker → main, ~4 Hz; off the render hot path) ────────────────
+
+/** A worker's periodic perf sample.  The main thread adds `fps`/`frameMs` (which only
+ *  it can see) and forwards the lot to the host page, where the metrics package charts
+ *  it per box (host vs guest).  `bytesIn`/`bytesOut` are byte counts accumulated since
+ *  the previous sample (the metrics package converts to a rate using the timestamps).
+ *  `rtt`/`lead` are wire-only signals: the host plays in-process so both read 0 there. */
+export interface MetricsSample {
+    tickMs:   number;   // sim step duration this interval's last tick (vs TICK_MS budget)
+    rtt:      number;   // ms round-trip to the referee (guest only; 0 for the in-process host)
+    lead:     number;   // serverTick − clientTick (guest desync early-warning; 0 for host)
+    units:    number;   // entities the worker is tracking (correlate axis)
+    bytesIn:  number;   // bytes received over the channel since the last sample
+    bytesOut: number;   // bytes sent over the channel since the last sample
 }
 
 /** Build a RenderUnit from a fog-view UnitSnapshot (shared by host + guest render). */
@@ -98,6 +103,8 @@ export type WorkerToMain =
     | { kind: "ready"; passability: Uint8Array | null; mapW: number; mapH: number }
     /** Per-tick render snapshot. */
     | { kind: "render"; state: RenderState }
+    /** Periodic perf sample (~4 Hz). */
+    | { kind: "metrics"; sample: MetricsSample }
     /** Relay fallback: a raw packet to send over the channel. */
     | { kind: "net-out"; data: ArrayBuffer }
     /** Debug inspector badge count (worker owns the debug WS; badge is DOM). */

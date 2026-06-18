@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "harness": "link:../../packages/harness",
+    "metrics": "link:../../packages/metrics",
     "jsx-async-runtime": "2.1.2"
   }
 }

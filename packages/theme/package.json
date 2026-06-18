@@ -1,0 +1,11 @@
+{
+  "name": "theme",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./theme.ts",
+      "default": "./theme.ts"
+    }
+  }
+}

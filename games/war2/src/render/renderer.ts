@@ -16,7 +16,7 @@
 import Phaser from "phaser";
 import { FP, TICK_MS } from "../game/components";
 import { inRange } from "../game/distance";
-import type { RenderState, RenderUnit, RenderHud } from "../worker/ipc";
+import type { RenderState, RenderUnit } from "../worker/ipc";
 
 /** Local-prediction overlay for an own unit: instant facing + move marker shown
  *  the moment a command is issued, until the authoritative snapshot catches up. */
@@ -68,8 +68,6 @@ const MAX_CATCHUP_PX_PER_MS = 0.25;
 
 const SEL_COLOR  = 0x00ff00;
 
-export type HudData = RenderHud;
-
 /** Drag-select result — stable unit-ids of the units under the selection box. */
 export type SelectCallback = (uids: number[]) => void;
 
@@ -78,7 +76,10 @@ export class GameScene extends Phaser.Scene {
     private gfx!:    Phaser.GameObjects.Graphics;
     // Screen-space graphics (fixed — drag rect, UI bar, minimap)
     private uiGfx!:  Phaser.GameObjects.Graphics;
-    private hudEl!: HTMLDivElement;
+
+    /** Rolling render frame time (ms), EMA-smoothed in update().  The client shell reads
+     *  this when assembling the perf sample — fps lives only on the main thread. */
+    frameMs = 0;
 
     // Refs into the static HUD markup (client.html), grabbed in wireHud().
     private resourceCell!: HTMLDivElement;   // top-centre: gold / lumber / oil / food
@@ -302,7 +303,6 @@ export class GameScene extends Phaser.Scene {
         this.resourceCell = document.querySelector<HTMLDivElement>("#hud-resources")!;
         this.portraitCell = document.querySelector<HTMLDivElement>("#hud-portrait")!;
         this.cardEl       = document.querySelector<HTMLDivElement>("#hud-card")!;
-        this.hudEl        = document.querySelector<HTMLDivElement>("#hud-telemetry")!;
         this.tweakPaneEl  = document.querySelector<HTMLDivElement>("#hud-tweak")!;
         this.tweakBodyEl  = document.querySelector<HTMLDivElement>("#hud-tweak-body")!;
 
@@ -567,6 +567,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     override update(_time: number, delta: number): void {
+        // Rolling render frame time (ms) for the perf overlay — EMA to smooth jitter.
+        this.frameMs += (delta - this.frameMs) * 0.1;
+
         // ── Terrain chunks ────────────────────────────────────────────────────
         this.chunkRenderer?.update(this.cameras.main);
 
@@ -702,16 +705,6 @@ export class GameScene extends Phaser.Scene {
             const overCard = dr >= sw - UI.right && db >= sh - UI.bottom;
             this.cardEl.style.opacity = overCard ? "0.2" : "1";
         }
-
-        // ── HUD ───────────────────────────────────────────────────────────────
-        const d = this.renderState.hud;
-        this.hudEl.textContent =
-            `serverTick  ${d.serverTick}\n` +
-            `clientTick  ${d.clientTick}\n` +
-            `rtt         ${d.rtt} ms\n` +
-            `lead        ${d.lead} ticks\n` +
-            `lastHash    0x${(d.lastHash >>> 0).toString(16).padStart(8,"0")}\n` +
-            `beatAge     ${d.beatAge} ticks`;
     }
 
     /** Push the latest worker snapshot.  Rolls the current positions into the

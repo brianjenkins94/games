@@ -18,12 +18,13 @@ export default defineConfig({
     "build": {
         "outDir": "dist",
         "lib": {
-            "entry": { "client": "client.ts" },
+            "entry": { "client": "client.tsx" },
             "formats": ["es"],
         },
         "rollupOptions": {
             // Leave deps unbundled — the consuming game's build resolves them from root.
-            "external": [/^almostnode/, /^jsx-async-runtime/],
+            // (preact + @stitches/core arrive via the bundled `window` component → `theme`.)
+            "external": [/^almostnode/, /^jsx-async-runtime/, /^preact/, /^@stitches/],
         },
     },
 });

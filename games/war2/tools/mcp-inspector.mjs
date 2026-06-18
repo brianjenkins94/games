@@ -8,6 +8,7 @@
  *
  * Tools:
  *   get_status        connection state, tick, history availability
+ *   get_metrics       latest per-box realtime perf sample (fps, tickMs, rtt/lead, units, bytes)
  *   get_state         full unit table at a tick (default: latest)
  *   get_map           compact spatial diagnostic / ASCII view
  *   get_unit          single unit on host + peer at a tick
@@ -331,6 +332,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             inputSchema: { type: 'object', properties: {} },
         },
         {
+            name:        'get_metrics',
+            description: 'Realtime perf per box (host/peer): fps, frame time (ms), sim tick duration (tickMs, vs the ~50ms budget), rtt/lead (guest only — host plays in-process so both read 0), entity count, and wire bytesIn/bytesOut per ~250ms sample. Samples are buffered ~4 Hz (up to ~150s, cleared on game reload). Called with no args it returns a SNAPSHOT: each box\'s latest sample (with ageMs) plus a summary (last/min/max/avg/p95) over the last 30s. Pass selection params for an arbitrary slice of history. Use to check perf health and spot trends/spikes; a single reading is noisy, so prefer the summary or a window.',
+            inputSchema: {
+                type:       'object',
+                properties: {
+                    last:      { type: 'number',  description: 'Return the last N samples per box (raw series)' },
+                    sinceMs:   { type: 'number',  description: 'Samples within the last X milliseconds' },
+                    from:      { type: 'number',  description: 'Absolute start time (ms epoch, matches sample.t)' },
+                    to:        { type: 'number',  description: 'Absolute end time (ms epoch)' },
+                    fields:    { type: 'array', items: { type: 'string' }, description: 'Restrict to these field names (e.g. ["fps","tickMs"])' },
+                    raw:       { type: 'boolean', description: 'Include raw samples even in snapshot mode' },
+                    aggregate: { type: 'boolean', description: 'With a selection, return only the summary (omit raw samples)' },
+                },
+            },
+        },
+        {
             name:        'get_state',
             description: 'Get full game state (all units, hash) for host and peer at a tick. Omit tick for latest.',
             inputSchema: {
@@ -457,6 +474,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         switch (name) {
             case 'get_status':
                 return ok(await query('status'));
+
+            case 'get_metrics':
+                return ok(await query('metrics', args));
 
             case 'get_state': {
                 const raw = await query('state', args.tick != null ? { tick: args.tick } : {});

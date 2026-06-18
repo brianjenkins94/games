@@ -1,5 +1,5 @@
 {
-  "name": "window",
+  "name": "metrics",
   "private": true,
   "type": "module",
   "dependencies": {
@@ -7,8 +7,8 @@
   },
   "exports": {
     ".": {
-      "types": "./window.tsx",
-      "default": "./window.tsx"
+      "types": "./metrics.ts",
+      "default": "./metrics.ts"
     }
   }
 }

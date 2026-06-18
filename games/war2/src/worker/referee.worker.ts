@@ -24,7 +24,7 @@ import { getPassability } from "../game/passability";
 import { initDebugClient, sendDebugState, sendDebugCommands, setDebugCallbacks } from "../debug/client";
 import {
     renderUnitFromSnapshot,
-    type MainToWorker, type WorkerToMain, type RenderState, type RenderHud, type WorkerInit,
+    type MainToWorker, type WorkerToMain, type RenderState, type MetricsSample, type WorkerInit,
 } from "./ipc";
 
 const post = (msg: WorkerToMain, transfer?: Transferable[]) =>
@@ -39,7 +39,13 @@ let mapW = 0, mapH = 0;
 let simPaused = false;
 let started   = false;
 
-const hud: RenderHud = { serverTick: 0, clientTick: 0, rtt: 0, lead: 0, lastHash: 0, beatAge: 0 };
+// Perf probes (flushed to the host page ~4 Hz, off the render hot path).  The host is
+// in-process so it has no wire RTT/lead — only tick cost, entity count, and the bytes
+// it pushes to / receives from the remote guest are meaningful here.
+const METRICS_MS = 250;
+let tickMs   = 0;   // duration of the most recent sim step
+let bytesIn  = 0;   // from the guest channel, accumulated since the last flush
+let bytesOut = 0;   // to the guest channel, accumulated since the last flush
 
 // ── Clients ───────────────────────────────────────────────────────────────────
 // The host's in-process client is always present; the guest joins when its channel
@@ -80,7 +86,15 @@ function fogSnapshot(team: number): UnitSnapshot[] {
 }
 
 function toRenderState(payload: StateUpdatePayload): RenderState {
-    return { tick: payload.tick, hud: { ...hud }, units: payload.visibleStates.map(renderUnitFromSnapshot) };
+    return { tick: payload.tick, units: payload.visibleStates.map(renderUnitFromSnapshot) };
+}
+
+function emitMetrics(): void {
+    let units = 0;
+    for (const _ of game.unitEids()) units++;
+    const sample: MetricsSample = { tickMs, rtt: 0, lead: 0, units, bytesIn, bytesOut };
+    bytesIn = bytesOut = 0;
+    post({ kind: "metrics", sample });
 }
 
 // ── Networking (guest channel: transferred, else relayed through host main) ──────
@@ -91,15 +105,18 @@ function attachGuestChannel(ch: RTCDataChannel): void {
     channel = ch;
     channel.binaryType = "arraybuffer";
     guestClient = new RemoteRefereeClient(oppTeam, (ab) => {
+        bytesOut += ab.byteLength;
         if (channel && channel.readyState === "open") channel.send(ab);
     });
     registerClient(guestClient);
-    channel.onmessage = (ev) => { if (ev.data instanceof ArrayBuffer) guestClient!.handleBytes(ev.data); };
+    channel.onmessage = (ev) => {
+        if (ev.data instanceof ArrayBuffer) { bytesIn += ev.data.byteLength; guestClient!.handleBytes(ev.data); }
+    };
 }
 
 function attachGuestRelay(): void {
     if (guestClient) return;
-    guestClient = new RemoteRefereeClient(oppTeam, (ab) => post({ kind: "net-out", data: ab }, [ab]));
+    guestClient = new RemoteRefereeClient(oppTeam, (ab) => { bytesOut += ab.byteLength; post({ kind: "net-out", data: ab }, [ab]); });
     registerClient(guestClient);
 }
 
@@ -107,6 +124,7 @@ function attachGuestRelay(): void {
 
 function tick(): void {
     if (simPaused || !started) return;
+    const t0 = performance.now();
 
     // Validate then apply each client's commands (host first, then guest), then step.
     const applied: Command[] = [];
@@ -125,14 +143,18 @@ function tick(): void {
     sendDebugCommands("host", game.world.tick, applied);
     sendDebugState(game.world, game.hashOwn(myTeam), "host");
 
-    hud.clientTick = hud.serverTick = game.world.tick;
-    hud.lastHash   = game.hashOwn(myTeam);
-
     // Send each client its fog view (the client formats it — full for the host,
-    // delta-encoded for the remote guest).
+    // delta-encoded for the remote guest).  Echo each client's pingTs EXACTLY ONCE — in
+    // the first snapshot after it arrives — then send 0.  Re-echoing the same pingTs every
+    // tick made the guest's rtt = now − pingTs climb until the next ping (a 0→heartbeat-
+    // interval sawtooth); consuming it means rtt reflects a true round-trip.
     for (const c of clients()) {
-        c.sendSnapshot(game.world.tick, fogSnapshot(c.team), lastPing.get(c) ?? 0);
+        const ping = lastPing.get(c) ?? 0;
+        lastPing.delete(c);
+        c.sendSnapshot(game.world.tick, fogSnapshot(c.team), ping);
     }
+
+    tickMs = performance.now() - t0;
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -168,7 +190,7 @@ function start(init: WorkerInit): void {
     post({ kind: "ready", passability: getPassability(), mapW, mapH });
 
     setInterval(tick, TICK_MS);
-    setInterval(() => { hud.beatAge++; hud.lead = 0; }, TICK_MS);
+    setInterval(emitMetrics, METRICS_MS);
 }
 
 // ── Message pump ────────────────────────────────────────────────────────────────
@@ -178,7 +200,7 @@ self.onmessage = (ev: MessageEvent<MainToWorker>) => {
     switch (msg.kind) {
         case "init":    start(msg.init); break;
         case "channel": attachGuestChannel(msg.channel); break;
-        case "net-in":  attachGuestRelay(); guestClient!.handleBytes(msg.data); break;
+        case "net-in":  attachGuestRelay(); bytesIn += msg.data.byteLength; guestClient!.handleBytes(msg.data); break;
         case "command": hostClient.deliverCommands([msg.cmd], 0); break;
         case "pause":   simPaused = true;  break;
         case "resume":  simPaused = false; break;
