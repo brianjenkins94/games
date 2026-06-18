@@ -23,8 +23,8 @@ export default defineConfig({
         },
         "rollupOptions": {
             // Leave deps unbundled — the consuming game's build resolves them from root.
-            // (preact + @stitches/core arrive via the bundled `window` component → `theme`.)
-            "external": [/^almostnode/, /^jsx-async-runtime/, /^preact/, /^@stitches/],
+            // (preact + @stitches/core + lucide arrive via the bundled `window` component.)
+            "external": [/^almostnode/, /^jsx-async-runtime/, /^preact/, /^@stitches/, /^lucide/],
         },
     },
 });

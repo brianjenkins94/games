@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npx tsx ../../util/vite/dev.ts",
+    "dev": "util-dev",
     "build": "npx tsx ../../util/vite/build.ts"
   }
 }

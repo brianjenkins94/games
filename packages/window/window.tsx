@@ -21,7 +21,17 @@
  */
 import { useRef, useState, useLayoutEffect, useEffect } from "preact/hooks";
 import type { VNode } from "preact";
-import { css } from "theme";
+import { css, iconSvg, type IconNode } from "theme";
+import { ExternalLink, Maximize2, Minimize2, Minus, X } from "lucide";
+import {
+    type Rect, peerRects, snapMove, snapResize, tileZone, applyRect,
+    isTiled, setTiled, popTiled, showPreview, hidePreview,
+} from "./snap";
+
+/** A lucide icon (rendered via the theme helper) wrapped in a span so Preact owns one node.
+ *  Stroke is `currentColor`, so it inherits the control's text colour. */
+const Icon = ({ node, size = 13 }: { node: IconNode; size?: number }): VNode =>
+    <span class="vt-ico" dangerouslySetInnerHTML={{ __html: iconSvg(node, { size }) }} />;
 
 // ── Drag: make an element draggable or resizable by a handle ───────────────────
 
@@ -60,6 +70,9 @@ class Drag {
 
         let offTop = 0, offLeft = 0, offBottom = 0, offRight = 0;
         let vw = window.innerWidth, vh = window.innerHeight;
+        let peers: Rect[] = [];        // peer-window rects, snapshotted at drag start
+        let zone: Rect | null = null;  // armed tile target (move only), committed on release
+        let pressX = 0, pressY = 0;    // press point, to defer un-tiling until a real drag
         const { minWidth, maxWidth, minHeight, maxHeight } = this.options;
 
         const moveOp = (x: number, y: number): void => {
@@ -69,8 +82,14 @@ class Drag {
             let t = y - offTop;
             if (y - offTop < 0) t = 0;
             else if (y - offBottom > vh) t = vh - this._targetElm.clientHeight;
+            // Magnetic edges: stick to viewport + peer edges within MAGNET px.
+            ({ l, t } = snapMove(l, t, this._targetElm.offsetWidth, this._targetElm.offsetHeight, peers, vw, vh));
             if (this.xAxis) this._targetElm.style.left = `${l}px`;
             if (this.yAxis) this._targetElm.style.top = `${t}px`;
+            // Edge tiling: preview the target while the cursor hugs a viewport edge/corner.
+            // Skipped when yAxis is disabled (the minimized bottom strip shouldn't tile).
+            zone = this.yAxis ? tileZone(x, y, vw, vh) : null;
+            if (zone) showPreview(zone); else hidePreview();
         };
         const resizeOp = (x: number, y: number): void => {
             let w = x - this._targetElm.offsetLeft - offRight;
@@ -81,6 +100,10 @@ class Drag {
             if (y - offBottom > vh) h = Math.min(vh - this._targetElm.offsetTop, maxHeight);
             else if (y - offBottom - this._targetElm.offsetTop > maxHeight) h = maxHeight;
             else if (y - offBottom - this._targetElm.offsetTop < minHeight) h = minHeight;
+            // Magnetic edges, then re-clamp so a snap can't break min/max.
+            const s = snapResize(this._targetElm.offsetLeft, this._targetElm.offsetTop, w, h, peers, vw, vh);
+            w = Math.max(minWidth, Math.min(maxWidth, s.w));
+            h = Math.max(minHeight, Math.min(maxHeight, s.h));
             if (this.xAxis) this._targetElm.style.width = `${w}px`;
             if (this.yAxis) this._targetElm.style.height = `${h}px`;
         };
@@ -92,10 +115,13 @@ class Drag {
             if (!((me.buttons === 1 || me.which === 1) || touch)) return;
             e.preventDefault();
             const p = touch ? (e as TouchEvent).touches[0] : me;
+            vw = window.innerWidth; vh = window.innerHeight;
+            peers = peerRects(this._targetElm);
+            zone = null;
+            pressX = p.clientX; pressY = p.clientY;
             const r = this._targetElm.getBoundingClientRect();
             offTop = p.clientY - r.y; offLeft = p.clientX - r.x;
             offBottom = p.clientY - (r.y + r.height); offRight = p.clientX - (r.x + r.width);
-            vw = window.innerWidth; vh = window.innerHeight;
             if (this.options.useMouseEvents) {
                 document.addEventListener("mousemove", this._move);
                 document.addEventListener("mouseup", this._end);
@@ -115,9 +141,30 @@ class Drag {
                 if ((me.buttons || me.which) !== 1) { this._end(); return; }
                 x = me.clientX; y = me.clientY;
             }
+            // First real drag of a tiled window: pop it back to floating size under the cursor,
+            // then re-anchor the drag offsets so the rest of the gesture tracks smoothly.
+            if (this.options.mode === "move" && isTiled(this._targetElm)
+                && (Math.abs(x - pressX) > 4 || Math.abs(y - pressY) > 4)) {
+                const el = this._targetElm, pre = popTiled(el)!;
+                el.style.width = `${pre.w}px`; el.style.height = `${pre.h}px`;
+                el.style.left = `${Math.max(0, Math.min(x - pre.w / 2, vw - pre.w))}px`;
+                el.style.top = `${Math.max(0, y - 14)}px`;
+                const r = el.getBoundingClientRect();
+                offTop = y - r.y; offLeft = x - r.x; offBottom = y - (r.y + r.height); offRight = x - (r.x + r.width);
+            }
             op(x, y);
         };
         this._end = () => {
+            // Commit a tile: remember the floating rect (for restore), then snap to the zone.
+            if (this.options.mode === "move") {
+                if (zone) {
+                    const el = this._targetElm;
+                    setTiled(el, { l: el.offsetLeft, t: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight });
+                    applyRect(el, zone);
+                    zone = null;
+                }
+                hidePreview();
+            }
             if (this.options.useMouseEvents) {
                 document.removeEventListener("mousemove", this._move);
                 document.removeEventListener("mouseup", this._end);
@@ -136,6 +183,7 @@ class Drag {
         if (this.options.useTouchEvents) this._handleElm.addEventListener("touchstart", this._start, { passive: false });
     }
     destroy(): void {
+        hidePreview();
         this._targetElm.classList.remove(this.options.draggingClass);
         this._handleElm.removeEventListener("mousedown", this._start);
         this._handleElm.removeEventListener("touchstart", this._start);
@@ -263,14 +311,14 @@ export function VtWindow(props: VtWindowProps): VNode {
     }));
 
     return (
-        <div ref={rootRef} class={cls} role="dialog" aria-label={title}>
+        <div ref={rootRef} class={`vt-window ${cls}`} role="dialog" aria-label={title}>
             <div ref={headerRef} class="vt-header">
                 <span class="vt-title" title={title}>{title}</span>
                 <span class="vt-controls">
-                    {detachable && <button class="vt-popout" title="Detach to popup" onClick={detach}>⇱</button>}
-                    {maximizable && <button class="vt-maximize" title="Maximize" onClick={() => setMaximized(m => !m)}>▢</button>}
-                    {minimizable && <button class="vt-minimize" title="Minimize" onClick={() => { setMaximized(false); onMinimizedChange?.(!minimized); }}>_</button>}
-                    {closable && <button class="vt-close" title="Close" onClick={() => setHidden(true)}>✕</button>}
+                    {detachable && <button class="vt-popout" title="Detach to popup" onClick={detach}><Icon node={ExternalLink} /></button>}
+                    {maximizable && <button class="vt-maximize" title={maximized ? "Restore" : "Maximize"} onClick={() => setMaximized(m => !m)}><Icon node={maximized ? Minimize2 : Maximize2} /></button>}
+                    {minimizable && <button class="vt-minimize" title="Minimize" onClick={() => { setMaximized(false); onMinimizedChange?.(!minimized); }}><Icon node={Minus} /></button>}
+                    {closable && <button class="vt-close" title="Close" onClick={() => setHidden(true)}><Icon node={X} /></button>}
                 </span>
             </div>
             <div ref={bodyRef} class="vt-body" />
@@ -319,16 +367,17 @@ const vtWindow = css({
     "& .vt-controls button": {
         width: 20,
         height: 18,
-        lineHeight: 1,
         cursor: "pointer",
         background: "$btnBg",
         color: "$btnText",
         border: "1px solid $border",
         borderRadius: 3,
-        fontFamily: "monospace",
-        fontSize: 11,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
     },
     "& .vt-controls button:hover": { background: "$btnHover" },
+    "& .vt-ico": { display: "inline-flex" },
     "& .vt-body": { position: "relative", flexGrow: 1, display: "flex", background: "#000" },
     "& .vt-body > iframe": { flex: "1 1 auto", width: "100%", height: "100%", border: 0 },
     "& .vt-footer": { position: "relative", height: 0 },

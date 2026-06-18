@@ -1,10 +1,8 @@
 # Vibes
 
-CAUTION: May contain vibes.
+WARNING: May contain vibes.
 
 - `games/war2/*`
-- `packages/harness/*`
-- `packages/window/*`
+- `packages/**/*`
 - `util/vite/build.ts`
-- `util/vite/dev.ts`
 - `util/vite/phaser-shim.ts`
