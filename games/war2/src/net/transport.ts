@@ -29,7 +29,7 @@ export interface RefereeClient {
     /** Commands received from this client (set by the referee). */
     onCommand?: (cmds: Command[], pingTs: number) => void;
     /** Push this client's authoritative fog view (the full visible set this tick). */
-    sendSnapshot(tick: number, units: UnitSnapshot[], pingTs: number): void;
+    sendSnapshot(tick: number, units: UnitSnapshot[], pingTs: number, speed: number): void;
 }
 
 /** In-process client (the host): no wire encoding, no delta — the full set crosses
@@ -37,8 +37,8 @@ export interface RefereeClient {
 export class LocalRefereeClient implements RefereeClient {
     onCommand?: (cmds: Command[], pingTs: number) => void;
     constructor(public readonly team: number, private readonly post: (snap: StateUpdatePayload) => void) {}
-    sendSnapshot(tick: number, units: UnitSnapshot[], pingTs: number): void {
-        this.post({ tick, keyframe: true, visibleStates: units, removed: [], pingTs });
+    sendSnapshot(tick: number, units: UnitSnapshot[], pingTs: number, speed: number): void {
+        this.post({ tick, keyframe: true, visibleStates: units, removed: [], pingTs, speed });
     }
     /** Feed locally-issued commands in (from the worker message pump). */
     deliverCommands(cmds: Command[], pingTs: number): void { this.onCommand?.(cmds, pingTs); }
@@ -53,13 +53,13 @@ export class RemoteRefereeClient implements RefereeClient {
 
     constructor(public readonly team: number, private readonly sendBytes: (ab: ArrayBuffer) => void) {}
 
-    sendSnapshot(tick: number, units: UnitSnapshot[], pingTs: number): void {
+    sendSnapshot(tick: number, units: UnitSnapshot[], pingTs: number, speed: number): void {
         let payload: StateUpdatePayload;
         if (this.ticks++ % KEYFRAME_TICKS === 0) {
             // Keyframe: full set; reset the baseline.
             this.lastSent.clear();
             for (const u of units) this.lastSent.set(u.uid, u);
-            payload = { tick, keyframe: true, visibleStates: units, removed: [], pingTs };
+            payload = { tick, keyframe: true, visibleStates: units, removed: [], pingTs, speed };
         } else {
             // Delta: only new/changed units + uids that dropped out of view.
             const changed: UnitSnapshot[] = [];
@@ -72,7 +72,7 @@ export class RemoteRefereeClient implements RefereeClient {
             const removed: number[] = [];
             for (const uid of this.lastSent.keys()) if (!present.has(uid)) removed.push(uid);
             for (const uid of removed) this.lastSent.delete(uid);
-            payload = { tick, keyframe: false, visibleStates: changed, removed, pingTs };
+            payload = { tick, keyframe: false, visibleStates: changed, removed, pingTs, speed };
         }
         this.sendBytes(encodeStateUpdate(payload));
     }

@@ -45,6 +45,16 @@ let myTeam = 1;
 let simPaused = false;
 let started = false;
 
+// Game-speed multiplier — taken from each referee snapshot (the referee is authoritative). Scales
+// only the local predictive-tick cadence so prediction keeps pace with the referee; the logical
+// timestep is unchanged, so reconciliation still works. Self-rescheduling so it can change live.
+let speed = 1;
+let tickTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleTick(): void {
+    if (tickTimer !== undefined) clearTimeout(tickTimer);
+    tickTimer = setTimeout(() => { tickTimer = undefined; tick(); scheduleTick(); }, TICK_MS / speed);
+}
+
 // Perf probes (flushed to the host page ~4 Hz, off the render hot path).
 const METRICS_MS = 250;
 let rtt        = 0;   // ms round-trip to the referee (heartbeat-refreshed)
@@ -70,6 +80,7 @@ function onBytes(ab: ArrayBuffer): void {
     if (packetType(ab) !== PacketType.STATE_UPDATE) return;
     const p = decodeStateUpdate(ab);
     if (p.pingTs > 0) rtt = Math.round(performance.now() - p.pingTs);
+    if (p.speed > 0 && p.speed !== speed) { speed = p.speed; scheduleTick(); }   // match the referee's cadence
     serverTick = p.tick;
 
     // Apply the units in this packet (full set on a keyframe, changed/new on a delta).
@@ -145,7 +156,7 @@ function start(init: WorkerInit): void {
     started = true;
     post({ kind: "ready", passability: getPassability(), mapW: init.mapW, mapH: init.mapH });
 
-    setInterval(tick, TICK_MS);
+    scheduleTick();                              // self-rescheduling so game speed can change the cadence
     setInterval(() => sendToReferee([]), 500);   // heartbeat keeps RTT fresh
     setInterval(emitMetrics, METRICS_MS);
 }

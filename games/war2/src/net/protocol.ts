@@ -17,7 +17,7 @@ import type { UnitSnapshot } from "../game/types";
 export type { UnitSnapshot };
 
 export const enum PacketType { STATE_UPDATE = 5, CLIENT_COMMAND = 6 }
-export const enum CmdType    { MOVE = 1, SPAWN = 2, STOP = 3, BUILD = 4 }
+export const enum CmdType    { MOVE = 1, SPAWN = 2, STOP = 3, BUILD = 4, SPEED = 5 }
 
 // Commands are intents.  The referee assigns unit ids for SPAWN/BUILD (clients no
 // longer mint them); `team` is the issuing client's team and is validated/stamped
@@ -26,7 +26,10 @@ export interface MoveCmd  { type: CmdType.MOVE;  unitIds: number[]; txFP: number
 export interface SpawnCmd { type: CmdType.SPAWN; xFP: number; yFP: number; team: number; typeId: number; }
 export interface StopCmd  { type: CmdType.STOP;  unitIds: number[]; }
 export interface BuildCmd { type: CmdType.BUILD; typeId: number; team: number; tileX: number; tileY: number; }
-export type Command = MoveCmd | SpawnCmd | StopCmd | BuildCmd;
+// Control-plane (not a world mutation): requests the *authoritative* game-speed multiplier. The
+// referee applies + broadcasts it (StateUpdatePayload.speed); it never reaches applyCommands.
+export interface SpeedCmd { type: CmdType.SPEED; speed: number; }
+export type Command = MoveCmd | SpawnCmd | StopCmd | BuildCmd | SpeedCmd;
 
 // ── Packet payloads ─────────────────────────────────────────────────────────────
 
@@ -39,6 +42,7 @@ export interface StateUpdatePayload {
     visibleStates: UnitSnapshot[];  // full set (keyframe) or changed/new units (delta)
     removed:       number[];         // uids that left the recipient's view (delta only; [] on keyframe)
     pingTs:        number;
+    speed:         number;          // authoritative game-speed multiplier (referee → clients)
 }
 
 /** True if any wire-relevant field of two snapshots of the same unit differs. */

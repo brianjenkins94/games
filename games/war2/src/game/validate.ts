@@ -38,5 +38,7 @@ export function validateCommand(world: SimWorld, team: number, cmd: Command): bo
         case CmdType.SPAWN:
         case CmdType.BUILD:
             return cmd.team === team && teamUnitCount(world, team) < MAX_LIVE_UNITS;
+        case CmdType.SPEED:
+            return false;   // control-plane; the referee handles it before validation (never simulated)
     }
 }

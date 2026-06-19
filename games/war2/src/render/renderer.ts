@@ -140,6 +140,10 @@ export class GameScene extends Phaser.Scene {
     // one-tick settle snap glides instead of teleporting.
     private dispPos = new Map<number, { x: number; y: number }>();
     private snapAt  = 0;
+    // Measured (EMA) real interval between snapshots — the interpolation period. Tracks the live
+    // tick cadence so interpolation stays correct as game speed (or tab-throttling) changes it,
+    // without the renderer needing to know the speed. Seeded to one nominal tick.
+    private snapInterval = TICK_MS;
 
     // ── Prediction: own-unit facing/marker overlay (uid → prediction) ────────────
     // Shared by reference with main.ts, which adds/removes entries; we just read it.
@@ -601,7 +605,7 @@ export class GameScene extends Phaser.Scene {
         // Interpolation factor: 0 just after a snapshot arrives → 1 a tick later.
         // Quantized into INTERP_SUBSTEPS sub-steps for a stepped, less-floaty feel
         // (1 = snap to the latest snapshot, no interpolation).
-        const raw        = Math.min(1, (performance.now() - this.snapAt) / TICK_MS);
+        const raw        = Math.min(1, (performance.now() - this.snapAt) / this.snapInterval);
         const t          = INTERP_SUBSTEPS <= 1 ? 1 : Math.round(raw * INTERP_SUBSTEPS) / INTERP_SUBSTEPS;
         const maxCatchup = MAX_CATCHUP_PX_PER_MS * delta;   // per-frame display catch-up cap (px)
         const currentSet = new Set(units.map(u => u.uid));
@@ -715,7 +719,14 @@ export class GameScene extends Phaser.Scene {
             for (const u of this.renderState.units) this.prevPos.set(u.uid, { x: u.x, y: u.y });
         }
         this.renderState = state;
-        this.snapAt = performance.now();
+        const now = performance.now();
+        // Track the real gap between snapshots (EMA-smoothed, sanity-clamped) so interpolation
+        // matches the current tick cadence — game speed changes it; a stalled tab inflates it.
+        if (this.snapAt > 0) {
+            const dt = now - this.snapAt;
+            if (dt > 0 && dt < 1000) this.snapInterval = this.snapInterval * 0.8 + dt * 0.2;
+        }
+        this.snapAt = now;
     }
 
     /** Share the live prediction map (main.ts mutates it; we read it each frame). */

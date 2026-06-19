@@ -19,7 +19,7 @@ import { unitTypeId, unitTypeName, unitFootprint } from "../game/unitTypes";
 import mapJson from "../assets/maps/ladder/Plains of snow BNE.json";
 import tilesetUrl from "../assets/tilesets/winter.png";
 import terrainData from "../assets/terrain.json";
-import { CmdType, type Command, type SpawnCmd } from "../net/protocol";
+import { CmdType, type Command, type SpawnCmd, type SpeedCmd } from "../net/protocol";
 import { openPeer, connectTo, waitForConnection } from "../net/peer";
 import { startPhaser, type GameScene, type UnitPrediction } from "../render/renderer";
 import { initGameConsole } from "../debug/console";
@@ -120,6 +120,25 @@ function emitCommand(cmd: Command): void {
         for (const uid of cmd.unitIds) predicted.delete(uid);
     }
 }
+
+// ── Game speed ───────────────────────────────────────────────────────────────────
+// Adjustable game speed: a SPEED command asks the referee to change the authoritative speed, which
+// it applies and broadcasts to both boxes (so they stay in step). `[` slows, `]` speeds up through
+// the steps below; the harness can also drive it via a `{ type: "speed", speed }` parent message.
+const SPEEDS = [0.5, 1, 2, 3];
+let speedIdx = 1;   // index into SPEEDS; 1× by default
+
+function requestSpeed(s: number): void {
+    if (!worker) return;
+    worker.postMessage({ kind: "command", cmd: { type: CmdType.SPEED, speed: s } satisfies SpeedCmd } satisfies MainToWorker);
+    console.info(`game speed → ${s}×`);
+}
+
+window.addEventListener("keydown", (e) => {
+    if (e.key !== "[" && e.key !== "]") return;
+    speedIdx = Math.max(0, Math.min(SPEEDS.length - 1, speedIdx + (e.key === "]" ? 1 : -1)));
+    requestSpeed(SPEEDS[speedIdx]);
+});
 
 /** Placement-ghost validity, computed locally from the latest snapshot + static
  *  passability.  Advisory only — the worker re-validates BUILD authoritatively. */
@@ -356,4 +375,6 @@ window.addEventListener("message", (e: MessageEvent) => {
         };
         worker.postMessage({ kind: "command", cmd } satisfies MainToWorker);
     }
+
+    if (d.type === "speed" && worker) requestSpeed(Number(d.speed) || 1);
 });

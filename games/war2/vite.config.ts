@@ -9,6 +9,14 @@ export default defineConfig({
         "jsx": "automatic",
         "jsxImportSource": "jsx-async-runtime",
     },
+    // Force a single Preact instance across chunks. The workspace packages (window/theme/vscode)
+    // each import Preact through their *own* pnpm symlink path, so without this Vite bundles a
+    // separate copy per chunk — and the lazily-imported `vscode` chunk's VtWindow ends up calling
+    // hooks against a different Preact than the one that rendered it ("Cannot read … '__H'" /
+    // null currentComponent). Deduping collapses them to one resolved module → one instance.
+    "resolve": {
+        "dedupe": ["preact", "preact/hooks", "preact/jsx-runtime", "preact/compat"],
+    },
     // `vscode` is a linked source package loaded via a *dynamic* import (lazy, post-isolation).
     // Vite auto-excludes statically-imported linked packages from pre-bundling but not dynamic
     // ones, so without this the optimizer tries to pre-bundle it and resolve its dep `window`

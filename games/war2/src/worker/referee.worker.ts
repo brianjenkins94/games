@@ -39,6 +39,29 @@ let mapW = 0, mapH = 0;
 let simPaused = false;
 let started   = false;
 
+// ── Game speed (authoritative) ──────────────────────────────────────────────────
+// A positive multiplier on the wall-clock tick cadence — NOT the logical timestep. Each tick
+// still advances the sim by the same fixed amount, so the tick sequence/results are identical at
+// any speed (determinism, client reconciliation, and world hashing are unaffected); only how fast
+// ticks fire in real time changes. Requested via CmdType.SPEED, clamped here, broadcast in every
+// snapshot so clients match. Pause is the separate `simPaused` gate (a stopped loop couldn't
+// process the resume command, so speed deliberately stays > 0).
+const MIN_SPEED = 0.25, MAX_SPEED = 4;
+let speed = 1;
+let tickTimer: ReturnType<typeof setTimeout> | undefined;
+
+function scheduleTick(): void {
+    if (tickTimer !== undefined) clearTimeout(tickTimer);
+    tickTimer = setTimeout(() => { tickTimer = undefined; tick(); scheduleTick(); }, TICK_MS / speed);
+}
+
+function setSpeed(s: number): void {
+    const next = Math.max(MIN_SPEED, Math.min(MAX_SPEED, s));
+    if (next === speed) return;
+    speed = next;
+    if (started) scheduleTick();   // re-arm at the new interval (scheduleTick clears the old timer)
+}
+
 // Perf probes (flushed to the host page ~4 Hz, off the render hot path).  The host is
 // in-process so it has no wire RTT/lead — only tick cost, entity count, and the bytes
 // it pushes to / receives from the remote guest are meaningful here.
@@ -132,6 +155,7 @@ function tick(): void {
         const buf = pending.get(c)!.splice(0);
         if (!buf.length) continue;
         const valid = buf.filter(cmd => {
+            if (cmd.type === CmdType.SPEED) { setSpeed(cmd.speed); return false; }   // control-plane, not simulated
             const ok = validateCommand(game.world, c.team, cmd);
             if (!ok) console.warn(`[referee] rejected illegal command from team ${c.team}`, cmd);
             return ok;
@@ -151,7 +175,7 @@ function tick(): void {
     for (const c of clients()) {
         const ping = lastPing.get(c) ?? 0;
         lastPing.delete(c);
-        c.sendSnapshot(game.world.tick, fogSnapshot(c.team), ping);
+        c.sendSnapshot(game.world.tick, fogSnapshot(c.team), ping, speed);
     }
 
     tickMs = performance.now() - t0;
@@ -189,7 +213,7 @@ function start(init: WorkerInit): void {
     started = true;
     post({ kind: "ready", passability: getPassability(), mapW, mapH });
 
-    setInterval(tick, TICK_MS);
+    scheduleTick();                          // self-rescheduling so game speed can change the cadence
     setInterval(emitMetrics, METRICS_MS);
 }
 
