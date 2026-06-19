@@ -28,4 +28,8 @@ cp -rf assets/docs/war2/. src/assets/
 
 rm -rf assets/
 
+cd src/assets
+
+find . -type f -not -path "*/.*" > tree.txt
+
 cd "$CWD"

@@ -6,6 +6,7 @@
     "build": "npx tsx ../../util/vite/build.ts"
   },
   "dependencies": {
+    "theme": "link:../theme",
     "window": "link:../window"
   },
   "exports": {

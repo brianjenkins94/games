@@ -233,8 +233,20 @@ export function VtWindow(props: VtWindowProps): VNode {
         title, body,
         top = 10, left = 10, width = 400, height = 300,
         closable = true, minimizable = true, maximizable = true, detachable = false, resizable = true,
-        minimized = false, onMinimizedChange,
+        onMinimizedChange,
     } = props;
+
+    // Minimized supports both controlled use (pass `minimized` + `onMinimizedChange`, e.g. the
+    // harness restoring a persisted layout) and uncontrolled use (omit them — the minimize button
+    // toggles internal state on its own, like `maximized` does).
+    const [minimizedInternal, setMinimizedInternal] = useState(false);
+    const minimizedControlled = props.minimized !== undefined;
+    const minimized = minimizedControlled ? props.minimized! : minimizedInternal;
+    const toggleMinimized = (): void => {
+        setMaximized(false);
+        if (minimizedControlled) onMinimizedChange?.(!minimized);
+        else setMinimizedInternal((m) => !m);
+    };
 
     const rootRef = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLDivElement>(null);
@@ -317,7 +329,7 @@ export function VtWindow(props: VtWindowProps): VNode {
                 <span class="vt-controls">
                     {detachable && <button class="vt-popout" title="Detach to popup" onClick={detach}><Icon node={ExternalLink} /></button>}
                     {maximizable && <button class="vt-maximize" title={maximized ? "Restore" : "Maximize"} onClick={() => setMaximized(m => !m)}><Icon node={maximized ? Minimize2 : Maximize2} /></button>}
-                    {minimizable && <button class="vt-minimize" title="Minimize" onClick={() => { setMaximized(false); onMinimizedChange?.(!minimized); }}><Icon node={Minus} /></button>}
+                    {minimizable && <button class="vt-minimize" title={minimized ? "Restore" : "Minimize"} onClick={toggleMinimized}><Icon node={Minus} /></button>}
                     {closable && <button class="vt-close" title="Close" onClick={() => setHidden(true)}><Icon node={X} /></button>}
                 </span>
             </div>

@@ -58,6 +58,15 @@ export interface WireOptions {
     boxes: BoxConfig[];
 }
 
+/** A booted box: its virtual port, role, and the VirtualFS that overrides the proxied game
+ *  files. Write into `vfs` (path as the box serves it, e.g. "/src/foo.ts") to live-edit what
+ *  the box runs — the GameProxyServer serves VFS entries instead of proxying to the outer server. */
+export interface BoxHandle {
+    port: number;
+    role: "host" | "peer";
+    vfs: VirtualFS;
+}
+
 interface Pending { win: Window; id: string; role: "host" | "peer"; }
 
 /**
@@ -66,7 +75,7 @@ interface Pending { win: Window; id: string; role: "host" | "peer"; }
  * mounted in `root` — the consuming game renders it as JSX, keeping this module free of any
  * JSX toolchain.
  */
-export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireOptions): Promise<void> {
+export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireOptions): Promise<{ boxes: BoxHandle[] }> {
     // Inline (non-windowed) boxes go in a #frames row, created on first use so the
     // default page stays just the floating windows (+ whatever the host mounts itself).
     let framesEl: HTMLElement | null = null;
@@ -156,7 +165,8 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
     }
 
     // ── Boot: a box + client preview per BoxConfig ────────────────────────────────
-    async function boot(): Promise<void> {
+    async function boot(): Promise<BoxHandle[]> {
+        const handles: BoxHandle[] = [];
         try {
             const bridge = getServerBridge();
             await bridge.initServiceWorker();
@@ -164,7 +174,9 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
 
             let windowOffset = 0;
             for (const box of boxes) {
-                bridge.registerServer(new GameProxyServer(new VirtualFS(), { port: box.port }), box.port);
+                const vfs = new VirtualFS();
+                bridge.registerServer(new GameProxyServer(vfs, { port: box.port }), box.port);
+                handles.push({ port: box.port, role: box.role, vfs });
 
                 const iframe = document.createElement("iframe");
                 // Load the client UNDER the box's virtual prefix so its requests route through
@@ -215,8 +227,9 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
         } catch (err) {
             log(`BOOT FAILED: ${(err as Error)?.stack ?? err}`, "err");
         }
+        return handles;
     }
 
     log("almostnode: starting boxes…");
-    void boot();
+    return { boxes: await boot() };
 }

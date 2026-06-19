@@ -1,0 +1,24 @@
+{
+  "name": "vscode",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npx tsx ../../util/vite/build.ts"
+  },
+  "dependencies": {
+    "preact": "^10.29.2",
+    "theme": "link:../theme",
+    "window": "link:../window",
+    "@brianjenkins94/monaco-vscode-api": "https://brianjenkins94.github.io/lib/components/monaco-vscode-api@latest.tgz"
+  },
+  "exports": {
+    ".": {
+      "types": "./vscode.tsx",
+      "default": "./vscode.tsx"
+    },
+    "./vite": {
+      "types": "./vite.ts",
+      "default": "./vite.ts"
+    }
+  }
+}

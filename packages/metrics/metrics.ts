@@ -14,7 +14,7 @@
  * and the sim tick budget guide-line.
  */
 
-import { palette } from "theme";
+import { globalCss, palette } from "theme";
 
 // billboard.js UMD global (billboard.pkgd.* bundles d3 + registers every chart type, so
 // `type: "line"` resolves as a string — the modular `line()` import is ESM-only).
@@ -197,28 +197,24 @@ export function mountMetrics(container: HTMLElement): () => void {
     return () => { clearInterval(timer); window.removeEventListener("message", onMessage); };
 }
 
-let stylesInjected = false;
-function injectStyles(): void {
-    if (stylesInjected) return;
-    stylesInjected = true;
-    const style = document.createElement("style");
-    // Dark theme to match the host page — billboard.css (CDN) is light by default, so we
-    // override its global `.bb-*` SVG classes with the shared palette.  Series line colours
-    // come from data.colors (ROLE_COLOR); these rules cover the chrome (axes/grid/legend).
-    style.textContent = `
-.metrics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
-.metrics-card { background: ${palette.headerBg}; border: 1px solid ${palette.line}; border-radius: 5px; padding: 6px 10px 2px; }
-.metrics-title { font: 600 11px/1.4 monospace; color: ${palette.title}; letter-spacing: 0.05em; margin-bottom: 2px; }
-.metrics-card .bb svg { font: 10px/1.2 monospace; }
-.metrics-card .bb text, .metrics-card .bb-axis text, .metrics-card .bb-legend-item text { fill: ${palette.text}; }
-.metrics-card .bb-legend-background { fill: ${palette.headerBg}; stroke: ${palette.line}; opacity: 0.9; }
-.metrics-card .bb-axis path.domain, .metrics-card .bb-axis line { stroke: ${palette.line}; }
-.metrics-card .bb-grid line { stroke: ${palette.line}; opacity: 0.55; }
-.metrics-card .bb-ygrid-line line, .metrics-card .bb-xgrid-line line { stroke: ${palette.accent2}; opacity: 0.8; stroke-dasharray: 4 3; }
-.metrics-card .bb-ygrid-line text, .metrics-card .bb-xgrid-line text { fill: ${palette.accent2}; }
-.metrics-card .bb-tooltip { background: ${palette.bg}; color: ${palette.text}; border: 1px solid ${palette.border}; box-shadow: none; opacity: 0.97; }
-.metrics-card .bb-tooltip th { background: ${palette.headerBg}; color: ${palette.title}; }
-.metrics-card .bb-tooltip td { background: ${palette.bg}; color: ${palette.text}; border-left: none; }
-`;
-    document.head.appendChild(style);
-}
+// Dark theme to match the host page — billboard.css (CDN) is light by default, so we override
+// its global `.bb-*` SVG classes with the shared palette.  Series line colours come from
+// data.colors (ROLE_COLOR); these rules cover the chrome (axes/grid/legend).  Stitches
+// `globalCss` (not a raw <style> string) — keeps the literal `.bb-*` selectors billboard needs,
+// and dedupes injection itself, so no manual guard.  Values stay `palette.*` (raw hex) since
+// `fill`/`stroke` aren't token-mapped and billboard reads plain colours.
+const injectStyles = globalCss({
+    ".metrics-grid": { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, marginTop: 10 },
+    ".metrics-card": { background: palette.headerBg, border: `1px solid ${palette.line}`, borderRadius: 5, padding: "6px 10px 2px" },
+    ".metrics-title": { font: "600 11px/1.4 monospace", color: palette.title, letterSpacing: "0.05em", marginBottom: 2 },
+    ".metrics-card .bb svg": { font: "10px/1.2 monospace" },
+    ".metrics-card .bb text, .metrics-card .bb-axis text, .metrics-card .bb-legend-item text": { fill: palette.text },
+    ".metrics-card .bb-legend-background": { fill: palette.headerBg, stroke: palette.line, opacity: 0.9 },
+    ".metrics-card .bb-axis path.domain, .metrics-card .bb-axis line": { stroke: palette.line },
+    ".metrics-card .bb-grid line": { stroke: palette.line, opacity: 0.55 },
+    ".metrics-card .bb-ygrid-line line, .metrics-card .bb-xgrid-line line": { stroke: palette.accent2, opacity: 0.8, strokeDasharray: "4 3" },
+    ".metrics-card .bb-ygrid-line text, .metrics-card .bb-xgrid-line text": { fill: palette.accent2 },
+    ".metrics-card .bb-tooltip": { background: palette.bg, color: palette.text, border: `1px solid ${palette.border}`, boxShadow: "none", opacity: 0.97 },
+    ".metrics-card .bb-tooltip th": { background: palette.headerBg, color: palette.title },
+    ".metrics-card .bb-tooltip td": { background: palette.bg, color: palette.text, borderLeft: "none" },
+});
