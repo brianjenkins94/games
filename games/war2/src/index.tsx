@@ -22,6 +22,16 @@ const app = document.getElementById("app")!;
 app.innerHTML = await jsxToString.call({}, <Harness />);
 const { boxes: boxHandles } = await wireHarness(app, { clientUrl: "client.html", boxes });
 
+// Cross-origin isolation for the *host* page. In dev a Vite middleware sets COOP/COEP directly on
+// the navigation; in a static deploy (GitHub Pages) it can't, so the page starts non-isolated. The
+// almostnode SW — patched at deploy time (see harnessPlugin) — re-serves same-origin navigations
+// with those headers once it controls the page, but only a fresh navigation picks them up. So if
+// we're controlled yet still not isolated, reload once (sessionStorage-guarded against a loop).
+if (!crossOriginIsolated && navigator.serviceWorker?.controller && !sessionStorage.getItem("coi-reload")) {
+    sessionStorage.setItem("coi-reload", "1");
+    location.reload();
+}
+
 // Realtime perf dashboard — each box's client shell forwards perf samples here via
 // postMessage; mountMetrics charts host vs guest (fps, sim tick, latency, wire).
 const metrics = document.createElement("div");
@@ -31,9 +41,9 @@ mountMetrics(metrics);
 // Mirror the same samples onto the debug WS so the MCP inspector can query perf (dev only).
 forwardMetricsToDebug();
 
-// Floating VS Code workbench — lazy-loaded only once the page is cross-origin isolated
-// (almostnode's service worker supplies COOP/COEP), since the workbench iframe needs
-// SharedArrayBuffer. On the first, non-isolated load the SW reloads us; we boot it next pass.
+// Floating VS Code workbench — lazy-loaded only once the page is cross-origin isolated, since the
+// workbench iframe needs SharedArrayBuffer. Isolation comes from COOP/COEP on the host navigation
+// (a Vite middleware in dev; the deploy-patched SW + the one-time reload above in prod).
 if (crossOriginIsolated) {
     const { createVscodeWindow } = await import("vscode");
 
