@@ -14,6 +14,7 @@ import { Workbench } from "./Workbench";
 import { createNodeModulesProvider } from "./node-modules-provider";
 import { createAssetsProvider } from "./assets-provider";
 import { configuration, keybindings } from "./workspace";
+import { SimDebugAdapter, type SimEvent } from "./sim-debug-adapter";
 
 interface Init { files: WorkbenchFile[]; openEditors: string[]; workspaceFolder?: string; moduleVersions?: Record<string, string>; assetsBase?: string; }
 
@@ -48,15 +49,59 @@ function maybeBoot(): void {
 			if (assetsBase != null) {
 				registerFileSystemOverlay(0, createAssetsProvider(workspaceFolder ?? "/workspace", assetsBase));
 			}
-			// Default extension so the vscode API has a context (lib no longer does this).
-			registerExtension(
-				{ name: "war2", publisher: "brianjenkins94", version: "1.0.0", engines: { vscode: "*" } },
+			// Default extension so the vscode API has a context (lib no longer does this). Also
+			// contributes the "war2-sim" debugger so the step-debugger adapter can attach.
+			const ext = registerExtension(
+				{
+					name: "war2", publisher: "brianjenkins94", version: "1.0.0", engines: { vscode: "*" },
+					// A `browser` entry point is mandatory for the extension to be flagged web-enabled;
+					// without it the extension is disabled and getApi() rejects. The file is a no-op.
+					browser: "extension.js",
+					contributes: { debuggers: [{ type: "war2-sim", label: "war2 sim", languages: [] }] },
+				},
 				ExtensionHostKind.LocalProcess
-			).setAsDefaultApi();
+			);
+			ext.registerFileUrl("./extension.js", "data:text/javascript;base64," + window.btoa("// nothing"));
+			ext.setAsDefaultApi();
+			ext.getApi().then(setupSimDebugger).catch((e) => console.error("[vscode] sim debugger setup failed", e));
+
+			// Tell the host the workbench is up (readiness gating — see war2 index.tsx "workbench" stage).
+			window.parent.postMessage({ source: "vscode", type: "online" }, "*");
 		})
 		.catch((error) => {
 			console.error("[vscode] workbench boot failed", error);
 		});
+}
+
+/**
+ * Wire the step-debugger: an inline DAP adapter whose toolbar drives the game sim. Control flows
+ * adapter → window.parent (→ host → game box); sim events flow back via "vscode-host" messages.
+ * `vscode` is the per-extension API from registerExtension().getApi(). The session is opt-in
+ * (start "war2 sim" from Run & Debug) — auto-attaching leaked the renderer against the live sim.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setupSimDebugger(vscode: any): void {
+	const emitter = new vscode.EventEmitter();
+	const adapter = new SimDebugAdapter(
+		(message) => emitter.fire(message),
+		(msg) => window.parent.postMessage({ source: "vscode", type: "debug-control", msg }, "*"),
+	);
+	const dap = { onDidSendMessage: emitter.event, handleMessage: (m: unknown) => adapter.handleMessage(m), dispose() {} };
+
+	vscode.debug.registerDebugConfigurationProvider("war2-sim", {
+		resolveDebugConfiguration: () => ({ name: "war2 sim", type: "war2-sim", request: "attach" }),
+	});
+	vscode.debug.registerDebugAdapterDescriptorFactory("war2-sim", {
+		createDebugAdapterDescriptor: () => new vscode.DebugAdapterInlineImplementation(dap),
+	});
+
+	window.addEventListener("message", (event: MessageEvent) => {
+		const d = event.data as { source?: string; type?: string; msg?: SimEvent } | null;
+		if (d?.source === "vscode-host" && d.type === "debug-event" && d.msg) adapter.onSimEvent(d.msg);
+	});
+
+	// NOTE: do NOT auto-attach. An always-on session against the live sim leaked the renderer
+	// (~45MB/s → OOM "Aw Snap"); the debugger is opt-in — start it from Run & Debug ("war2 sim").
 }
 
 window.addEventListener("message", (event) => {

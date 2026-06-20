@@ -84,6 +84,25 @@ export interface WorkerInit {
     mapH:        number;
 }
 
+// ── Step-debug state (worker → main, on request / when stopped) ──────────────────
+
+/** One entity, formatted for the debugger's Variables tree (a flat per-unit bag of components). */
+export interface SimDebugUnit {
+    uid: number; type: number; team: number;
+    x: number; y: number; dir: number; moving: number;
+    moveActive: number; mtx: number; mty: number;
+    fw: number; fh: number; buildLeft: number;
+}
+
+/** A snapshot of the authoritative sim for the debugger (tick + paused flag + every unit). The
+ *  DAP adapter maps this onto VS Code's Variables panel; cheap to build (reuses unit snapshots). */
+export interface SimDebugState {
+    tick:   number;
+    paused: boolean;
+    hash:   number;          // own-team world hash (desync / change detection)
+    units:  SimDebugUnit[];
+}
+
 // ── Messages: main → worker ──────────────────────────────────────────────────────
 
 export type MainToWorker =
@@ -95,7 +114,22 @@ export type MainToWorker =
     /** A locally-issued command to queue for the next tick. */
     | { kind: "command"; cmd: Command }
     | { kind: "pause" }
-    | { kind: "resume" };
+    | { kind: "resume" }
+    /** Step debugger: advance exactly one tick while paused, then re-pause. */
+    | { kind: "step" }
+    /** Step debugger: send a fresh SimDebugState (for the Variables panel). */
+    | { kind: "debug-state-request" }
+    /** Conditional breakpoints: JS expressions evaluated against the sim each tick; the sim halts
+     *  on the rising edge of any. Vocabulary: tick, units, hash, paused, count, team(t), unit(uid). */
+    | { kind: "set-breakpoints"; exprs: string[] }
+    /** Data breakpoints: dataIds (`sim.hash`, `unit.<uid>.<field>`) watched for change each tick. */
+    | { kind: "set-data-breakpoints"; ids: string[] }
+    /** Reverse debugging: enable/disable per-tick snapshot recording (on while a session is attached). */
+    | { kind: "set-reverse"; enabled: boolean }
+    /** Reverse debugging: restore the previous tick from the snapshot ring (one reverse step). */
+    | { kind: "step-back" }
+    /** Reverse debugging: rewind until a breakpoint expression holds, or to the earliest snapshot. */
+    | { kind: "reverse-continue" };
 
 // ── Messages: worker → main ──────────────────────────────────────────────────────
 
@@ -108,4 +142,9 @@ export type WorkerToMain =
     /** Relay fallback: a raw packet to send over the channel. */
     | { kind: "net-out"; data: ArrayBuffer }
     /** Debug inspector badge count (worker owns the debug WS; badge is DOM). */
-    | { kind: "inspector-count"; n: number };
+    | { kind: "inspector-count"; n: number }
+    /** Step debugger: the sim halted (manual pause, a completed step, or a breakpoint hit). `hit`
+     *  describes the matched breakpoint (the expression, or the changed dataId). */
+    | { kind: "stopped"; tick: number; reason: "pause" | "step" | "breakpoint"; hit?: string }
+    /** Step debugger: requested/owed sim state for the Variables panel. */
+    | { kind: "debug-state"; state: SimDebugState };

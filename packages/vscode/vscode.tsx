@@ -36,17 +36,31 @@ export interface VscodeWindowOptions {
 	assetsBase?: string;
 	/** Called in *this* document when a document is saved in the workbench. */
 	onSave?: (path: string, contents: string) => void;
+	/** Called with step-debugger control messages the workbench's DAP adapter emits (pause/step/…).
+	 *  The host wires these to a game box; events flow back via the returned `sendDebugEvent`. */
+	onDebugControl?: (msg: unknown) => void;
 	/** Where to mount the floating window. Default: document.body. */
 	mountInto?: HTMLElement;
 }
 
+/** Handle returned by createVscodeWindow for talking to the workbench after it's mounted. */
+export interface VscodeWindowHandle {
+	/** Push a step-debugger event (sim `stopped` / `debug-state`) into the workbench's adapter. */
+	sendDebugEvent(msg: unknown): void;
+	/** Resolves once the workbench has actually booted (monaco mounted), for readiness gating. */
+	whenReady: Promise<void>;
+}
+
 let booted = false;
 
-export function createVscodeWindow(options: VscodeWindowOptions = {}): void {
-	if (booted) return;
+export function createVscodeWindow(options: VscodeWindowOptions = {}): VscodeWindowHandle {
+	if (booted) return { sendDebugEvent() {}, whenReady: Promise.resolve() };
 	booted = true;
 
-	const { files = [], openEditors = [], workspaceFolder, moduleVersions, assetsBase, onSave, mountInto = document.body } = options;
+	let markReady: () => void;
+	const whenReady = new Promise<void>((resolve) => { markReady = resolve; });
+
+	const { files = [], openEditors = [], workspaceFolder, moduleVersions, assetsBase, onSave, onDebugControl, mountInto = document.body } = options;
 	const base = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
 
 	const iframe = document.createElement("iframe");
@@ -58,13 +72,17 @@ export function createVscodeWindow(options: VscodeWindowOptions = {}): void {
 	// Bridge to the iframe entry. Kept registered (not one-shot) so a detach/reload re-handshakes.
 	window.addEventListener("message", (event) => {
 		if (event.source !== iframe.contentWindow) return;
-		const data = event.data as { source?: string; type?: string; path?: string; contents?: string } | null;
+		const data = event.data as { source?: string; type?: string; path?: string; contents?: string; msg?: unknown } | null;
 		if (data?.source !== "vscode") return;
 
 		if (data.type === "ready") {
 			iframe.contentWindow!.postMessage({ source: "vscode-host", type: "init", files, openEditors, workspaceFolder, moduleVersions, assetsBase }, "*");
 		} else if (data.type === "save" && typeof data.path === "string" && typeof data.contents === "string") {
 			onSave?.(data.path, data.contents);
+		} else if (data.type === "debug-control") {
+			onDebugControl?.(data.msg);
+		} else if (data.type === "online") {
+			markReady();
 		}
 	});
 
@@ -75,4 +93,11 @@ export function createVscodeWindow(options: VscodeWindowOptions = {}): void {
 		<VtWindow title="VS Code" body={iframe} top={80} left={80} width={1100} height={720} detachable closable={false} />,
 		container,
 	);
+
+	return {
+		sendDebugEvent(msg: unknown): void {
+			iframe.contentWindow?.postMessage({ source: "vscode-host", type: "debug-event", msg }, "*");
+		},
+		whenReady,
+	};
 }

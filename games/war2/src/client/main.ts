@@ -193,6 +193,9 @@ function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
         case "metrics":         onMetrics(msg.sample); break;
         case "net-out":         relayChannel?.send(msg.data); break;   // relay mode
         case "inspector-count": updateInspectorBadge(msg.n); break;
+        // Step debugger: surface sim halts + state up to the host page (→ the VS Code adapter).
+        case "stopped":
+        case "debug-state":     window.parent.postMessage({ source: "war2", type: "sim-debug-event", role: selfRole, msg }, "*"); break;
     }
 }
 
@@ -377,4 +380,8 @@ window.addEventListener("message", (e: MessageEvent) => {
     }
 
     if (d.type === "speed" && worker) requestSpeed(Number(d.speed) || 1);
+
+    // Step debugger: control messages from the host page (relayed from the VS Code adapter) →
+    // this box's worker. The payload is a MainToWorker debug message (pause/resume/step/state).
+    if (d.type === "sim-debug-control" && worker) worker.postMessage(d.msg as MainToWorker);
 });

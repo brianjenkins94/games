@@ -65,6 +65,8 @@ export interface BoxHandle {
     port: number;
     role: "host" | "peer";
     vfs: VirtualFS;
+    /** Relay a message into the box's client (its window.addEventListener("message") pump). */
+    post(msg: unknown): void;
 }
 
 interface Pending { win: Window; id: string; role: "host" | "peer"; }
@@ -176,12 +178,14 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
             for (const box of boxes) {
                 const vfs = new VirtualFS();
                 bridge.registerServer(new GameProxyServer(vfs, { port: box.port }), box.port);
-                handles.push({ port: box.port, role: box.role, vfs });
 
                 const iframe = document.createElement("iframe");
                 // Load the client UNDER the box's virtual prefix so its requests route through
                 // this box (proxy/override), and so window.parent === this host (for pairing).
                 iframe.src = `__virtual__/${box.port}/${clientUrl}`;
+
+                // `post` lets the host relay messages into the box (e.g. step-debugger control).
+                handles.push({ port: box.port, role: box.role, vfs, post: (m) => iframe.contentWindow?.postMessage(m, "*") });
 
                 if (box.windowed) {
                     // Floating, draggable, minimizable, detachable VtWindow (Preact).  The
