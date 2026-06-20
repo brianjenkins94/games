@@ -26,6 +26,13 @@ let parts: WorkbenchParts | undefined;
 let init: Init | undefined;
 let booted = false;
 
+// The per-extension VS Code API, captured once the default extension resolves. The custom activity
+// bar drives the workbench through it (view-switch commands). `runCommand` is a stable wrapper that
+// reads the latest api, so the activity bar — rendered before boot — works on clicks made after boot.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let vscodeApi: any = null;
+const runCommand = (command: string): void => { void vscodeApi?.commands?.executeCommand(command); };
+
 function maybeBoot(): void {
 	if (booted || parts === undefined || init === undefined) return;
 	booted = true;
@@ -67,7 +74,14 @@ function maybeBoot(): void {
 			);
 			ext.registerFileUrl("./extension.js", "data:text/javascript;base64," + window.btoa("// nothing"));
 			ext.setAsDefaultApi();
-			ext.getApi().then(setupSimDebugger).catch((e) => console.error("[vscode] sim debugger setup failed", e));
+			ext.getApi().then((api) => {
+				vscodeApi = api;
+				setupSimDebugger(api);
+				// Always boot into the Explorer viewlet (otherwise it can come up on Run & Debug),
+				// matching the activity bar's default selection. Deferred so it runs AFTER the workbench
+				// restores its last-active viewlet (which would otherwise win).
+				setTimeout(() => runCommand("workbench.view.explorer"), 0);
+			}).catch((e) => console.error("[vscode] sim debugger setup failed", e));
 
 			// Tell the host the workbench is up (readiness gating — see war2 index.tsx "workbench" stage).
 			host.postMessage({ source: "vscode", type: "online" }, "*");
@@ -117,7 +131,7 @@ window.addEventListener("message", (event) => {
 	}
 });
 
-render(<Workbench onReady={(resolved) => { parts = resolved; maybeBoot(); }} />, document.body);
+render(<Workbench onReady={(resolved) => { parts = resolved; maybeBoot(); }} runCommand={runCommand} />, document.body);
 
 // Tell the host we're ready to receive the workspace.
 host.postMessage({ source: "vscode", type: "ready" }, "*");
