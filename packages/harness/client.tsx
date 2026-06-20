@@ -76,7 +76,7 @@ export interface BoxHandle {
  * mounted in `root` — the consuming game renders it as JSX, keeping this module free of any
  * JSX toolchain.
  */
-export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireOptions): Promise<{ boxes: BoxHandle[] }> {
+export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireOptions): Promise<{ boxes: BoxHandle[]; swapHost: () => void }> {
     // Inline (non-windowed) boxes go in a #frames row, created on first use so the
     // default page stays just the floating windows (+ whatever the host mounts itself).
     let framesEl: HTMLElement | null = null;
@@ -171,6 +171,47 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
         log(`pair → host dials guest (${peer.id})`, "ok");
     }
 
+    // ── Authority move (2-box dev convenience) ────────────────────────────────────
+    // Move the authoritative referee to a chosen box so you can safely background / pop-out the OTHER
+    // one (a peer just reconciles when it comes back; the host is the sim clock, so backgrounding it
+    // would stall everything). NOT host migration — that's the N≥3 "a player dropped" case (deferred,
+    // see games/war2/docs/box-reconnection.md). Here it's a manual swap of two boxes' roles.
+    //
+    // Implementation reuses everything reconnection already does: flip each box's role and reload it
+    // under the new `?role`, so it spawns the right worker (referee vs thin client) and re-announces.
+    // The box becoming host re-announces as host → the peer-ready handler above replays the latest
+    // heartbeat as `restore`, so the new referee resumes the exact sim instead of reseeding; the
+    // now-peer box reconciles against it. A ≤SNAPSHOT_MS blip, same character as a pop-out.
+    //
+    // Exposed as `swapHost()` on the return (war2 stashes it on `window` for console use) — a dev
+    // affordance, deliberately NOT a permanent button in the window UI.
+    interface BoxRuntime {
+        config: BoxConfig;
+        iframe: HTMLIFrameElement;
+        currentRole: "host" | "peer";   // mutable; diverges from config.role after a swap
+        setMinimized?: (m: boolean) => void;
+    }
+    const runtimes: BoxRuntime[] = [];
+
+    function makeHost(target: BoxRuntime): void {
+        if (target.currentRole === "host") return;   // already the authority
+        // Promote brings it forward — booting a referee while minimized (display:none) inits at 0×0.
+        target.setMinimized?.(false);
+        for (const rt of runtimes) {
+            rt.currentRole = rt === target ? "host" : "peer";
+            // Reload under the new role: spawns the matching worker and re-announces → restore + re-pair.
+            rt.iframe.src = `__virtual__/${rt.config.port}/${clientUrl}?role=${rt.currentRole}`;
+        }
+        log(`authority → ${target.config.label}`, "ok");
+    }
+
+    /** Move the authoritative referee to whichever box is currently the peer (the 2-box swap). */
+    function swapHost(): void {
+        const peer = runtimes.find((rt) => rt.currentRole === "peer");
+        if (peer) makeHost(peer);
+        else log("swapHost: no peer box to promote", "info");
+    }
+
     // ── Boot: a box + client preview per BoxConfig ────────────────────────────────
     async function boot(): Promise<BoxHandle[]> {
         const handles: BoxHandle[] = [];
@@ -189,6 +230,11 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
                 // box (proxy/override). `?role` lets the box know its role from the URL alone, so it's
                 // still pairable after being reloaded into a popped-out tab (its own top-level page).
                 iframe.src = `__virtual__/${box.port}/${clientUrl}?role=${box.role}`;
+
+                // Track this box's live role so the authority-move (makeHost) can swap it. config.role
+                // is the initial role only; currentRole diverges once authority is moved.
+                const rt: BoxRuntime = { config: box, iframe, currentRole: box.role };
+                runtimes.push(rt);
 
                 // `post` relays messages into the box (e.g. step-debugger control). Target the box's
                 // CURRENT window (tracked per role from peer-ready) so it follows a popped-out box;
@@ -216,10 +262,11 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
                             container,
                         );
                     };
+                    rt.setMinimized = (m) => { minimized = m; draw(); };
                     draw();
                     // Defer minimize until every box has booted (client-ready) — booting
                     // while minimized (display:none) would init the canvas at 0×0.
-                    if (box.startMinimized) minimizeWhenReady.push(() => { minimized = true; draw(); });
+                    if (box.startMinimized) minimizeWhenReady.push(() => rt.setMinimized!(true));
                     windowOffset += 40;
                 } else {
                     const wrap = document.createElement("div");
@@ -242,5 +289,5 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
     }
 
     log("almostnode: starting boxes…");
-    return { boxes: await boot() };
+    return { boxes: await boot(), swapHost };
 }

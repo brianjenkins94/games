@@ -14,6 +14,8 @@ import indexRaw from "./index.tsx?raw";
 const boxes: BoxConfig[] = [
     // Both boxes run in floating windows.  The host stays open; the peer starts
     // minimized once both have initialized — available for debugging, out of the way.
+    // Roles are the INITIAL assignment; `swapHost()` in the console moves the authoritative
+    // referee between boxes at runtime (so you can background/pop-out the non-host one).
     { port: 5273, role: "host", label: "BOX A · host", windowed: true },
     { port: 5274, role: "peer", label: "BOX B · peer", windowed: true, startMinimized: true },
 ];
@@ -84,7 +86,11 @@ const app = document.getElementById("app")!;
 
 await stage("shell", async () => { app.innerHTML = await jsxToString.call({}, <Harness />); });
 
-const boxHandles = (await stage("harness", () => wireHarness(app, { clientUrl: "client.html", boxes })))?.boxes ?? [];
+const harness = await stage("harness", () => wireHarness(app, { clientUrl: "client.html", boxes }));
+const boxHandles = harness?.boxes ?? [];
+// Dev affordance: move the authoritative referee to the other box from the console (so you can
+// safely background / pop-out the non-host one). Deliberately not surfaced in the window UI.
+if (harness) (globalThis as { swapHost?: () => void }).swapHost = harness.swapHost;
 
 // Confirm the boxes actually came online (paired + rendered), not just that wireHarness returned.
 await stage("boxes-ready", () => online(boxesReady, 15000, "boxes did not report ready"));
