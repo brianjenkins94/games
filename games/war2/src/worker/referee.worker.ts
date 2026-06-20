@@ -80,6 +80,7 @@ function setSpeed(s: number): void {
 // in-process so it has no wire RTT/lead — only tick cost, entity count, and the bytes
 // it pushes to / receives from the remote guest are meaningful here.
 const METRICS_MS = 250;
+const SNAPSHOT_MS = 2000;   // host-state heartbeat → host page → restore on a host-box reboot
 let tickMs   = 0;   // duration of the most recent sim step
 let bytesIn  = 0;   // from the guest channel, accumulated since the last flush
 let bytesOut = 0;   // to the guest channel, accumulated since the last flush
@@ -134,11 +135,21 @@ function emitMetrics(): void {
     post({ kind: "metrics", sample });
 }
 
+/** Heartbeat the authoritative state to the host page so it can restore the game into a host box that
+ *  reloads (popped out into its own tab, re-attached, or recycled). Up to SNAPSHOT_MS of rewind. */
+function emitSnapshot(): void {
+    if (started) post({ kind: "snapshot", snap: game.takeSnapshot() });
+}
+
 // ── Networking (guest channel: transferred, else relayed through host main) ──────
 
 let channel: RTCDataChannel | null = null;
 
 function attachGuestChannel(ch: RTCDataChannel): void {
+    // Reconnect (the guest box popped out + reloaded): drop the stale guest so we don't accumulate
+    // dead clients in `pending`/`lastPing`. The referee keeps running; the fresh guest resyncs from
+    // the next snapshots. See games/war2/docs/box-reconnection.md.
+    if (guestClient) { pending.delete(guestClient); lastPing.delete(guestClient); guestClient = null; }
     channel = ch;
     channel.binaryType = "arraybuffer";
     guestClient = new RemoteRefereeClient(oppTeam, (ab) => {
@@ -387,6 +398,7 @@ function start(init: WorkerInit): void {
 
     scheduleTick();                          // self-rescheduling so game speed can change the cadence
     setInterval(emitMetrics, METRICS_MS);
+    setInterval(emitSnapshot, SNAPSHOT_MS);
 }
 
 // ── Message pump ────────────────────────────────────────────────────────────────
@@ -395,6 +407,7 @@ self.onmessage = (ev: MessageEvent<MainToWorker>) => {
     const msg = ev.data;
     switch (msg.kind) {
         case "init":    start(msg.init); break;
+        case "restore": game.applySnapshot(msg.snap); console.info(`[referee] restored from snapshot at tick ${msg.snap.tick}`); break;
         case "channel": attachGuestChannel(msg.channel); break;
         case "net-in":  attachGuestRelay(); bytesIn += msg.data.byteLength; guestClient!.handleBytes(msg.data); break;
         case "command": hostClient.deliverCommands([msg.cmd], 0); break;

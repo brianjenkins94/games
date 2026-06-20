@@ -18,6 +18,10 @@ import { SimDebugAdapter, type SimEvent } from "./sim-debug-adapter";
 
 interface Init { files: WorkbenchFile[]; openEditors: string[]; workspaceFolder?: string; moduleVersions?: Record<string, string>; assetsBase?: string; }
 
+// The host page we report to: our parent when nested in its iframe (in-page window), or our opener
+// when we've been popped out into our own standalone tab/window (where our parent is the tab itself).
+const host = window.opener ?? window.parent;
+
 let parts: WorkbenchParts | undefined;
 let init: Init | undefined;
 let booted = false;
@@ -35,7 +39,7 @@ function maybeBoot(): void {
 		configuration,
 		keybindings,
 		onSave: (path, contents) => {
-			window.parent.postMessage({ source: "vscode", type: "save", path, contents }, "*");
+			host.postMessage({ source: "vscode", type: "save", path, contents }, "*");
 		}
 	})
 		.then(() => {
@@ -66,7 +70,7 @@ function maybeBoot(): void {
 			ext.getApi().then(setupSimDebugger).catch((e) => console.error("[vscode] sim debugger setup failed", e));
 
 			// Tell the host the workbench is up (readiness gating — see war2 index.tsx "workbench" stage).
-			window.parent.postMessage({ source: "vscode", type: "online" }, "*");
+			host.postMessage({ source: "vscode", type: "online" }, "*");
 		})
 		.catch((error) => {
 			console.error("[vscode] workbench boot failed", error);
@@ -75,7 +79,7 @@ function maybeBoot(): void {
 
 /**
  * Wire the step-debugger: an inline DAP adapter whose toolbar drives the game sim. Control flows
- * adapter → window.parent (→ host → game box); sim events flow back via "vscode-host" messages.
+ * adapter → host (→ host page → game box); sim events flow back via "vscode-host" messages.
  * `vscode` is the per-extension API from registerExtension().getApi(). The session is opt-in
  * (start "war2 sim" from Run & Debug) — auto-attaching leaked the renderer against the live sim.
  */
@@ -84,7 +88,7 @@ function setupSimDebugger(vscode: any): void {
 	const emitter = new vscode.EventEmitter();
 	const adapter = new SimDebugAdapter(
 		(message) => emitter.fire(message),
-		(msg) => window.parent.postMessage({ source: "vscode", type: "debug-control", msg }, "*"),
+		(msg) => host.postMessage({ source: "vscode", type: "debug-control", msg }, "*"),
 	);
 	const dap = { onDidSendMessage: emitter.event, handleMessage: (m: unknown) => adapter.handleMessage(m), dispose() {} };
 
@@ -105,7 +109,7 @@ function setupSimDebugger(vscode: any): void {
 }
 
 window.addEventListener("message", (event) => {
-	if (event.source !== window.parent) return;
+	if (event.source !== host) return;
 	const data = event.data as { source?: string; type?: string } & Partial<Init> | null;
 	if (data?.source === "vscode-host" && data.type === "init") {
 		init = { files: data.files ?? [], openEditors: data.openEditors ?? [], workspaceFolder: data.workspaceFolder, moduleVersions: data.moduleVersions, assetsBase: data.assetsBase };
@@ -116,4 +120,4 @@ window.addEventListener("message", (event) => {
 render(<Workbench onReady={(resolved) => { parts = resolved; maybeBoot(); }} />, document.body);
 
 // Tell the host we're ready to receive the workspace.
-window.parent.postMessage({ source: "vscode", type: "ready" }, "*");
+host.postMessage({ source: "vscode", type: "ready" }, "*");

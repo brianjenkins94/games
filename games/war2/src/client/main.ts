@@ -20,12 +20,13 @@ import mapJson from "../assets/maps/ladder/Plains of snow BNE.json";
 import tilesetUrl from "../assets/tilesets/winter.png";
 import terrainData from "../assets/terrain.json";
 import { CmdType, type Command, type SpawnCmd, type SpeedCmd } from "../net/protocol";
-import { openPeer, connectTo, waitForConnection } from "../net/peer";
+import { openPeer, connectTo } from "../net/peer";
+import type { DataConnection } from "peerjs";
 import { startPhaser, type GameScene, type UnitPrediction } from "../render/renderer";
 import { initGameConsole } from "../debug/console";
 import type { MainToWorker, WorkerToMain, RenderState, RenderUnit, MetricsSample } from "../worker/ipc";
-import type { MapInfo } from "../game/world";
-import type { PeerReadyMsg, InitMsg, ClientReadyMsg } from "harness/client";
+import type { MapInfo, WorldSnapshot } from "../game/world";
+import type { PeerReadyMsg, ConnectMsg, ClientReadyMsg } from "harness/client";
 
 // In-game console (press ` / ~). Set up first so it captures everything below.
 initGameConsole();
@@ -62,10 +63,15 @@ const p0x = mapProp("p0_startX", 32), p0y = mapProp("p0_startY", 32);
 const p1x = mapProp("p1_startX", 96), p1y = mapProp("p1_startY", 96);
 const SPAWN_COUNT = 4;
 
+// The host page we report to (pairing, metrics, debug relay): our parent when nested in its iframe,
+// or our opener once popped out into our own standalone tab/window (where our parent is the tab).
+const host = window.opener ?? window.parent;
+
 // ── Runtime state ─────────────────────────────────────────────────────────────
 
 let myTeam  = 0;
 let selfRole: "host" | "peer" = "host";   // labels this box's metrics on the host page
+let pendingRestore: WorldSnapshot | null = null;   // host-box restore snapshot (applied after boot)
 let worker: Worker | null = null;
 let scene:  GameScene | null = null;
 let cardController: CommandCardController | null = null;
@@ -193,9 +199,11 @@ function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
         case "metrics":         onMetrics(msg.sample); break;
         case "net-out":         relayChannel?.send(msg.data); break;   // relay mode
         case "inspector-count": updateInspectorBadge(msg.n); break;
+        // Host-state heartbeat → host page, which restores it into a reloaded host box (popout etc.).
+        case "snapshot":        host.postMessage({ type: "host-snapshot", snap: msg.snap }, "*"); break;
         // Step debugger: surface sim halts + state up to the host page (→ the VS Code adapter).
         case "stopped":
-        case "debug-state":     window.parent.postMessage({ source: "war2", type: "sim-debug-event", role: selfRole, msg }, "*"); break;
+        case "debug-state":     host.postMessage({ source: "war2", type: "sim-debug-event", role: selfRole, msg }, "*"); break;
     }
 }
 
@@ -210,7 +218,7 @@ function onMetrics(sample: MetricsSample): void {
     // elsewhere, so the heap chart simply has no data on Firefox/Safari.
     const mem = (performance as { memory?: { usedJSHeapSize: number } }).memory;
     if (mem) fields.heap = Math.round(mem.usedJSHeapSize / 1048576 * 10) / 10;   // MB
-    window.parent.postMessage({ type: "metrics", role: selfRole, t: Date.now(), fields }, "*");
+    host.postMessage({ type: "metrics", role: selfRole, t: Date.now(), fields }, "*");
 }
 
 function onRender(state: RenderState): void {
@@ -270,20 +278,49 @@ function setupNet(dc: RTCDataChannel): void {
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
-console.info("opening peer...");
+// Identity travels in the box URL, so a box reloaded into its own popped-out tab is still pairable.
+const role = (new URLSearchParams(location.search).get("role") as "host" | "peer") ?? "host";
+
+console.info(`opening peer...  role=${role}`);
 const { peer, selfId } = await openPeer();
 console.info(`peer open  id=${selfId}`);
-window.parent.postMessage({ type: "peer-ready", selfId } satisfies PeerReadyMsg, "*");
-console.info("signalled parent, waiting for init...");
 
-async function start(role: "host" | "peer", targetId: string): Promise<void> {
+// Connection model: the host dials, the guest listens. The guest's listener is persistent (accepts
+// the first connection AND every reconnect) and registered BEFORE we announce, so a dial can't beat
+// it. A reconnect (the other box popped out + reloaded) just swaps the channel — see onConnection.
+if (role === "peer") peer.on("connection", (conn) => conn.once("open", () => onConnection(conn)));
+
+host.postMessage({ type: "peer-ready", role, selfId } satisfies PeerReadyMsg, "*");
+console.info("announced peer-ready");
+
+let started = false;
+
+/** A data connection opened — initial pairing, or a reconnect after the other box popped out and
+ *  reloaded. Boot the sim+render exactly once; hand the (new) channel to the worker every time, which
+ *  re-attaches it. So a reconnect swaps the channel under a still-running sim — no restart. */
+function onConnection(conn: DataConnection): void {
+    console.info(`connection ${started ? "re-established (channel swap)" : "open"}  peer=${conn.peer}`);
+    if (!started) { started = true; void boot(); }   // boot() creates the worker synchronously, before…
+    setupNet(conn.dataChannel);                       // …setupNet transfers the channel to it
+}
+
+/** Host: (re)dial the guest on every `connect` from the harness. The dial can race a freshly-reloaded
+ *  guest's listener, so retry a few times. */
+async function dialGuest(targetId: string): Promise<void> {
+    for (let attempt = 1; attempt <= 4; attempt++) {
+        try { onConnection(await connectTo(peer, targetId)); return; }
+        catch (err) { console.warn(`dial attempt ${attempt} failed, retrying…`, err); await new Promise((r) => setTimeout(r, 400)); }
+    }
+    console.error(`dial to ${targetId} gave up`);
+}
+
+/** Spawn the sim worker + start Phaser/input. Networking is handled by onConnection. */
+async function boot(): Promise<void> {
     myTeam = role === "host" ? 0 : 1;
     selfRole = role;
     const isHost = role === "host";
     const sx = myTeam === 0 ? p0x : p1x;
     const sy = myTeam === 0 ? p0y : p1y;
-
-    console.info(`init received  role=${role}  target=${targetId}`);
 
     // Host spawns the authoritative referee worker (simulates both teams); the guest
     // spawns a thin client worker (relays over the channel — no local sim).
@@ -306,11 +343,12 @@ async function start(role: "host" | "peer", targetId: string): Promise<void> {
         init: { role, myTeam, seed: SEED, mapInfo, spawns, mapW: mapInfo.mapW, mapH: mapInfo.mapH },
     } satisfies MainToWorker);
 
-    // Establish the peer connection, then hand its channel to the worker.
-    console.info(role === "host" ? `connecting to ${targetId}...` : "waiting for host connection...");
-    const conn = role === "host" ? await connectTo(peer, targetId) : await waitForConnection(peer);
-    console.info(`connection open  peer=${conn.peer}`);
-    setupNet(conn.dataChannel);
+    // Host-box restore (popped out / re-attached): replace the freshly-seeded world with the snapshot
+    // the host page kept from before the reload, so the game resumes instead of starting over.
+    if (isHost && pendingRestore) {
+        worker.postMessage({ kind: "restore", snap: pendingRestore } satisfies MainToWorker);
+        pendingRestore = null;
+    }
 
     // ── Rendering + input ─────────────────────────────────────────────────────
     console.info("starting phaser...");
@@ -352,7 +390,7 @@ async function start(role: "host" | "peer", targetId: string): Promise<void> {
     console.info(`${role} client ready`);
     // Tell the host the renderer is up (so a windowed box can now minimize safely —
     // booting while minimized would init the canvas at 0×0).
-    window.parent.postMessage({ type: "client-ready" } satisfies ClientReadyMsg, "*");
+    host.postMessage({ type: "client-ready", role } satisfies ClientReadyMsg, "*");
 }
 
 // ── Parent messages ───────────────────────────────────────────────────────────
@@ -361,9 +399,15 @@ window.addEventListener("message", (e: MessageEvent) => {
     const d = e.data;
     if (!d) return;
 
-    if (d.type === "init") {
-        const init = d as InitMsg;
-        start(init.role, init.targetId);
+    // Host only: (re)dial the guest. Sent on first pairing and again on every reconnect.
+    if (d.type === "connect" && role === "host") {
+        void dialGuest((d as ConnectMsg).targetId);
+    }
+
+    // Host only: a snapshot to resume from when this (reloaded) host box boots — sent before connect.
+    if (d.type === "restore" && role === "host") {
+        pendingRestore = d.snap as WorldSnapshot;
+        console.info(`[box] host restore received — snapshot tick=${pendingRestore.tick}`);
     }
 
     if (d.type === "spawn" && worker) {

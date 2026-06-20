@@ -69,14 +69,20 @@ export function createVscodeWindow(options: VscodeWindowOptions = {}): VscodeWin
 	iframe.src = base + "__vscode__/host.html";
 	iframe.className = iframeStyle();
 
-	// Bridge to the iframe entry. Kept registered (not one-shot) so a detach/reload re-handshakes.
+	// The workbench's window — the in-page iframe, or (once popped out) the standalone tab. We don't
+	// hardcode `iframe.contentWindow`: instead we track whoever is currently handshaking via
+	// `event.source`, so the same bridge serves both topologies. The popped-out page reaches us via
+	// `window.opener` (see workbench-entry's `host = opener ?? parent`).
+	let contentWindow: Window | null = null;
+
+	// Bridge to the workbench entry. Kept registered (not one-shot) so a detach/reload re-handshakes.
 	window.addEventListener("message", (event) => {
-		if (event.source !== iframe.contentWindow) return;
 		const data = event.data as { source?: string; type?: string; path?: string; contents?: string; msg?: unknown } | null;
 		if (data?.source !== "vscode") return;
+		contentWindow = event.source as Window;   // reply target: in-page iframe or popped-out tab
 
 		if (data.type === "ready") {
-			iframe.contentWindow!.postMessage({ source: "vscode-host", type: "init", files, openEditors, workspaceFolder, moduleVersions, assetsBase }, "*");
+			contentWindow.postMessage({ source: "vscode-host", type: "init", files, openEditors, workspaceFolder, moduleVersions, assetsBase }, "*");
 		} else if (data.type === "save" && typeof data.path === "string" && typeof data.contents === "string") {
 			onSave?.(data.path, data.contents);
 		} else if (data.type === "debug-control") {
@@ -96,7 +102,7 @@ export function createVscodeWindow(options: VscodeWindowOptions = {}): VscodeWin
 
 	return {
 		sendDebugEvent(msg: unknown): void {
-			iframe.contentWindow?.postMessage({ source: "vscode-host", type: "debug-event", msg }, "*");
+			contentWindow?.postMessage({ source: "vscode-host", type: "debug-event", msg }, "*");
 		},
 		whenReady,
 	};

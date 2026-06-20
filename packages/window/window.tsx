@@ -15,9 +15,10 @@
  *     it's outside reconciliation and never recreated — re-creating an iframe reloads
  *     it (and drops its P2P connection).  `minimized` toggles a CSS class, it does not
  *     unmount the body.
- *   • Detach moves the whole Preact mount container into the popup (preserving the
- *     container node, so re-renders keep working).  Re-parenting the iframe across
- *     documents still reloads it — fine for a fresh debug view, not for live state.
+ *   • Detach opens the body iframe's OWN url as a standalone top-level tab/window (no chrome, no
+ *     nested iframe) and tears down the in-page copy, so there's one live instance. The standalone
+ *     page carries its own COOP/COEP (cross-origin isolated) and talks to the host over
+ *     `window.opener`; closing it re-appends the iframe for a fresh in-page instance.
  */
 import { useRef, useState, useLayoutEffect, useEffect } from "preact/hooks";
 import type { VNode } from "preact";
@@ -254,7 +255,6 @@ export function VtWindow(props: VtWindowProps): VNode {
     const grabRef = useRef<HTMLDivElement>(null);
     const dragMoveRef = useRef<Drag | null>(null);
     const popupRef = useRef<Window | null>(null);
-    const restoreParentRef = useRef<HTMLElement | null>(null);
     const idRef = useRef(`vt-${Math.random().toString(36).slice(2)}`);
 
     const [maximized, setMaximized] = useState(false);
@@ -294,28 +294,33 @@ export function VtWindow(props: VtWindowProps): VNode {
         if (rootRef.current && !minimized) constrain(rootRef.current);
     }, [minimized]);
 
-    // Detach the window into a real popup by moving the Preact mount container
-    // (keeps the container node, so re-renders keep working in the popup).
+    // Detach by opening the body's OWN url as a standalone top-level document, then tearing down the
+    // in-page instance so there's exactly one live copy. The standalone page carries its own
+    // COOP/COEP (→ cross-origin isolated, SharedArrayBuffer works) and renders without VtWindow chrome
+    // or an extra iframe nesting; it reaches this host page over `window.opener`. On localhost we open
+    // a TAB (omit the features arg) — trivial to inspect/automate; in prod a popup window sized to
+    // match is the natural multi-monitor target. Closing it re-attaches (re-appending reloads a fresh
+    // in-page instance).
     const detach = (): void => {
+        const url = (body as HTMLIFrameElement).src;
+        if (!url) return;
         const el = rootRef.current!;
-        const container = el.parentElement as HTMLElement | null;
-        if (!container) return;
+        const onLocalhost = location.hostname === "localhost" || location.hostname === "127.0.0.1";
         const features = `width=${el.offsetWidth},height=${el.offsetHeight},` +
             `top=${el.offsetTop + (window.outerHeight - window.innerHeight) / 2 + window.screenY},` +
             `left=${el.offsetLeft + (window.outerWidth - window.innerWidth) / 2 + window.screenX}`;
-        const popup = window.open("", idRef.current, features);
+        const popup = onLocalhost ? window.open(url, idRef.current) : window.open(url, idRef.current, features);
         if (!popup) return;   // blocked
         popupRef.current = popup;
-        restoreParentRef.current = container.parentElement;
-        popup.document.body.appendChild(container);
-        popup.document.title = title;
-        document.querySelectorAll("style,link").forEach(n => popup.document.head.appendChild(n.cloneNode(true)));
+        body.remove();          // tear down the in-page copy — the standalone page is the live one now
         setWindowed(true);
-        popup.addEventListener("beforeunload", () => {
-            restoreParentRef.current?.appendChild(container);
+        const poll = setInterval(() => {
+            if (!popup.closed) return;
+            clearInterval(poll);
+            bodyRef.current?.appendChild(body);   // re-attach: reloads a fresh in-page instance
             setWindowed(false);
             popupRef.current = null;
-        });
+        }, 500);
     };
 
     const cls = String(vtWindow({
@@ -327,13 +332,14 @@ export function VtWindow(props: VtWindowProps): VNode {
             <div ref={headerRef} class="vt-header">
                 <span class="vt-title" title={title}>{title}</span>
                 <span class="vt-controls">
-                    {detachable && <button class="vt-popout" title="Detach to popup" onClick={detach}><Icon node={ExternalLink} /></button>}
+                    {detachable && <button class="vt-popout" title={windowed ? "Focus the popped-out window" : "Pop out to its own window"} onClick={windowed ? () => popupRef.current?.focus() : detach}><Icon node={ExternalLink} /></button>}
                     {maximizable && <button class="vt-maximize" title={maximized ? "Restore" : "Maximize"} onClick={() => setMaximized(m => !m)}><Icon node={maximized ? Minimize2 : Maximize2} /></button>}
                     {minimizable && <button class="vt-minimize" title={minimized ? "Restore" : "Minimize"} onClick={toggleMinimized}><Icon node={Minus} /></button>}
                     {closable && <button class="vt-close" title="Close" onClick={() => setHidden(true)}><Icon node={X} /></button>}
                 </span>
             </div>
             <div ref={bodyRef} class="vt-body" />
+            <div class="vt-detached">Popped out to its own window.<br />Close that window to bring it back here.</div>
             <div class="vt-footer">{resizable && <div ref={grabRef} class="vt-grab" />}</div>
         </div>
     );
@@ -392,6 +398,8 @@ const vtWindow = css({
     "& .vt-ico": { display: "inline-flex" },
     "& .vt-body": { position: "relative", flexGrow: 1, display: "flex", background: "#000" },
     "& .vt-body > iframe": { flex: "1 1 auto", width: "100%", height: "100%", border: 0 },
+    // Shown only while detached (windowed variant) — a compact in-page placeholder for the popped-out content.
+    "& .vt-detached": { display: "none", flexDirection: "column", gap: 6, padding: "10px 12px", fontSize: 11, lineHeight: 1.5, color: "$text", opacity: 0.8 },
     "& .vt-footer": { position: "relative", height: 0 },
     "& .vt-grab": { cursor: "nwse-resize", position: "absolute", bottom: 0, right: 0, width: 16, height: 16 },
     "& .vt-grab::after": {
@@ -416,12 +424,14 @@ const vtWindow = css({
     variants: {
         mode: {
             virtual: { position: "fixed", zIndex: 0 },
+            // Detached: the in-page window shrinks to a compact placeholder card (the real content
+            // now lives in its own tab/window); the empty body is hidden, the placeholder shown.
             windowed: {
-                position: "static",
-                width: "100% !important",
-                height: "100% !important",
-                border: "none",
-                "& .vt-header": { display: "none" },
+                position: "fixed",
+                height: "auto !important",
+                width: "260px !important",
+                "& .vt-body, & .vt-footer": { display: "none" },
+                "& .vt-detached": { display: "flex" },
             },
         },
         focused: {

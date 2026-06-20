@@ -29,14 +29,15 @@ import { VtWindow } from "window";
 export { Harness } from "./Harness";
 
 // ── Host ⇄ box pairing contract (the game client is the other half) ───────────────
-/** A box's game client posts this to the host once its peer id is known. */
-export interface PeerReadyMsg { type: "peer-ready"; selfId: string; }
-/** The host posts this back to pair the two boxes once both are ready. */
-export interface InitMsg { type: "init"; role: "host" | "peer"; targetId: string; }
-/** A box's game client posts this to the host once its renderer is up — the host
- *  uses it to minimize a windowed box only AFTER it has initialized at full size
- *  (minimizing first hides the iframe, so the renderer would boot at 0×0). */
-export interface ClientReadyMsg { type: "client-ready"; }
+// Connection model: the host box dials, the guest box listens. Roles travel in the box URL, so a box
+// reloaded into a popped-out tab is still pairable. See games/war2/docs/box-reconnection.md.
+/** A box posts this once its peer id is known (on first boot AND after a reload/reconnect). */
+export interface PeerReadyMsg { type: "peer-ready"; role: "host" | "peer"; selfId: string; }
+/** Host-only: (re)dial the guest at this id. Re-sent on every (re)announce → graceful reconnect. */
+export interface ConnectMsg { type: "connect"; targetId: string; }
+/** A box posts this once its renderer is up — the host uses it to minimize a windowed box only AFTER
+ *  it has initialized at full size (minimizing first hides the iframe, so it would boot at 0×0). */
+export interface ClientReadyMsg { type: "client-ready"; role: "host" | "peer"; }
 
 /** One box: a virtual port (distinct from the real outer dev port), a role, a label. */
 export interface BoxConfig {
@@ -68,8 +69,6 @@ export interface BoxHandle {
     /** Relay a message into the box's client (its window.addEventListener("message") pump). */
     post(msg: unknown): void;
 }
-
-interface Pending { win: Window; id: string; role: "host" | "peer"; }
 
 /**
  * Wire the harness runtime onto an already-rendered shell: register a proxy server per
@@ -128,42 +127,48 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
         }
     }
 
-    // ── Box pairing (peer-ready → init) ───────────────────────────────────────────
-    const ready: Pending[] = [];
-    const winRole = new Map<Window, "host" | "peer">();
-    // Callbacks that minimize a startMinimized window — run once every box's
-    // renderer is up (see client-ready), so all boxes initialize at full size first.
+    // ── Box pairing: host dials, guest listens ────────────────────────────────────
+    // Role-keyed by the role each box announces (it reads it from its own URL), so a box reloaded
+    // into a popped-out tab is still pairable. The one rule: whenever both boxes are present, tell the
+    // host to (re)dial the current guest. Re-firing on any re-announce IS graceful reconnection.
+    const boxesByRole = new Map<"host" | "peer", { win: Window; id: string }>();
+    // Callbacks that minimize a startMinimized window — run once every box's renderer is up.
     const minimizeWhenReady: Array<() => void> = [];
-    const clientReady = new Set<Window>();
+    const clientReady = new Set<"host" | "peer">();
+    // Latest authoritative-state heartbeat from the host box (opaque to the harness). Sent back as a
+    // `restore` when a host box (re)announces, so a popped-out / re-attached / recycled host resumes
+    // the game instead of reseeding. See games/war2/docs/box-reconnection.md (Phase B).
+    let hostSnapshot: unknown;
 
     window.addEventListener("message", (e: MessageEvent) => {
-        const d = e.data as { type?: string; selfId?: string } | null;
+        const d = e.data as { type?: string; role?: "host" | "peer"; selfId?: string; snap?: unknown } | null;
         if (!d || typeof d !== "object") return;
 
-        if (d.type === "peer-ready") {
-            const role = winRole.get(e.source as Window);
-            if (!role) return;
-            ready.push({ win: e.source as Window, id: d.selfId as string, role });
-            log(`${role} peer-ready id=${d.selfId}`, "ok");
-            if (ready.length === 2) pair();
-        } else if (d.type === "client-ready") {
-            clientReady.add(e.source as Window);
-            // Wait until EVERY box's renderer is up before collapsing the
-            // start-minimized ones, so all boxes initialize under the same full-size
-            // conditions (no boot-time asymmetry from one being hidden early).
+        if (d.type === "peer-ready" && d.role && d.selfId) {
+            boxesByRole.set(d.role, { win: e.source as Window, id: d.selfId });
+            log(`${d.role} peer-ready id=${d.selfId}`, "ok");
+            // Hand a (re)booting host its last known state before we pair it, so it resumes the game.
+            if (d.role === "host" && hostSnapshot !== undefined) {
+                (e.source as Window).postMessage({ type: "restore", snap: hostSnapshot }, "*");
+            }
+            pairIfReady();
+        } else if (d.type === "host-snapshot") {
+            hostSnapshot = d.snap;   // heartbeat — keep the freshest authoritative state
+        } else if (d.type === "client-ready" && d.role) {
+            clientReady.add(d.role);
+            // Wait until EVERY box's renderer is up before collapsing the start-minimized ones.
             if (clientReady.size >= boxes.length) {
                 for (const minimize of minimizeWhenReady) minimize();
             }
         }
     });
 
-    function pair(): void {
-        const host = ready.find((r) => r.role === "host")!;
-        const peer = ready.find((r) => r.role === "peer")!;
-        // host connects to peer's id; peer waits for host's id.
-        host.win.postMessage({ type: "init", role: "host", targetId: peer.id } satisfies InitMsg, "*");
-        peer.win.postMessage({ type: "init", role: "peer", targetId: host.id } satisfies InitMsg, "*");
-        log("paired → init sent to both boxes", "ok");
+    function pairIfReady(): void {
+        const host = boxesByRole.get("host"), peer = boxesByRole.get("peer");
+        if (!host || !peer) return;
+        // Host dials the current guest. Re-sent on any (re)announce → reconnect after a box reloads.
+        host.win.postMessage({ type: "connect", targetId: peer.id } satisfies ConnectMsg, "*");
+        log(`pair → host dials guest (${peer.id})`, "ok");
     }
 
     // ── Boot: a box + client preview per BoxConfig ────────────────────────────────
@@ -180,12 +185,15 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
                 bridge.registerServer(new GameProxyServer(vfs, { port: box.port }), box.port);
 
                 const iframe = document.createElement("iframe");
-                // Load the client UNDER the box's virtual prefix so its requests route through
-                // this box (proxy/override), and so window.parent === this host (for pairing).
-                iframe.src = `__virtual__/${box.port}/${clientUrl}`;
+                // Load the client UNDER the box's virtual prefix so its requests route through this
+                // box (proxy/override). `?role` lets the box know its role from the URL alone, so it's
+                // still pairable after being reloaded into a popped-out tab (its own top-level page).
+                iframe.src = `__virtual__/${box.port}/${clientUrl}?role=${box.role}`;
 
-                // `post` lets the host relay messages into the box (e.g. step-debugger control).
-                handles.push({ port: box.port, role: box.role, vfs, post: (m) => iframe.contentWindow?.postMessage(m, "*") });
+                // `post` relays messages into the box (e.g. step-debugger control). Target the box's
+                // CURRENT window (tracked per role from peer-ready) so it follows a popped-out box;
+                // fall back to the in-page iframe before the first announce.
+                handles.push({ port: box.port, role: box.role, vfs, post: (m) => (boxesByRole.get(box.role)?.win ?? iframe.contentWindow)?.postMessage(m, "*") });
 
                 if (box.windowed) {
                     // Floating, draggable, minimizable, detachable VtWindow (Preact).  The
@@ -223,9 +231,8 @@ export async function wireHarness(root: HTMLElement, { clientUrl, boxes }: WireO
                     ensureFrames().appendChild(wrap);
                 }
 
-                iframe.addEventListener("load", () => winRole.set(iframe.contentWindow!, box.role));
-                // set role mapping eagerly too (load may fire after peer-ready in some browsers)
-                winRole.set(iframe.contentWindow!, box.role);
+                // Role no longer needs a window→role map — each box announces its own role (from its
+                // URL), so pairing is keyed by the announced role and survives a reload into a tab.
                 log(`box ${box.port} (${box.role})${box.windowed ? " [windowed]" : ""} → /__virtual__/${box.port}/${clientUrl}`, "ok");
             }
         } catch (err) {

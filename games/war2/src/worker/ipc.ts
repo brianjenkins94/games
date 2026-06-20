@@ -15,7 +15,7 @@
  * This module is shared by both threads and must stay free of Phaser/DOM imports.
  */
 import type { Command, UnitSnapshot } from "../net/protocol";
-import type { MapInfo } from "../game/world";
+import type { MapInfo, WorldSnapshot } from "../game/world";
 
 // ── Render snapshot (worker → main, every tick) ──────────────────────────────────
 
@@ -113,6 +113,9 @@ export type MainToWorker =
     | { kind: "net-in";  data: ArrayBuffer }
     /** A locally-issued command to queue for the next tick. */
     | { kind: "command"; cmd: Command }
+    /** Reverse/popout restore: boot the referee from this snapshot instead of the seed, so a host box
+     *  that reloaded (e.g. popped out into its own tab) resumes the game rather than reseeding it. */
+    | { kind: "restore"; snap: WorldSnapshot }
     | { kind: "pause" }
     | { kind: "resume" }
     /** Step debugger: advance exactly one tick while paused, then re-pause. */
@@ -139,6 +142,9 @@ export type WorkerToMain =
     | { kind: "render"; state: RenderState }
     /** Periodic perf sample (~4 Hz). */
     | { kind: "metrics"; sample: MetricsSample }
+    /** Referee only: a periodic full snapshot, relayed to the host page so it can restore the game
+     *  into a reloaded host box (popout/re-attach/crash). Authoritative state survives the reboot. */
+    | { kind: "snapshot"; snap: WorldSnapshot }
     /** Relay fallback: a raw packet to send over the channel. */
     | { kind: "net-out"; data: ArrayBuffer }
     /** Debug inspector badge count (worker owns the debug WS; badge is DOM). */
