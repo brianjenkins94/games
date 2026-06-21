@@ -6,7 +6,7 @@
     "postinstall": "./scripts/postinstall.sh",
     "dev": "npx tsx scripts/dev.ts",
     "build": "npx tsx ../../util/vite/build.ts",
-    "mcp": "node tools/mcp-inspector.mjs"
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts"
   },
   "dependencies": {
     "harness": "link:../../packages/harness",

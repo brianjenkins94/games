@@ -21,7 +21,8 @@ import { UnitId, TICK_MS, tileCenterFP } from "../game/components";
 import { CmdType, type Command, type UnitSnapshot, type StateUpdatePayload } from "../net/protocol";
 import { LocalRefereeClient, RemoteRefereeClient, type RefereeClient } from "../net/transport";
 import { getPassability } from "../game/passability";
-import { initDebugClient, sendDebugState, sendDebugCommands, setDebugCallbacks } from "../debug/client";
+import { revealAll } from "../game/vision";
+import { initDebugClient, sendDebugState, sendDebugCommands, setDebugCallbacks, type DebugScenario } from "../debug/client";
 import {
     renderUnitFromSnapshot,
     type MainToWorker, type WorkerToMain, type RenderState, type MetricsSample, type WorkerInit, type SimDebugState, type SimDebugUnit,
@@ -36,6 +37,7 @@ let game!: GameInstance;
 let myTeam   = 0;          // the host's team
 let oppTeam  = 1;          // the guest's team
 let mapW = 0, mapH = 0;
+let seed = 0;              // remembered from init; reused by debug loadScenario when none is given
 let simPaused = false;
 let stepping  = false;   // step debugger: forces a single tick through the simPaused gate
 let started   = false;
@@ -234,6 +236,47 @@ function stepOnce(): void {
     post({ kind: "debug-state", state: buildDebugState() });
 }
 
+/** Debug/e2e: advance exactly n ticks through the pause gate. The harness loads a scenario (which
+ *  pauses), then steps a fixed count so results are deterministic and the per-tick state streams out. */
+function stepTicks(n: number): void {
+    const count = Math.max(1, Math.floor(n));
+    for (let i = 0; i < count; i++) { stepping = true; try { tick(); } finally { stepping = false; } }
+}
+
+/** Debug/e2e: rebuild the sim from a tiny scenario (fresh map + explicit unit placements), left paused
+ *  so the harness can step deterministically. createGame re-inits every grid (passability / occupancy /
+ *  walk / path / local / vision), so this is a clean full reset. */
+function loadScenario(sc: DebugScenario): void {
+    seed = sc.seed ?? seed;
+    mapW = sc.mapInfo.mapW;
+    mapH = sc.mapInfo.mapH;
+    game = createGame(seed, sc.mapInfo satisfies MapInfo);
+    game.initUnitIdCounter(0);
+    for (const u of sc.spawns) {
+        game.spawnUnit(tileCenterFP(u.tx), tileCenterFP(u.ty), u.team, undefined, u.typeId ?? 0);
+    }
+    revealAll();   // scenarios test obstacle routing with full map knowledge (no fog-of-war discovery)
+    simPaused = true;
+    started   = true;
+    history.length = 0;
+    post({ kind: "ready", passability: getPassability(), mapW, mapH });
+    post({ kind: "scenario-map", gids: scenarioRenderGids(), mapW, mapH });   // redraw the terrain
+    renderHost();                                                // initial frame to the host renderer
+    sendDebugState(game.world, game.hashOwn(myTeam), "host");    // tick-0 state for the inspector/harness
+}
+
+/** Build terrain GIDs for the loaded scenario: plain grass for walkable tiles, an impassable tile for
+ *  blocked. These are FOREST-tileset GIDs — the renderer draws scenarios from the "forest" sheet (a
+ *  clean grass look), independent of whatever tileset the boot map used. */
+function scenarioRenderGids(): number[] {
+    const pass = getPassability();   // 0 = walkable, 1 = blocked, for the loaded scenario
+    const GRASS = 357;   // forest plain-grass tile (most uniform green LAND tile in forest.png)
+    const WALL  = 1;     // a forest impassable tile (for obstacle scenarios)
+    const out = new Array<number>(pass.length);
+    for (let i = 0; i < pass.length; i++) out[i] = pass[i] ? WALL : GRASS;
+    return out;
+}
+
 // ── Breakpoints ─────────────────────────────────────────────────────────────────
 // Expressions are compiled to plain functions over a fixed vocabulary (no `with` — workers are
 // strict-mode modules). `new Function` only closes over globals + its named args, so the expression
@@ -371,6 +414,7 @@ function start(init: WorkerInit): void {
     oppTeam = 1 - myTeam;
     mapW    = init.mapW;
     mapH    = init.mapH;
+    seed    = init.seed;
 
     game = createGame(init.seed, init.mapInfo satisfies MapInfo);
     game.initUnitIdCounter(0);      // single id space — the referee mints every unit
@@ -391,6 +435,12 @@ function start(init: WorkerInit): void {
         onPause:          () => { simPaused = true;  },
         onResume:         () => { simPaused = false; },
         onInspectorCount: (n) => post({ kind: "inspector-count", n }),
+        // e2e/debug driving (from the debug server — Playwright harness or MCP):
+        // Queue like a real command so it's validated, applied AND logged next tick (so the
+        // command-log–based tools — summarize_move / trace — see test-driven moves too).
+        onCommand:        (cmd) => { if (started) hostClient.deliverCommands([cmd], 0); },
+        onStep:           (n)   => { if (started) stepTicks(n); },                // advance N ticks (load paused first)
+        onLoadScenario:   (sc)  => loadScenario(sc),                              // rebuild from a tiny map
     });
 
     started = true;

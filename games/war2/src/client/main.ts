@@ -196,6 +196,7 @@ function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
             mapTW = msg.mapW; mapTH = msg.mapH;
             break;
         case "render":          onRender(msg.state); break;
+        case "scenario-map":    scene?.rebuildMap(msg.gids, msg.mapW, msg.mapH); break;
         case "metrics":         onMetrics(msg.sample); break;
         case "net-out":         relayChannel?.send(msg.data); break;   // relay mode
         case "inspector-count": updateInspectorBadge(msg.n); break;

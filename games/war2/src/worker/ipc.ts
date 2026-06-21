@@ -145,6 +145,9 @@ export type WorkerToMain =
     /** Referee only: a periodic full snapshot, relayed to the host page so it can restore the game
      *  into a reloaded host box (popout/re-attach/crash). Authoritative state survives the reboot. */
     | { kind: "snapshot"; snap: WorldSnapshot }
+    /** Debug/e2e: a scenario was loaded — redraw the terrain. `gids` are real tileset frame ids
+     *  (grass for walkable, wall for blocked), one per tile, mapW×mapH; the renderer rebuilds. */
+    | { kind: "scenario-map"; gids: number[]; mapW: number; mapH: number }
     /** Relay fallback: a raw packet to send over the channel. */
     | { kind: "net-out"; data: ArrayBuffer }
     /** Debug inspector badge count (worker owns the debug WS; badge is DOM). */

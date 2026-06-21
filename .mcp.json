@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "war2": {
-      "command": "node",
-      "args": ["games/war2/tools/mcp-inspector.mjs"]
+      "type": "http",
+      "url": "http://localhost:9229/mcp"
     }
   }
 }

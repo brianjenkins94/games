@@ -75,6 +75,25 @@ export function createVscodeWindow(options: VscodeWindowOptions = {}): VscodeWin
 	// `window.opener` (see workbench-entry's `host = opener ?? parent`).
 	let contentWindow: Window | null = null;
 
+	// The workbench window. A draw() closure (not a one-shot render) so we can collapse it to the
+	// minimized strip once monaco has booted — minimizing before mount would lay the editor out at 0×0.
+	const container = document.createElement("div");
+	mountInto.appendChild(container);
+	let minimized = false;
+	const draw = (): void => {
+		render(
+			<VtWindow
+				title="VS Code" body={iframe}
+				top={80} left={80} width={1100} height={720}
+				detachable closable={false}
+				minimized={minimized}
+				onMinimizedChange={(m) => { minimized = m; draw(); }}
+			/>,
+			container,
+		);
+	};
+	draw();
+
 	// Bridge to the workbench entry. Kept registered (not one-shot) so a detach/reload re-handshakes.
 	window.addEventListener("message", (event) => {
 		const data = event.data as { source?: string; type?: string; path?: string; contents?: string; msg?: unknown } | null;
@@ -89,16 +108,10 @@ export function createVscodeWindow(options: VscodeWindowOptions = {}): VscodeWin
 			onDebugControl?.(data.msg);
 		} else if (data.type === "online") {
 			markReady();
+			minimized = true;   // collapse to the strip now that monaco is up (mounted at full size first)
+			draw();
 		}
 	});
-
-	const container = document.createElement("div");
-	mountInto.appendChild(container);
-
-	render(
-		<VtWindow title="VS Code" body={iframe} top={80} left={80} width={1100} height={720} detachable closable={false} />,
-		container,
-	);
 
 	return {
 		sendDebugEvent(msg: unknown): void {

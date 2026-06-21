@@ -12,9 +12,17 @@
 import { Position, Unit, UnitId, Path, MoveTarget, UnitAnim, fpToTile } from '../game/components';
 import { unitBoxHalfPx } from '../game/unitTypes';
 import { debugReservedRegion } from '../game/walkGrid';
-import type { SimWorld } from '../game/world';
+import type { MapInfo, SimWorld } from '../game/world';
 import { unitEids } from '../game/world';
 import type { Command } from '../net/protocol';
+
+/** A tiny e2e/debug scenario: a fresh map + explicit per-unit placements (tile coords). The referee
+ *  rebuilds the sim from this (paused) so a test can step deterministically. See referee.worker.ts. */
+export interface DebugScenario {
+    seed?: number;
+    mapInfo: MapInfo;
+    spawns: { team: number; tx: number; ty: number; typeId?: number }[];
+}
 
 // Runs in the sim worker (WebSocket works there; the sim state it serialises now
 // lives there too).  The only DOM concern — the inspector badge — is delegated to
@@ -27,6 +35,9 @@ let socket: WebSocket | null = null;
 let _onPause:  (() => void) | null = null;
 let _onResume: (() => void) | null = null;
 let _onInspectorCount: ((n: number) => void) | null = null;
+let _onCommand:      ((cmd: Command) => void) | null = null;
+let _onStep:         ((n: number) => void) | null = null;
+let _onLoadScenario: ((sc: DebugScenario) => void) | null = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -48,6 +59,10 @@ export function initDebugClient(role: string): void {
                     if (msg.cmd === 'pause')           _onPause?.();
                     if (msg.cmd === 'resume')          _onResume?.();
                     if (msg.cmd === 'inspector-count') _onInspectorCount?.(msg.n as number);
+                    // e2e/debug driving: inject a command, advance N ticks, or rebuild from a scenario.
+                    if (msg.cmd === 'command' && msg.command)        _onCommand?.(msg.command as Command);
+                    if (msg.cmd === 'step')                          _onStep?.(typeof msg.n === 'number' ? msg.n : 1);
+                    if (msg.cmd === 'load-scenario' && msg.scenario) _onLoadScenario?.(msg.scenario as DebugScenario);
                 }
             } catch { /* ignore */ }
         });
@@ -67,10 +82,16 @@ export function setDebugCallbacks(cbs: {
     onPause?: () => void;
     onResume?: () => void;
     onInspectorCount?: (n: number) => void;
+    onCommand?: (cmd: Command) => void;
+    onStep?: (n: number) => void;
+    onLoadScenario?: (sc: DebugScenario) => void;
 }): void {
     _onPause          = cbs.onPause          ?? null;
     _onResume         = cbs.onResume         ?? null;
     _onInspectorCount = cbs.onInspectorCount ?? null;
+    _onCommand        = cbs.onCommand        ?? null;
+    _onStep           = cbs.onStep           ?? null;
+    _onLoadScenario   = cbs.onLoadScenario   ?? null;
 }
 
 // ── Send helpers ──────────────────────────────────────────────────────────────

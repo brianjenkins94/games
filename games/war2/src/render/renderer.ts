@@ -22,6 +22,10 @@ import type { RenderState, RenderUnit } from "../worker/ipc";
  *  the moment a command is issued, until the authoritative snapshot catches up. */
 export interface UnitPrediction { dir: number; mtx: number; mty: number; at: number; }
 import { ChunkRenderer, TILE_PX } from "./ChunkRenderer";
+// Debug/e2e scenarios render terrain from the forest tileset (clean plain grass), independent of the
+// boot map's tileset. Loaded in preload(); see rebuildMap().
+import forestTilesetUrl from "../assets/tilesets/forest.png";
+const SCENARIO_TILESET = "forest";
 // Command-card icon sheet.  Tileset-specific; the current map is winter, so we
 // load the winter sheet.  TODO: follow the active map's tileset like tilesetUrl.
 import iconsUrl   from "../assets/graphics/tilesets/winter/icons.png";
@@ -182,6 +186,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     preload(): void {
+        // Scenario terrain sheet (forest plain grass), always available regardless of the boot map.
+        this.load.spritesheet(SCENARIO_TILESET, forestTilesetUrl, { frameWidth: TILE_PX, frameHeight: TILE_PX, spacing: 1, margin: 0 });
         if (!this.mapConfig) return;
         const { tilesetUrl, mapJson } = this.mapConfig;
         const ts = mapJson.tilesets[0];
@@ -224,7 +230,10 @@ export class GameScene extends Phaser.Scene {
             this.tileVis     = new Uint8Array(this.mapTileW * this.mapTileH);
             this.tileExplored = new Uint8Array(this.mapTileW * this.mapTileH);
 
-            this.createMinimapTexture(mapJson);
+            this.createMinimapTexture(
+                mapJson.layers.find((l: any) => l.type === "tilelayer").data,
+                mapJson.width, mapJson.height, ts.name, ts.spacing ?? 0, ts.margin ?? 0,
+            );
         }
 
         // ── Graphics layers ───────────────────────────────────────────────────
@@ -445,16 +454,7 @@ export class GameScene extends Phaser.Scene {
      * behind the unit dots.  Uses the raw tileset HTMLImageElement so that
      * canvas drawImage handles the downscale — no Phaser stamp loop needed.
      */
-    private createMinimapTexture(mapJson: any): void {
-        const ts       = mapJson.tilesets[0];
-        const tsName   = ts.name as string;
-        const spacing  = (ts.spacing as number) ?? 0;
-        const margin   = (ts.margin  as number) ?? 0;
-        const mapW     = mapJson.width  as number;
-        const mapH     = mapJson.height as number;
-        const tileData = (mapJson.layers as any[])
-            .find((l: any) => l.type === "tilelayer").data as number[];
-
+    private createMinimapTexture(tileData: number[], mapW: number, mapH: number, tsName: string, spacing: number, margin: number): void {
         const srcImage = this.textures.get(tsName).getSourceImage() as HTMLImageElement;
         const tsColumns = Math.floor(
             (srcImage.width - 2 * margin + spacing) / (TILE_PX + spacing),
@@ -503,7 +503,8 @@ export class GameScene extends Phaser.Scene {
         if (this.textures.exists("minimapTerrain")) this.textures.remove("minimapTerrain");
         this.textures.addCanvas("minimapTerrain", canvas);
 
-        this.minimapImg = this.add.image(0, 0, "minimapTerrain")
+        this.minimapImg?.destroy();   // replace any prior minimap (e.g. on a scenario map change)
+        this.minimapImg = this.add.image(0, this.scale.height - UI.bottom, "minimapTerrain")
             .setScrollFactor(0)
             .setOrigin(0, 0)
             .setDepth(9);   // below uiGfx (depth 10) which draws dots + viewport rect
@@ -555,15 +556,16 @@ export class GameScene extends Phaser.Scene {
             this.uiGfx.fillRect(dx - 1, dy - 1, 3, 3);
         }
 
-        // Camera viewport rect.  The world now fills the whole canvas (the HUD is
-        // a translucent overlay), so the visible region is the full cam extent.
-        const cam = this.cameras.main;
-        const vx  = cam.scrollX * scaleX;
-        const vy  = mmTop + cam.scrollY * scaleY;
-        const vw  = cam.width  * scaleX;
-        const vh  = cam.height * scaleY;
+        // Camera viewport rect, clamped to the minimap square. The world fills the whole canvas, so the
+        // visible region is the full cam extent — but on a tiny scenario map the cam sees well beyond the
+        // map, which would balloon the rect past the minimap; clamp each edge to [0, MINIMAP_SZ].
+        const cam   = this.cameras.main;
+        const left   = Math.max(0,                   cam.scrollX * scaleX);
+        const top    = Math.max(mmTop,               mmTop + cam.scrollY * scaleY);
+        const right  = Math.min(MINIMAP_SZ,          (cam.scrollX + cam.width)  * scaleX);
+        const bottom = Math.min(mmTop + MINIMAP_SZ,  mmTop + (cam.scrollY + cam.height) * scaleY);
         this.uiGfx.lineStyle(1, 0xffffff, 0.8);
-        this.uiGfx.strokeRect(vx, vy, vw, vh);
+        this.uiGfx.strokeRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
 
         // Border
         this.uiGfx.lineStyle(1, 0x444466, 1);
@@ -709,6 +711,45 @@ export class GameScene extends Phaser.Scene {
             const overCard = dr >= sw - UI.right && db >= sh - UI.bottom;
             this.cardEl.style.opacity = overCard ? "0.2" : "1";
         }
+    }
+
+    /** Debug/e2e: tear down the boot terrain and rebuild it for a loaded scenario — a fresh
+     *  ChunkRenderer at the scenario's dimensions, fully lit (scenarios run without fog). `gids` are
+     *  real tileset frame ids (grass for walkable, wall for blocked), built by the worker. The camera
+     *  is re-bounded and zoomed to fit the (usually tiny) scenario so you can watch it. */
+    rebuildMap(gids: number[], mapW: number, mapH: number): void {
+        if (!this.tilesetName) return;
+
+        // Blank slate: drop the old map's unit sprites + interpolation baselines so the new scenario's
+        // units appear at their tiles instead of tweening in from their previous (old-map) positions.
+        for (const s of this.unitSprites.values()) s.destroy();
+        this.unitSprites.clear();
+        for (const s of this.buildingSprites.values()) s.destroy();
+        this.buildingSprites.clear();
+        this.renderState = null;
+        this.prevPos.clear();
+        this.dispPos.clear();
+
+        this.chunkRenderer?.destroy();
+        this.chunkRenderer = new ChunkRenderer(this, gids, mapW, mapH, SCENARIO_TILESET);
+        this.createMinimapTexture(gids, mapW, mapH, SCENARIO_TILESET, 1, 0);   // regen minimap for the new map
+
+        this.mapTileW  = mapW;
+        this.mapTileH  = mapH;
+        this.mapPixelW = mapW * TILE_PX;
+        this.mapPixelH = mapH * TILE_PX;
+        this.tileVis      = new Uint8Array(mapW * mapH).fill(2);   // VISIBLE everywhere (no fog)
+        this.tileExplored = new Uint8Array(mapW * mapH).fill(1);
+
+        const cam = this.cameras.main;
+        // No bounds: a scenario map is smaller than the viewport, and bounds would clamp the scroll to
+        // the top-left and defeat centring. Centre the (native-scale) map in the window instead.
+        cam.removeBounds();
+        cam.setZoom(1);   // native 1:1 (reset any prior scenario's fit-zoom)
+        cam.centerOn(this.mapPixelW / 2, this.mapPixelH / 2);
+
+        this.chunkRenderer.update(cam);
+        this.chunkRenderer.updateFog(this.tileVis, mapW, mapH);
     }
 
     /** Push the latest worker snapshot.  Rolls the current positions into the

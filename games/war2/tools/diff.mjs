@@ -1,5 +1,5 @@
 /**
- * Shared unit-diff logic used by debug-server.mjs and mcp-inspector.mjs.
+ * Shared unit-diff logic used by debug-server.mjs.
  * Keeps the diffed field list and output shape in one place so adding a new
  * field (e.g. health) only requires one edit.
  */

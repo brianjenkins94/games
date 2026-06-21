@@ -105,6 +105,17 @@ export function takeBelievedDirty(team: number): boolean {
     return true;
 }
 
+/** Debug/e2e: mark the whole map explored for every team so pathfinding uses the real passability
+ *  (no fog). Lets scenarios test obstacle routing directly, without fog-of-war discovery in the loop. */
+export function revealAll(): void {
+    const realPass = getPassability();
+    for (const tv of _teams.values()) {
+        tv.explored.fill(1);
+        if (realPass) tv.believedPass.set(realPass); else tv.believedPass.fill(0);
+        tv.dirty = true;   // force each team's flow cache to rebuild against the now-known terrain
+    }
+}
+
 /** Serialize every team's explored state for the deterministic snapshot. */
 export function exportExplored(): [number, number[]][] {
     return [..._teams].map(([team, tv]) => [team, Array.from(tv.explored)]);
