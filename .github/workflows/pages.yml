@@ -37,7 +37,7 @@
 				{ "run": "pnpm config set --location=project strict-dep-builds false" },
 				{ "env": { "PAT": "${{ secrets.PAT }}" }, "run": "pnpm install" },
 				{ "run": "pnpm run build" },
-				{ "run": "pnpm run test --if-present" },
+				{ "run": "pnpm run --if-present test" },
 				{
 					"uses": "brianjenkins94/lib/.github/actions/pages-deploy@main",
 					"id": "deploy",
