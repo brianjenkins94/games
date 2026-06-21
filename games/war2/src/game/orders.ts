@@ -8,6 +8,7 @@
  * passability, the flow-field cache) — no wall-clock, no RNG — so issuing the same order on both peers
  * produces identical MoveTarget/Path state.
  */
+import { hasComponent } from "bitecs";
 import { Position, MoveTarget, Unit, Path, UnitAnim, Building, FP, TILE_PX, WALK_PX, tileCenterFP, fpToTile, snapWalkFP } from "./components";
 import { unitRadiusPx } from "./unitTypes";
 import { distance } from "./distance";
@@ -259,7 +260,7 @@ function occupiedTilesOutside(world: SimWorld, group: number[], mapW: number): S
     const inGroup = new Set(group);
     const taken = new Set<number>();
     for (const e of unitEids(world)) {
-        if (inGroup.has(e) || MoveTarget.active[e] === 1 || Building.fw[e] > 0) continue;
+        if (inGroup.has(e) || MoveTarget.active[e] === 1 || hasComponent(world, e, Building)) continue;
         taken.add(fpToTile(Position.y[e]) * mapW + fpToTile(Position.x[e]));
     }
     return taken;

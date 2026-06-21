@@ -130,7 +130,7 @@ export function createGame(seed: number, mapInfo?: MapInfo): GameInstance {
         ownSnapshotsVisibleTo:    (myTeam)                           => ownSnapshotsVisibleTo(world, myTeam),
         isTileVisible:            (observerTeam, tx, ty)             => isTileVisible(world, observerTeam, tx, ty),
         hashOwn:                (t)                                  => worldHashOwn(world, t),
-        snapshotUnit:           (eid)                                => _snapshotUnit(eid),
+        snapshotUnit:           (eid)                                => _snapshotUnit(world, eid),
         addKnownUnit:           (snap)                               => _addKnownUnit(world, snap),
         updateKnownUnit:        (eid, snap)                          => _updateKnownUnit(eid, snap),
         removeKnownUnit:        (eid)                                => _removeKnownUnit(world, eid),

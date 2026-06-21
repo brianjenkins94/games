@@ -13,7 +13,8 @@ import { createGame } from "../src/game/game";
 import { revealAll } from "../src/game/vision";
 import { spawnBuilding } from "../src/game/world";
 import { footprintStaticFreeAt } from "../src/game/walkGrid";
-import { Position, Building } from "../src/game/components";
+import { Position, Building, UnitId } from "../src/game/components";
+import { CmdType } from "../src/net/protocol";
 
 const FP = 1000, R = 16 * FP;   // a default unit's L1 radius
 const FARM = 37, BARRACKS = 49; // 2×2, 3×3 footprints
@@ -51,4 +52,27 @@ test("building: smaller 2×2 footprint still blocks its core but clears just out
     const { cx, cy, hw } = placeBuilding(FARM);   // 2×2, hw = 32px
     assert.equal(clear(cx, cy), false, "2×2 core blocks at the centre");
     assert.equal(clear(cx + hw + 16 * FP, cy), true, "well outside the small footprint is clear");
+});
+
+const tc = (t: number) => t * 32 * FP + 16 * FP;   // tile-centre fixed-point
+
+// Regression: component arrays are module-global and bitecs recycles eids, so a unit that lands on an
+// eid a building previously held must NOT inherit its building-ness — else it renders as a building and
+// the movement system skips it (it never moves).  Guards both the spawnUnit clear and the hasComponent
+// "is a building" checks (see world.ts / movement.ts).
+test("building: a unit on an eid recycled from a building is not treated as a building", () => {
+    const g = createGame(1, { gids: Array(144).fill(1), mapW: 12, mapH: 12, terrainArr: [0, 0] });
+    revealAll();
+    g.initUnitIdCounter(0);
+    const beid = spawnBuilding(g.world, 4, 4, 0, FARM);   // claims an eid + sets Building.fw
+    g.despawnUnit(beid);                                  // free it for reuse
+    const ueid = g.spawnUnit(tc(0), tc(0), 0);           // recycles that eid
+    assert.equal(ueid, beid, "precondition: the building's eid was recycled");
+    assert.equal(Building.fw[ueid], 0, "recycled unit cleared the stale Building.fw");
+
+    // It must actually move when ordered — a unit wrongly seen as a building would be skipped and stuck.
+    g.applyCommands([{ type: CmdType.MOVE, unitIds: [UnitId.id[ueid]], txFP: tc(0), tyFP: tc(10) }]);
+    const y0 = Position.y[ueid];
+    for (let i = 0; i < 80; i++) g.step();
+    assert.ok(Position.y[ueid] > y0, "recycled unit moved (not skipped as a static building)");
 });

@@ -8,7 +8,7 @@
  * touches lives in world.ts (single owner, shared with spawn/despawn); this module drives it through
  * the exported accessors.
  */
-import { addEntity, removeEntity, addComponent } from "bitecs";
+import { addEntity, removeEntity, addComponent, hasComponent } from "bitecs";
 import { Position, MoveTarget, Unit, UnitId, Path, UnitAnim, Building } from "./components";
 import type { UnitSnapshot } from "./types";
 import { occupyRect, freeRect, resetOccupancy } from "./occupancy";
@@ -39,11 +39,14 @@ import {
 export function ownSnapshotsVisibleTo(world: SimWorld, myTeam: number): UnitSnapshot[] {
     return unitEids(world)
         .filter(e => Unit.team[e] === myTeam)
-        .map(snapshotUnit);
+        .map(e => snapshotUnit(world, e));
 }
 
 /** Snapshot the full state of a single entity. */
-export function snapshotUnit(eid: number): UnitSnapshot {
+export function snapshotUnit(world: SimWorld, eid: number): UnitSnapshot {
+    // Footprint only when the entity actually has the Building component — never read the (module-global,
+    // possibly recycled) fw/fh array as a proxy for "is a building".
+    const isBuilding = hasComponent(world, eid, Building);
     return {
         uid:        UnitId.id[eid],
         team:       Unit.team[eid],
@@ -61,9 +64,9 @@ export function snapshotUnit(eid: number): UnitSnapshot {
         stuckTicks: Path.stuckTicks[eid],
         dir:        UnitAnim.dir[eid],
         moving:     UnitAnim.moving[eid],
-        bw:         Building.fw[eid],
-        bh:         Building.fh[eid],
-        buildLeft:  Building.buildLeft[eid],
+        bw:         isBuilding ? Building.fw[eid] : 0,
+        bh:         isBuilding ? Building.fh[eid] : 0,
+        buildLeft:  isBuilding ? Building.buildLeft[eid] : 0,
     };
 }
 
@@ -155,7 +158,7 @@ export function addKnownUnit(world: SimWorld, snap: UnitSnapshot): void { _spawn
 export function updateKnownUnit(eid: number, snap: UnitSnapshot): void { _applyFromSnapshot(eid, snap, true); }
 /** Despawn an enemy unit that has left visibility (free its footprint if a building). */
 export function removeKnownUnit(world: SimWorld, eid: number): void {
-    if (Building.fw[eid] > 0) freeRect(Path.curTx[eid], Path.curTy[eid], Building.fw[eid], Building.fh[eid]);
+    if (hasComponent(world, eid, Building)) freeRect(Path.curTx[eid], Path.curTy[eid], Building.fw[eid], Building.fh[eid]);
     else                      freeUnit(eid);
     unregisterUnitId(UnitId.id[eid]);
     removeEntity(world, eid);
@@ -184,7 +187,7 @@ export function takeSnapshot(world: SimWorld): WorldSnapshot {
         tick:       world.tick,
         nextUnitId: getNextUnitId(),
         rngState:   getRngState(),
-        units:      unitEids(world).map(snapshotUnit),
+        units:      unitEids(world).map(e => snapshotUnit(world, e)),
         explored:   exportExplored(),
     };
 }

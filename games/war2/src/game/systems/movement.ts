@@ -34,7 +34,7 @@
  * snapshot/replay reproduces.  UnitAnim is render-only (excluded from hash).
  */
 
-import { query } from "bitecs";
+import { query, hasComponent } from "bitecs";
 import {
     Position, MoveTarget, Unit, Path, UnitAnim, Building,
     UNIT_SPD, FP, TILE_PX, fpToTile, tileCenterFP, snapWalkFP,
@@ -122,7 +122,7 @@ export function movementSystem(world: object): void {
     if (mapW === 0) { movePreMap(world); return; }
 
     for (const eid of query(world, [Position, MoveTarget, Unit])) {
-        if (Building.fw[eid] > 0) continue;                 // buildings: static, never move
+        if (hasComponent(world, eid, Building)) continue;   // buildings: static, never move
 
         if (Unit.movable[eid] === 1 && MoveTarget.active[eid] === 1) {
             stepUnit(eid, mapW, mapH);

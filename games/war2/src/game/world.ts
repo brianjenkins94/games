@@ -1,4 +1,4 @@
-import { createWorld, addEntity, removeEntity, addComponent, query, observe, onAdd, onRemove } from "bitecs";
+import { createWorld, addEntity, removeEntity, addComponent, hasComponent, query, observe, onAdd, onRemove } from "bitecs";
 import { Position, MoveTarget, Unit, UnitId, Path, UnitAnim, Building, FP, TILE_PX, WORLD_W, WORLD_H, fpToTile } from "./components";
 import { unitFootprint, unitBuildTicks, unitRadiusPx } from "./unitTypes";
 export type { UnitSnapshot } from "./types";
@@ -166,7 +166,7 @@ export function spawnUnit(world: SimWorld, xFP: number, yFP: number, team: numbe
 }
 
 export function despawnUnit(world: SimWorld, eid: number): void {
-    if (Building.fw[eid] > 0) {
+    if (hasComponent(world, eid, Building)) {
         freeRect(Path.curTx[eid], Path.curTy[eid], Building.fw[eid], Building.fh[eid]);
         clearFlowFieldCache();   // footprint freed → cached fields routed around it are stale
     } else {
@@ -253,7 +253,7 @@ export function refreshPathObstacles(world: SimWorld): void {
     resetIdleGrids();
     const MOVER_R = TILE_PX >> 1;   // assume a ~tile mover for the shared C-space (land units)
     for (const eid of unitEids(world)) {
-        if (Building.fw[eid] > 0 || Unit.movable[eid] !== 1) continue;   // buildings / display-only
+        if (hasComponent(world, eid, Building) || Unit.movable[eid] !== 1) continue;   // buildings / display-only
         if (MoveTarget.active[eid] === 1) continue;                       // moving → not an obstacle
         // 8px C-space: a mover's centre may not come within (mover r + this unit's r) of this centre.
         addIdleCSpace(Unit.team[eid], Position.x[eid] / FP, Position.y[eid] / FP, MOVER_R + unitRadiusPx(Unit.type[eid]));
