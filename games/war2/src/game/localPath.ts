@@ -21,14 +21,14 @@ import { getBelievedPassability } from "./vision";
 import { buildingAtIdx } from "./occupancy";
 import { cspaceBlockedCell } from "./pathObstacles";
 import { MinHeap, DIR_DX, DIR_DY } from "./flowField";
+import { terrainClearForPass } from "./walkGrid";
 
 export const LOCAL_RANGE   = 6;             // tiles: within this of the goal, steer with the local A*
 const CELLS_PER_TILE       = 4;             // 8px cells per 32px tile
 const RANGE_CELLS          = LOCAL_RANGE * CELLS_PER_TILE;   // A* window radius around the goal (cells)
-const STEP_AHEAD           = 1;             // aim the NEXT path cell — hug the path so bends are taken as
-                                            // clean full moves (no slip/corner-cut); slip stays for the
-                                            // straight razor (touching) cells the planner legitimately uses.
 const DIR_COST = [10, 14, 10, 14, 10, 14, 10, 14] as const;
+const CLEARANCE_MARGIN  = 12000;   // FP: a cell clear at rFP but not rFP+this is "touching" (low clearance)
+const CLEARANCE_PENALTY = 40;      // extra A* cost for a low-clearance cell → prefer margin, allow touching
 
 let _mapW = 0, _cW = 0, _cH = 0;
 let _g:     Int32Array | null = null;   // gScore (valid only where _stamp === _gen)
@@ -58,10 +58,31 @@ function octile(dx: number, dy: number): number {
     return 10 * hi + 4 * lo;
 }
 
-/** A cell is terrain-blocked if its 32px tile is impassable or holds a building. */
-function terrainCell(pass: Uint8Array, cx: number, cy: number): boolean {
-    const ti = (cy >> 2) * _mapW + (cx >> 2);
-    return pass[ti] === 1 || buildingAtIdx(ti);
+/** True if a mover of L1 radius `rFP` centred at (xFP,yFP) is clear of static terrain on this team's
+ *  BELIEVED grid.  Delegates to the SAME test the mover uses (walkGrid.terrainClearForPass) so the
+ *  planner's route can never permit a path the mover can't walk — walls as diamonds, buildings as
+ *  octagons, identically. */
+function terrainClearFP(pass: Uint8Array, xFP: number, yFP: number, rFP: number): boolean {
+    return terrainClearForPass(pass, xFP, yFP, rFP, _mapW, (_cH / 4) | 0);
+}
+
+/** Cell-centre terrain test for the A* grid (true = blocked for a centre sitting in that cell). */
+function terrainCell(pass: Uint8Array, cx: number, cy: number, rFP: number): boolean {
+    return !terrainClearFP(pass, (cx * 8 + 4) * 1000, (cy * 8 + 4) * 1000, rFP);
+}
+
+/** True if the straight segment (ax,ay)→(bx,by) is traversable for a mover of radius rFP — clear of
+ *  terrain AND this team's settled-unit C-space.  Drives the string-pull. */
+function losClear(pass: Uint8Array, team: number, ax: number, ay: number, bx: number, by: number, rFP: number): boolean {
+    const dx = bx - ax, dy = by - ay;
+    const span = Math.abs(dx) > Math.abs(dy) ? Math.abs(dx) : Math.abs(dy);
+    const steps = Math.max(1, (span / 4000) | 0);   // sample ~every 4px
+    for (let i = 1; i <= steps; i++) {
+        const x = ax + ((dx * i / steps) | 0), y = ay + ((dy * i / steps) | 0);
+        if (!terrainClearFP(pass, x, y, rFP)) return false;
+        if (cspaceBlockedCell(team, (x / 8000) | 0, (y / 8000) | 0)) return false;
+    }
+    return true;
 }
 
 /**
@@ -70,7 +91,7 @@ function terrainCell(pass: Uint8Array, cx: number, cy: number): boolean {
  * (caller falls back to the flow field).  The start cell is C-space-exempt (the mover may currently
  * touch/overlap a parked unit and must be able to path out).
  */
-export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: number, gyFP: number): [number, number] | null {
+export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: number, gyFP: number, rFP: number): [number, number] | null {
     const pass = getBelievedPassability(team);
     if (!pass || !_g) return null;
     const cW = _cW;
@@ -81,10 +102,15 @@ export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: num
     const goalIdx  = gcy * cW + gcx;
     if (startIdx === goalIdx) return null;   // already in the goal cell → movement beelines the exact point
 
-    const blockedTerrain = (cx: number, cy: number): boolean => terrainCell(pass, cx, cy);
+    // Terrain is inflated by the mover's footprint (terrainCell); the START cell is exempt so a unit
+    // standing legitimately close to a wall can still path out (the continuous collision validates the
+    // actual first step anyway).  The GOAL tile only needs to be a passable TILE — a tile-centre goal
+    // adjacent to a wall is reachable even though its inflated footprint grazes the wall.
+    const blockedTerrain = (cx: number, cy: number): boolean => terrainCell(pass, cx, cy, rFP);
     const blocked = (idx: number, cx: number, cy: number): boolean =>
-        blockedTerrain(cx, cy) || (idx !== startIdx && idx !== goalIdx && cspaceBlockedCell(team, cx, cy));
-    if (blockedTerrain(gcx, gcy)) return null;   // goal on terrain → let the flow field decide
+        idx !== startIdx && idx !== goalIdx && (blockedTerrain(cx, cy) || cspaceBlockedCell(team, cx, cy));
+    const goalTi = (gcy >> 2) * _mapW + (gcx >> 2);
+    if (pass[goalTi] === 1 || buildingAtIdx(goalTi)) return null;   // goal on terrain → let the flow field decide
 
     const gen  = ++_gen;
     const heap = _heap!;
@@ -109,12 +135,20 @@ export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: num
 
             const ni = ny * cW + nx;
             if (blocked(ni, nx, ny)) continue;
-            // Only a TERRAIN corner blocks a diagonal — the C-space already encodes unit clearance, so
-            // a diagonal may thread a unit gap (where both diagonal cells are C-space-free).
-            if (DIR_DX[d] !== 0 && DIR_DY[d] !== 0) {
-                if (blockedTerrain(nx, y) || blockedTerrain(x, ny)) continue;
+            // Edge (segment) check: two consecutive "touching"-clear cells can still have a wall poking
+            // BETWEEN them.  CARDINAL edges use the full footprint (catches a mover sweeping into a wall).
+            // DIAGONAL edges use a centre-only test (radius 0) — matching the mover's corner-cut tier,
+            // which grazes wall corners — so a diagonal pinch corridor stays threadable.
+            if (idx !== startIdx) {
+                const mx = (4 * (x + nx) + 4) * 1000, my = (4 * (y + ny) + 4) * 1000;
+                if (!terrainClearFP(pass, mx, my, DIR_DX[d] !== 0 && DIR_DY[d] !== 0 ? 0 : rFP)) continue;
             }
-            const ng = gcur + DIR_COST[d];
+            // Clearance cost: penalise cells the mover can only pass by TOUCHING a wall (clear at rFP but
+            // not at rFP+margin).  The A* then prefers routes with real clearance — so it doesn't skim an
+            // obstacle's edge into a touching-boundary freeze — yet still uses touching cells when they're
+            // the only way through (a pinch / 1-tile gap), where the uniform penalty doesn't change the route.
+            const wide = terrainClearFP(pass, (nx * 8 + 4) * 1000, (ny * 8 + 4) * 1000, rFP + CLEARANCE_MARGIN);
+            const ng = gcur + DIR_COST[d] + (wide ? 0 : CLEARANCE_PENALTY);
             if (_stamp![ni] !== gen || ng < _g![ni]) {
                 _g![ni] = ng; _from![ni] = idx; _stamp![ni] = gen;
                 heap.push(ng + octile(gcx - nx, gcy - ny), ni);
@@ -123,12 +157,19 @@ export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: num
     }
     if (!found) return null;
 
-    // Walk the parent chain back from the goal into _path[0..len) (goal → … → start), then aim a few
-    // cells ahead of the start for smooth steering (re-planned every tick).
+    // Walk the parent chain back from the goal into _path[0..len) (goal → … → start).
     let len = 0, cur = goalIdx;
     while (cur !== -1 && len < _path!.length) { _path![len++] = cur; cur = _from![cur]; }
-    const wi = len - 1 - STEP_AHEAD;                       // index toward the goal from the start
-    const aimIdx = _path![wi > 0 ? wi : 0];                // (len-1 is the start; clamp into the path)
-    const acx = aimIdx % cW, acy = (aimIdx / cW) | 0;
-    return [(acx * 8 + 4) * 1000, (acy * 8 + 4) * 1000];   // cell-centre world position in FP
+
+    // String-pull: steer at the FURTHEST path waypoint with clear line-of-sight from the unit — one
+    // follower for every case.  It cuts straight across open ground; where terrain/units constrain LOS
+    // (gap, pinch, corner) it falls back to the nearest reachable waypoint, funnelling through the
+    // corridor centre.  (_path[0] = goal, [len-1] = start.)  Re-planned each tick, so the aim advances.
+    for (let i = 0; i < len - 1; i++) {
+        const c = _path![i];
+        const wx = ((c % cW) * 8 + 4) * 1000, wy = (((c / cW) | 0) * 8 + 4) * 1000;
+        if (losClear(pass, team, uxFP, uyFP, wx, wy, rFP)) return [wx, wy];
+    }
+    const aimIdx = _path![len - 2 >= 0 ? len - 2 : 0];   // nothing visible → next cell along the path
+    return [((aimIdx % cW) * 8 + 4) * 1000, (((aimIdx / cW) | 0) * 8 + 4) * 1000];
 }

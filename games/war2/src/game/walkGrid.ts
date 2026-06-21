@@ -2,8 +2,8 @@
  * Walk grid — the 8px spatial layer for unit collision.  Units keep smooth fixed-point positions.
  *
  * Two distinct jobs:
- *   • TERRAIN (static): a cell is blocked if its 32px tile is impassable or holds a building
- *     (`staticBlocked`, 4 cells per tile).  Movers may never cross it.
+ *   • TERRAIN (static): `terrainClearAt` tests the unit against impassable tiles (DIAMONDS, corner-
+ *     passable) and buildings (undersized OCTAGONS).  Movers may never cross it.
  *   • UNITS (dynamic): unit↔unit collision is a DIAMOND (L1 ball, radius `unitRadiusPx`), tested as
  *     exact L1 distance vs summed radii — NOT cell occupancy.  The `_grid` (`cell = eid+1`) is just a
  *     BROAD-PHASE index: each unit stamps the cells around it so a query can gather nearby candidate
@@ -17,9 +17,9 @@
  * Determinism: pure integer; the broad-phase scan + L1 tests are order-independent, and reservation
  * order (referee's stable eid order, reproduced by snapshot/replay) only affects who-claims-a-cell ties.
  */
-import { FP, TILE_PX, UNIT_SPD, Position, Unit, MoveTarget } from "./components";
+import { FP, TILE_PX, UNIT_SPD, Position, Unit, MoveTarget, Building } from "./components";
 import { getPassability } from "./passability";
-import { buildingAt } from "./occupancy";
+import { occupant } from "./occupancy";
 import { unitRadiusPx } from "./unitTypes";
 import { distance } from "./distance";
 
@@ -47,33 +47,54 @@ export function initWalkGrid(mapW: number, mapH: number): void {
 
 export function resetWalkGrid(): void { _grid?.fill(0); }
 
-/** A walk cell is statically blocked if its 32px tile is impassable terrain or holds
- *  a building footprint. */
-function staticBlocked(wx: number, wy: number): boolean {
-    const tx = (wx / CELLS_PER_TILE) | 0;
-    const ty = (wy / CELLS_PER_TILE) | 0;
-    const pass = getPassability();
-    if (pass && pass[ty * _mapW + tx] === 1) return true;
-    return buildingAt(tx, ty);
-}
-
 // Largest unit collision radius (ships = 32px L1) — the broad-phase window pads the query by this so
 // no overlapping unit is missed when scanning the grid for candidates.
 const MAX_UNIT_RADIUS_FP = 32 * FP;
 
-/** True if the bounding box of a circle (centre xFP,yFP; radius rFP) is in-bounds and clear of static
- *  terrain/buildings.  Sub-tile units use a circle for unit↔unit collision, but terrain is still the
- *  cell grid, so we sweep the circle's cell box against it (a hair conservative at the box corners). */
-function terrainClearAt(xFP: number, yFP: number, rFP: number): boolean {
-    const wx0 = Math.floor((xFP - rFP) / WALK_FP);
-    const wx1 = Math.floor((xFP + rFP - 1) / WALK_FP);
-    const wy0 = Math.floor((yFP - rFP) / WALK_FP);
-    const wy1 = Math.floor((yFP + rFP - 1) / WALK_FP);
-    if (wx0 < 0 || wy0 < 0 || wx1 >= _wW || wy1 >= _wH) return false;   // would leave the map
-    for (let wy = wy0; wy <= wy1; wy++)
-        for (let wx = wx0; wx <= wx1; wx++)
-            if (staticBlocked(wx, wy)) return false;
+const TILE_FP      = TILE_PX * FP;
+const HALF_TILE_FP = (TILE_PX >> 1) * FP;   // a tile's inscribed-diamond / box half-extent (16px)
+
+/** Shared static-terrain test — the single source of truth for BOTH the mover (real passability) and the
+ *  planner (localPath, believed passability), so their terrain models can never silently desync.  A unit
+ *  (centre xFP,yFP; L1 radius rFP) on the given `pass` grid:
+ *    • WALL tiles = inscribed DIAMONDS (L1 ball, radius = half-tile) — the same shape as a unit, so a unit
+ *      threads a diagonal wall pinch just as it threads two diagonally-placed units, and corners pass.
+ *    • BUILDINGS = undersized OCTAGONS about Position — footprint inset 16px (matches the structure inside
+ *      its sprite padding) with 16px 45° corner chamfers, so units round building corners.
+ *    • map border = a hard box (the unit must stay fully on the map).
+ *  Sqrt-free, integer, deterministic. */
+export function terrainClearForPass(pass: Uint8Array | null, xFP: number, yFP: number, rFP: number, mapW: number, mapH: number): boolean {
+    if (!pass) return true;
+    if (xFP - rFP < 0 || yFP - rFP < 0 || xFP + rFP > mapW * TILE_FP || yFP + rFP > mapH * TILE_FP) return false;
+    const reach = rFP + HALF_TILE_FP;   // unit radius + tile half-extent
+    const tx0 = Math.max(0, ((xFP - reach) / TILE_FP) | 0), tx1 = Math.min(mapW - 1, ((xFP + reach) / TILE_FP) | 0);
+    const ty0 = Math.max(0, ((yFP - reach) / TILE_FP) | 0), ty1 = Math.min(mapH - 1, ((yFP + reach) / TILE_FP) | 0);
+    for (let ty = ty0; ty <= ty1; ty++) {
+        for (let tx = tx0; tx <= tx1; tx++) {
+            if (pass[ty * mapW + tx] === 1) {
+                const cx = tx * TILE_FP + HALF_TILE_FP, cy = ty * TILE_FP + HALF_TILE_FP;       // WALL: diamond
+                const dx = xFP > cx ? xFP - cx : cx - xFP, dy = yFP > cy ? yFP - cy : cy - yFP;
+                if (dx + dy < reach) return false;
+                continue;
+            }
+            const beid = occupant(tx, ty);
+            if (beid < 0) continue;
+            // BUILDING: undersized octagon about its centre — box half (bxh,byh) inset 16px, corners
+            // chamfered 16px (diamond bound dd); overlap = unit inside all three, each grown by rFP.
+            const bxh = Math.max(0, Building.fw[beid] * HALF_TILE_FP - HALF_TILE_FP);
+            const byh = Math.max(0, Building.fh[beid] * HALF_TILE_FP - HALF_TILE_FP);
+            const dd  = Math.max(0, bxh + byh - HALF_TILE_FP);
+            const dx = xFP > Position.x[beid] ? xFP - Position.x[beid] : Position.x[beid] - xFP;
+            const dy = yFP > Position.y[beid] ? yFP - Position.y[beid] : Position.y[beid] - yFP;
+            if (dx < bxh + rFP && dy < byh + rFP && dx + dy < dd + rFP) return false;
+        }
+    }
     return true;
+}
+
+/** Mover-side terrain test: shared logic against the REAL passability grid. */
+function terrainClearAt(xFP: number, yFP: number, rFP: number): boolean {
+    return terrainClearForPass(getPassability(), xFP, yFP, rFP, _mapW, (_wH / CELLS_PER_TILE) | 0);
 }
 
 /** True if a DIAMOND (L1 ball; centre xFP,yFP; L1 radius rFP) would overlap another unit's diamond.
@@ -123,6 +144,29 @@ export function footprintStaticFreeAt(xFP: number, yFP: number, rFP: number): bo
  *  traffic (a convoy) while never overlapping a parked one.  Used for settle and for following. */
 export function footprintSoftFreeAt(xFP: number, yFP: number, rFP: number, selfEid: number): boolean {
     return terrainClearAt(xFP, yFP, rFP) && !unitOverlapAt(xFP, yFP, rFP, selfEid, true);
+}
+
+/** Corner-graze terrain test: passable if just the unit's CENTRE tile is open (in-bounds, not a wall
+ *  or building) — the swept-box corners are ignored.  Used ONLY by the diagonal corner-cut step in
+ *  movement, where a tile-sized unit threading a diagonal pinch/stairstep must be allowed to clip the
+ *  flanking wall corners (WC2 behaviour).  The centre stays in open terrain, so a unit never tunnels
+ *  through a wall body — it only grazes corners while passing diagonally.  At the exact tile corner of
+ *  a pinch ANY positive-radius box clips the flanking walls, so the corner-cut step can't use one. */
+export function terrainCentreClearAt(xFP: number, yFP: number): boolean {
+    const tx = (xFP / FP / TILE_PX) | 0;
+    const ty = (yFP / FP / TILE_PX) | 0;
+    const pass = getPassability();
+    if (!pass) return true;
+    if (tx < 0 || ty < 0 || tx >= _mapW || ty >= (pass.length / _mapW)) return false;
+    if (pass[ty * _mapW + tx] === 1) return false;
+    return occupant(tx, ty) < 0;   // open if no building occupies the centre tile
+}
+
+/** Clear of *settled* units only (terrain ignored) — the unit half of footprintSoftFreeAt.  Pairs
+ *  with terrainCentreClearAt for the corner-cut step: terrain is centre-only there, but a unit must
+ *  still not cut a corner straight through a parked unit. */
+export function unitsSoftFreeAt(xFP: number, yFP: number, rFP: number, selfEid: number): boolean {
+    return !unitOverlapAt(xFP, yFP, rFP, selfEid, true);
 }
 
 /** If a unit at (x,y,r) is OVERLAPPING any SETTLED unit (penetration — it phased in, or one settled

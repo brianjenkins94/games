@@ -80,9 +80,8 @@ export function unitBoxHalfPx(id: number): [number, number] {
 // Unit↔unit collision is a DIAMOND (L1 ball); this returns its L1 "radius" in PIXELS = the cardinal
 // reach (N/S/E/W).  Full tile size: the diamond is inscribed in the tile (cardinal reach = tile edge),
 // so at rest units pack flush (touch edge-to-edge at 32px tile spacing) and look fully tile-filling.
-// Threading a tile-diagonal pinch is impossible at the full radius (zero corridor) — it's handled by
-// movement.ts's SQUEEZE tier (a temporarily smaller footprint, SQUEEZE_FP); the resting size and the
-// threading ability are decoupled, so we keep the fullest look here.
+// The diamond's slim diagonals are what let a unit thread the gap between two diagonally-placed units
+// (movement.ts's full step does it; no temporary-shrink "squeeze" is involved — that model is gone).
 export function unitRadiusPx(id: number): number {
     const b = unitTypeDef(id)?.["boxSize"] as [number, number] | undefined;
     const w = b ? b[0] : TILE_PX;

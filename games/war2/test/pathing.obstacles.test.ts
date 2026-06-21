@@ -51,12 +51,8 @@ const CASES: Case[] = [
     },
 ];
 
-// NOTE: currently `todo` — the present pathing stalls a lone unit at an obstacle (it routes *to* the
-// obstacle via the flow field, then aborts at maxStuck instead of going around; reproduced headless
-// too, fog ruled out). These encode the target behaviour for the pathing rework; node:test will flag
-// them as it starts passing, then drop the `todo`.
 for (const c of CASES) {
-    test(`pathing: ${c.name}`, { todo: "pathing rework: lone unit must route around obstacles (currently stalls)" }, async () => {
+    test(`pathing: ${c.name}`, async () => {
         const map = tinyMap(c.rows);
         const uid = await loadSingleUnit(insp, c.from, map);
         move(insp, uid, c.to);

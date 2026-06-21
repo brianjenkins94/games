@@ -57,6 +57,15 @@ export const Path = {
     curTx:      new Int16Array(CAP),   // tile the unit currently sits in
     curTy:      new Int16Array(CAP),
     stuckTicks: new Uint8Array(CAP),   // consecutive low-progress ticks (arrival/settle)
+    // Pinch-corridor commitment (movement.ts): when the flow steers a unit into a diagonal pinch (both
+    // flanks walls), it commits to driving CENTRE-to-CENTRE through the corridor (wpFrom→wp tile centres)
+    // without re-sampling the flow until it arrives — so the tile-boundary direction flip and the 4-tile-
+    // corner sampling singularity that wedge a unit entering a pinch perpendicular can't happen.
+    wpActive:   new Uint8Array(CAP),   // 1 = committed to a pinch corridor
+    wpFromTx:   new Int16Array(CAP),   // corridor source tile (line anchor)
+    wpFromTy:   new Int16Array(CAP),
+    wpTx:       new Int16Array(CAP),   // corridor destination tile
+    wpTy:       new Int16Array(CAP),
 };
 
 // ── Buildings ─────────────────────────────────────────────────────────────────

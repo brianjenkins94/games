@@ -10,8 +10,11 @@
  *   0=N  1=NE  2=E  3=SE  4=S  5=SW  6=W  7=NW   0xFF=unreachable
  *
  * Diagonal moves use cost 14, cardinal 10 (× integer scale).
- * Diagonal moves that would clip a blocked corner are excluded from both the
- * Dijkstra and the direction-selection pass, so units never cut corners.
+ * A diagonal into an open tile is allowed only when 0 or 2 of its flanking tiles are blocked: 0 = a
+ * clean diagonal; 2 = a pinch with no cardinal alternative (units thread it — walls are diamonds, see
+ * walkGrid).  Exactly 1 flanking wall is excluded, so the field routes CARDINAL around a single corner
+ * rather than steering a unit's continuous path into the wall's pocket (movement.ts still cuts the
+ * corner when the geometry fits).
  *
  * Obstacles here are ONLY the slow-changing ones: impassable terrain and building footprints.
  * Units are deliberately NOT in the flow field — they change every tick and would thrash the
@@ -94,6 +97,23 @@ export class MinHeap {
 
 const INF = 0x7FFFFFFF;
 
+// Reusable scratch for the Dijkstra (the per-field `dirs` is the only thing allocated per call — it's
+// returned and cached).  Sized to the map; grown if the map ever gets larger.  Avoids ~19×map-size of
+// typed-array garbage — chiefly the size*8 heap — on every flow-field computation.
+let _scratchSize = 0;
+let _blocked: Uint8Array | null = null;
+let _cost: Int32Array | null = null;
+let _visited: Uint8Array | null = null;
+let _scratchHeap: MinHeap | null = null;
+function ensureScratch(size: number): void {
+    if (size <= _scratchSize) return;
+    _scratchSize = size;
+    _blocked = new Uint8Array(size);
+    _cost = new Int32Array(size);
+    _visited = new Uint8Array(size);
+    _scratchHeap = new MinHeap(size * 8);   // each tile can be pushed at most 8 times
+}
+
 /**
  * Run reverse-Dijkstra from (goalTx, goalTy) and build a per-tile direction
  * array.  Returns null if the goal tile is terrain-impassable.
@@ -110,23 +130,18 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
     goalTy = Math.max(0, Math.min(mapH - 1, goalTy));
 
     const size    = mapW * mapH;
+    ensureScratch(size);
+    const blocked = _blocked!, cost = _cost!, visited = _visited!, heap = _scratchHeap!;
 
-    // Combined obstacle map: a tile is blocked for pathing if terrain is impassable
-    // (per this team's belief) OR a building footprint covers it.  Mobile units are
-    // NOT in here — they're avoided by continuous collision, not by the flow field.
-    const blocked = new Uint8Array(size);
-    for (let i = 0; i < size; i++) blocked[i] = (pass[i] || buildingAtIdx(i)) ? 1 : 0;
+    // Combined obstacle map (terrain impassable per this team's belief OR a building footprint) plus the
+    // cost/visited reset — one pass over the scratch.  Mobile units are NOT here (continuous collision).
+    for (let i = 0; i < size; i++) { blocked[i] = (pass[i] || buildingAtIdx(i)) ? 1 : 0; cost[i] = INF; visited[i] = 0; }
+    heap.clear();
 
     const goalIdx = goalTy * mapW + goalTx;
     if (blocked[goalIdx]) return null; // blocked goal
 
-    // cost[i] = minimum movement cost to reach goal from tile i
-    const cost    = new Int32Array(size).fill(INF);
-    const visited = new Uint8Array(size);
     cost[goalIdx] = 0;
-
-    // Heap capacity: each tile can be pushed at most 8 times
-    const heap = new MinHeap(size * 8);
     heap.push(0, goalIdx);
 
     while (heap.size > 0) {
@@ -144,11 +159,12 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
 
             const ni = ny * mapW + nx;
             if (blocked[ni]) continue;
-
-            // Diagonal: block if either orthogonal side is blocked
-            if (DIR_DX[d] !== 0 && DIR_DY[d] !== 0) {
-                if (blocked[cy * mapW + nx] || blocked[ny * mapW + cx]) continue;
-            }
+            // Diagonal: allow only when 0 or 2 flanking tiles are blocked.  0 = a clean diagonal;
+            // 2 = a pinch with no cardinal alternative (units thread it — wall diamonds).  Exactly 1
+            // flanking wall is skipped, so the field routes CARDINAL around a single corner rather than
+            // diving the unit's continuous path into the wall's pocket (movement still cuts the corner
+            // when the geometry fits).
+            if (DIR_DX[d] !== 0 && DIR_DY[d] !== 0 && blocked[cy * mapW + nx] !== blocked[ny * mapW + cx]) continue;
 
             const nc = c + DIR_COST[d];
             if (nc < cost[ni]) {
@@ -174,10 +190,8 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
                 if (nx < 0 || nx >= mapW || ny < 0 || ny >= mapH) continue;
                 const ni = ny * mapW + nx;
                 if (blocked[ni]) continue;
-
-                if (DIR_DX[d] !== 0 && DIR_DY[d] !== 0) {
-                    if (blocked[ty * mapW + nx] || blocked[ny * mapW + tx]) continue;
-                }
+                // Diagonal allowed only with 0 or 2 flanking walls (see the Dijkstra pass above).
+                if (DIR_DX[d] !== 0 && DIR_DY[d] !== 0 && blocked[ty * mapW + nx] !== blocked[ny * mapW + tx]) continue;
 
                 if (cost[ni] < minCost) { minCost = cost[ni]; bestDir = d; }
             }
@@ -196,9 +210,10 @@ const CACHE_CAP = 64;
 const _cache    = new Map<number, FlowField>(); // goalIdx → FlowField
 
 export function getOrComputeFlowField(team: number, goalTx: number, goalTy: number): FlowField | null {
-    // Newly-explored terrain that proved blocked invalidates fields computed under
-    // the prior optimistic belief — drop them so they recompute against reality.
-    if (takeBelievedDirty(team)) clearFlowFieldCache();
+    // Newly-explored terrain that proved blocked invalidates fields computed under the prior optimistic
+    // belief — drop THIS team's fields so they recompute against reality.  Per-team (not the whole cache),
+    // so one team's constant scouting doesn't keep evicting the other team's fields.
+    if (takeBelievedDirty(team)) clearFlowFieldCacheForTeam(team);
 
     const mapW    = getMapW();
     // Cache key includes team so the same goal yields each team's own field.
@@ -224,3 +239,10 @@ export function getOrComputeFlowField(team: number, goalTx: number, goalTy: numb
 }
 
 export function clearFlowFieldCache(): void { _cache.clear(); }
+
+/** Drop only `team`'s cached fields (its goal keys occupy a contiguous span — see the key formula). */
+export function clearFlowFieldCacheForTeam(team: number): void {
+    const span = getMapW() * getMapH();
+    const lo = team * span, hi = lo + span;
+    for (const k of _cache.keys()) if (k >= lo && k < hi) _cache.delete(k);
+}
