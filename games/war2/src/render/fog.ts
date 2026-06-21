@@ -5,34 +5,34 @@
  * The visibility metric (dodecagonal `inRange`) is the single source of truth shared with the sim
  * (vision.ts isTileVisible / computeVisibleUids), so the drawn fog matches actual gameplay vision.
  */
-import Phaser from "phaser";
 import { FP, TILE_PX } from "../game/components";
 import { inRange } from "../game/distance";
 import { unitSight } from "../game/unitTypes";
 import type { RenderUnit } from "../worker/ipc";
+import type { RendererState } from "./renderer";
 
 /**
- * Recompute per-tile visibility for `scene.myTeam` and push it to the ChunkRenderer.
+ * Recompute per-tile visibility for `renderer.myTeam` and push it to the ChunkRenderer.
  *
  * tileVis values:
  *   0 = UNEXPLORED — never seen; solid ~100% black
  *   1 = EXPLORED   — seen before but not current view; 50% dim terrain
  *   2 = VISIBLE    — currently in sight; full terrain + fog edge tiles
  */
-export function updateFow(scene: Phaser.Scene, units: RenderUnit[]): void {
-    if (!scene.chunkRenderer || !scene.tileVis || !scene.tileExplored) return;
+export function updateFow(renderer: RendererState, units: RenderUnit[]): void {
+    if (!renderer.chunkRenderer || !renderer.tileVis || !renderer.tileExplored) return;
 
-    const mapW = scene.mapTileW;
-    const mapH = scene.mapTileH;
-    const vis  = scene.tileVis;
-    const exp  = scene.tileExplored;
+    const mapW = renderer.mapTileW;
+    const mapH = renderer.mapTileH;
+    const vis  = renderer.tileVis;
+    const exp  = renderer.tileExplored;
 
     // Start from explored state, then mark current visibility on top
     for (let i = 0; i < vis.length; i++) vis[i] = exp[i];
 
     // Mark tiles currently in sight of any own unit as VISIBLE (2)
     for (const u of units) {
-        if (u.team !== scene.myTeam) continue;
+        if (u.team !== renderer.myTeam) continue;
         // Per-unit sight (unitSight), matching the sim's vision/visibility.
         const sight = unitSight(u.type);
         const utx = (u.x / FP / TILE_PX) | 0;
@@ -57,5 +57,5 @@ export function updateFow(scene: Phaser.Scene, units: RenderUnit[]): void {
         if (vis[i] === 2) exp[i] = 1;
     }
 
-    scene.chunkRenderer.updateFog(vis, mapW, mapH);
+    renderer.chunkRenderer.updateFog(vis, mapW, mapH);
 }

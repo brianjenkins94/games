@@ -21,6 +21,12 @@ export function tinyMap(rows: string[]): MapInfo {
 /** A 5x5 all-walkable map. */
 export const empty5 = (): MapInfo => tinyMap(["....." , ".....", ".....", ".....", "....."]);
 
+/** Is tile (tx,ty) walkable in this map? (gid 0 = blocked; out of bounds = blocked.) */
+export function isWalkable(map: MapInfo, tx: number, ty: number): boolean {
+    if (tx < 0 || ty < 0 || tx >= map.mapW || ty >= map.mapH) return false;
+    return map.gids[ty * map.mapW + tx] !== 0;
+}
+
 /** Diagonal-gap threading: a mover crosses a 5x5 corner-to-corner in each diagonal direction, with two
  *  own-team peasants flanking the centre tile (2,2) — the orthogonal corners of its centre diagonal
  *  step — so it must thread the diagonal gap BETWEEN them (localPath's diagonal-gap rule). */

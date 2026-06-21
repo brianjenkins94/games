@@ -17,7 +17,7 @@
  */
 import { createGame, type GameInstance, type MapInfo, type WorldSnapshot } from "../game/game";
 import { validateCommand } from "../game/validate";
-import { UnitId, TICK_MS, tileCenterFP } from "../game/components";
+import { UnitId, TICK_MS, tileCenterFP, Building } from "../game/components";
 import { CmdType, type Command, type UnitSnapshot, type StateUpdatePayload } from "../net/protocol";
 import { LocalRefereeClient, RemoteRefereeClient, type RefereeClient } from "../net/transport";
 import { getPassability } from "../game/passability";
@@ -255,6 +255,10 @@ function loadScenario(sc: DebugScenario): void {
     for (const u of sc.spawns) {
         game.spawnUnit(tileCenterFP(u.tx), tileCenterFP(u.ty), u.team, undefined, u.typeId ?? 0);
     }
+    for (const b of sc.buildings ?? []) {
+        const beid = game.spawnBuilding(b.tx, b.ty, b.team, b.typeId);   // footprint top-left tile
+        Building.buildLeft[beid] = 0;   // scenarios place finished buildings (render the real sprite, not a construction site)
+    }
     revealAll();   // scenarios test obstacle routing with full map knowledge (no fog-of-war discovery)
     simPaused = true;
     started   = true;
@@ -441,6 +445,7 @@ function start(init: WorkerInit): void {
         onCommand:        (cmd) => { if (started) hostClient.deliverCommands([cmd], 0); },
         onStep:           (n)   => { if (started) stepTicks(n); },                // advance N ticks (load paused first)
         onLoadScenario:   (sc)  => loadScenario(sc),                              // rebuild from a tiny map
+        onLabel:          (text) => post({ kind: "scenario-label", text }),       // e2e: show the running test name
     });
 
     started = true;

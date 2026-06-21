@@ -8,6 +8,7 @@
 import {
     createSimWorld, stepWorld, unitEids as _unitEids,
     spawnUnit as _spawnUnit, spawnRandom as _spawnRandom, despawnUnit,
+    spawnBuilding as _spawnBuilding,
     canPlaceBuilding as _canPlaceBuilding,
     registerObservers as _registerObservers,
     consumeUnitId, eidForUnitId, setNextUnitId, initUnitIdCounter,
@@ -48,6 +49,10 @@ export interface GameInstance {
 
     /** Spawn a unit at a random position within the world bounds. */
     spawnRandom(team: number): number;
+
+    /** Spawn a building at footprint top-left tile (tileX,tileY). `typeId` is an interned
+     *  unit-type id with a multi-tile footprint (see game/unitTypes.ts). */
+    spawnBuilding(tileX: number, tileY: number, team: number, typeId: number): number;
 
     /** Remove a unit by its bitecs eid. */
     despawnUnit(eid: number): void;
@@ -108,6 +113,7 @@ export function createGame(seed: number, mapInfo?: MapInfo): GameInstance {
         unitEids:          ()                       => _unitEids(world),
         spawnUnit:         (xFP, yFP, team, uid?, typeId?) => _spawnUnit(world, xFP, yFP, team, uid, typeId),
         spawnRandom:       (team)                   => _spawnRandom(world, team),
+        spawnBuilding:     (tileX, tileY, team, typeId)    => _spawnBuilding(world, tileX, tileY, team, typeId),
         despawnUnit:       (eid)                    => despawnUnit(world, eid),
         setMoveTarget:     (eid, txFP, tyFP)        => _setMoveTarget(world, eid, txFP, tyFP),
         previewMoveTarget: (eid, txFP, tyFP)        => _previewMoveTarget(world, eid, txFP, tyFP),

@@ -53,14 +53,15 @@ const MAX_UNIT_RADIUS_FP = 32 * FP;
 
 const TILE_FP      = TILE_PX * FP;
 const HALF_TILE_FP = (TILE_PX >> 1) * FP;   // a tile's inscribed-diamond / box half-extent (16px)
+const BUILD_MARGIN_FP = 8 * FP;             // building collision margin: footprint inset + corner chamfer
 
 /** Shared static-terrain test — the single source of truth for BOTH the mover (real passability) and the
  *  planner (localPath, believed passability), so their terrain models can never silently desync.  A unit
  *  (centre xFP,yFP; L1 radius rFP) on the given `pass` grid:
  *    • WALL tiles = inscribed DIAMONDS (L1 ball, radius = half-tile) — the same shape as a unit, so a unit
  *      threads a diagonal wall pinch just as it threads two diagonally-placed units, and corners pass.
- *    • BUILDINGS = undersized OCTAGONS about Position — footprint inset 16px (matches the structure inside
- *      its sprite padding) with 16px 45° corner chamfers, so units round building corners.
+ *    • BUILDINGS = undersized OCTAGONS about Position — footprint inset 8px (matches the structure inside
+ *      its sprite padding) with 8px 45° corner chamfers, so units round building corners.
  *    • map border = a hard box (the unit must stay fully on the map).
  *  Sqrt-free, integer, deterministic. */
 export function terrainClearForPass(pass: Uint8Array | null, xFP: number, yFP: number, rFP: number, mapW: number, mapH: number): boolean {
@@ -79,11 +80,11 @@ export function terrainClearForPass(pass: Uint8Array | null, xFP: number, yFP: n
             }
             const beid = occupant(tx, ty);
             if (beid < 0) continue;
-            // BUILDING: undersized octagon about its centre — box half (bxh,byh) inset 16px, corners
-            // chamfered 16px (diamond bound dd); overlap = unit inside all three, each grown by rFP.
-            const bxh = Math.max(0, Building.fw[beid] * HALF_TILE_FP - HALF_TILE_FP);
-            const byh = Math.max(0, Building.fh[beid] * HALF_TILE_FP - HALF_TILE_FP);
-            const dd  = Math.max(0, bxh + byh - HALF_TILE_FP);
+            // BUILDING: undersized octagon about its centre — box half (bxh,byh) inset 8px, corners
+            // chamfered 8px (diamond bound dd); overlap = unit inside all three, each grown by rFP.
+            const bxh = Math.max(0, Building.fw[beid] * HALF_TILE_FP - BUILD_MARGIN_FP);
+            const byh = Math.max(0, Building.fh[beid] * HALF_TILE_FP - BUILD_MARGIN_FP);
+            const dd  = Math.max(0, bxh + byh - BUILD_MARGIN_FP);
             const dx = xFP > Position.x[beid] ? xFP - Position.x[beid] : Position.x[beid] - xFP;
             const dy = yFP > Position.y[beid] ? yFP - Position.y[beid] : Position.y[beid] - yFP;
             if (dx < bxh + rFP && dy < byh + rFP && dx + dy < dd + rFP) return false;

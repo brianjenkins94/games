@@ -154,6 +154,10 @@ export function spawnUnit(world: SimWorld, xFP: number, yFP: number, team: numbe
     Path.curTy[eid]        = fpToTile(yFP);
     UnitAnim.dir[eid]      = 4;   // default South
     UnitAnim.moving[eid]   = 0;
+    // Clear any stale Building fields: component arrays are module-global and bitecs recycles eids, so an
+    // eid that previously held a building would otherwise leave fw/fh set — making this unit render as a
+    // building (the blue fallback rect) and get skipped by the movement system (Building.fw > 0 guard).
+    Building.fw[eid] = 0; Building.fh[eid] = 0; Building.buildLeft[eid] = 0;
     reserveUnit(eid);             // claim the unit's footprint on the 8px collision grid
     markIdleDirty();              // a new idle unit joins the path-obstacle set
     _unitIdToEid.set(uid, eid);

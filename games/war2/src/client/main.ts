@@ -23,7 +23,7 @@ import { CmdType, type Command, type SpawnCmd, type SpeedCmd } from "../net/prot
 import { openPeer, connectTo } from "../net/peer";
 import type { DataConnection } from "peerjs";
 import {
-    startPhaser, type GameScene, type UnitPrediction,
+    startPhaser, type Renderer, type UnitPrediction,
     rebuildMap, setRenderState, setSelectedUids, setPrediction,
     setTargetingCursor, showPlacementGhost,
 } from "../render/renderer";
@@ -79,7 +79,7 @@ let myTeam  = 0;
 let selfRole: "host" | "peer" = "host";   // labels this box's metrics on the host page
 let pendingRestore: WorldSnapshot | null = null;   // host-box restore snapshot (applied after boot)
 let worker: Worker | null = null;
-let scene:  GameScene | null = null;
+let renderer:  Renderer | null = null;
 let cardController: CommandCardController | null = null;
 
 // Relay-mode channel (main thread keeps it); null in transfer mode.
@@ -192,6 +192,30 @@ function updateInspectorBadge(n: number): void {
     }
 }
 
+// ── Scenario/test label badge (upper-left; set by the e2e harness via `set-label`) ──
+function updateScenarioBadge(text: string): void {
+    const ID = "scenario-label-badge";
+    let badge = document.getElementById(ID);
+    if (text) {
+        if (!badge) {
+            badge = document.createElement("div");
+            badge.id = ID;
+            badge.style.cssText = [
+                "position:fixed", "top:8px", "left:8px",
+                "background:#dc2626", "color:#fff",
+                "font:bold 11px/1 monospace", "padding:4px 8px",
+                "border-radius:4px", "z-index:9999", "pointer-events:none",
+                "letter-spacing:0.05em", "max-width:60vw", "white-space:nowrap",
+                "overflow:hidden", "text-overflow:ellipsis",
+            ].join(";");
+            document.body.appendChild(badge);
+        }
+        badge.textContent = `🧪 ${text}`;
+    } else {
+        badge?.remove();
+    }
+}
+
 // ── Worker messages ─────────────────────────────────────────────────────────────
 
 function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
@@ -202,10 +226,11 @@ function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
             mapTW = msg.mapW; mapTH = msg.mapH;
             break;
         case "render":          onRender(msg.state); break;
-        case "scenario-map":    if (scene) rebuildMap(scene, msg.gids, msg.mapW, msg.mapH); break;
+        case "scenario-map":    if (renderer) rebuildMap(renderer, msg.gids, msg.mapW, msg.mapH); break;
         case "metrics":         onMetrics(msg.sample); break;
         case "net-out":         relayChannel?.send(msg.data); break;   // relay mode
         case "inspector-count": updateInspectorBadge(msg.n); break;
+        case "scenario-label":  updateScenarioBadge(msg.text); break;
         // Host-state heartbeat → host page, which restores it into a reloaded host box (popout etc.).
         case "snapshot":        host.postMessage({ type: "host-snapshot", snap: msg.snap }, "*"); break;
         // Step debugger: surface sim halts + state up to the host page (→ the VS Code adapter).
@@ -218,7 +243,7 @@ function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
  *  role and stamped with fps/frameMs — the only signals the worker can't see itself.
  *  The metrics package on the host page charts host vs guest from these. */
 function onMetrics(sample: MetricsSample): void {
-    const frameMs = scene?.frameMs ?? 0;
+    const frameMs = renderer?.frameMs ?? 0;
     const fps = frameMs > 0 ? Math.round(1000 / frameMs) : 0;
     const fields: Record<string, number> = { ...sample, fps, frameMs: Math.round(frameMs * 10) / 10 };
     // JS heap — Chromium-only (`performance.memory` is main-thread + Chromium); absent
@@ -259,8 +284,8 @@ function onRender(state: RenderState): void {
     }
     if (pruned) refreshCard();
 
-    if (scene) setRenderState(scene, state);
-    if (scene) setSelectedUids(scene, selectedUids);
+    if (renderer) setRenderState(renderer, state);
+    if (renderer) setSelectedUids(renderer, selectedUids);
 }
 
 // ── Networking: transfer the channel to the worker, else relay ───────────────────
@@ -316,7 +341,7 @@ function onConnection(conn: DataConnection): void {
 async function dialGuest(targetId: string): Promise<void> {
     for (let attempt = 1; attempt <= 4; attempt++) {
         try { onConnection(await connectTo(peer, targetId)); return; }
-        catch (err) { console.warn(`dial attempt ${attempt} failed, retrying…`, err); await new Promise((r) => setTimeout(r, 400)); }
+        catch (err) { console.warn(`dial attempt ${attempt} failed, retrying…`, err); await new Promise((renderer) => setTimeout(renderer, 400)); }
     }
     console.error(`dial to ${targetId} gave up`);
 }
@@ -359,40 +384,40 @@ async function boot(): Promise<void> {
 
     // ── Rendering + input ─────────────────────────────────────────────────────
     console.info("starting phaser...");
-    scene = await startPhaser(document.getElementById("game")!, { tilesetUrl, mapJson });
+    renderer = await startPhaser(document.getElementById("game")!, { tilesetUrl, mapJson });
     console.info("phaser ready");
 
-    scene.myTeam = myTeam;
-    scene.cameras.main.centerOn(sx * TILE_PX, sy * TILE_PX);
+    renderer.myTeam = myTeam;
+    renderer.scene.cameras.main.centerOn(sx * TILE_PX, sy * TILE_PX);
 
     cardController = createCommandCardController({
         getOwnSelection:    ownSelection,
         snapToTile:         snapClickFP,
         emit:               emitCommand,
-        render:             (card) => showCommandCard(scene!, card),
-        setTargetingCursor: (on) => setTargetingCursor(scene!, on),
+        render:             (card) => showCommandCard(renderer!, card),
+        setTargetingCursor: (on) => setTargetingCursor(renderer!, on),
         log:                (m) => console.info(m),
         myTeam,
         fpToTile,
         canPlaceBuilding:   canPlaceBuildingLocal,
-        showPlacementGhost: (g) => showPlacementGhost(scene!, g),
+        showPlacementGhost: (g) => showPlacementGhost(renderer!, g),
     });
 
-    setPrediction(scene, predicted);   // share the live prediction map (we mutate it)
+    setPrediction(renderer, predicted);   // share the live prediction map (we mutate it)
 
-    scene.onSelect = (uids) => {
+    renderer.onSelect = (uids) => {
         selectedUids = new Set(uids);
-        setSelectedUids(scene!, selectedUids);
+        setSelectedUids(renderer!, selectedUids);
         refreshCard();
     };
 
     // Raw input → the controller decides what it means.
-    scene.onSlot           = (index)      => cardController!.slot(index);
-    scene.onPrimaryClick   = (wxFP, wyFP) => cardController!.primaryClick(wxFP, wyFP);
-    scene.onSecondaryClick = (wxFP, wyFP) => cardController!.secondaryClick(wxFP, wyFP);
-    scene.onEscape         = ()           => cardController!.escape();
-    scene.onHotkey         = (letter)     => cardController!.hotkey(letter);
-    scene.onHover          = (wxFP, wyFP) => cardController!.hoverTile(wxFP, wyFP);
+    renderer.onSlot           = (index)      => cardController!.slot(index);
+    renderer.onPrimaryClick   = (wxFP, wyFP) => cardController!.primaryClick(wxFP, wyFP);
+    renderer.onSecondaryClick = (wxFP, wyFP) => cardController!.secondaryClick(wxFP, wyFP);
+    renderer.onEscape         = ()           => cardController!.escape();
+    renderer.onHotkey         = (letter)     => cardController!.hotkey(letter);
+    renderer.onHover          = (wxFP, wyFP) => cardController!.hoverTile(wxFP, wyFP);
 
     console.info(`${role} client ready`);
     // Tell the host the renderer is up (so a windowed box can now minimize safely —

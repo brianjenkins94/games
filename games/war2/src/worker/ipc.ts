@@ -153,6 +153,8 @@ export type WorkerToMain =
     | { kind: "net-out"; data: ArrayBuffer }
     /** Debug inspector badge count (worker owns the debug WS; badge is DOM). */
     | { kind: "inspector-count"; n: number }
+    /** e2e scenario/test label to show in the host's upper-left badge (DOM). */
+    | { kind: "scenario-label"; text: string }
     /** Step debugger: the sim halted (manual pause, a completed step, or a breakpoint hit). `hit`
      *  describes the matched breakpoint (the expression, or the changed dataId). */
     | { kind: "stopped"; tick: number; reason: "pause" | "step" | "breakpoint"; hit?: string }

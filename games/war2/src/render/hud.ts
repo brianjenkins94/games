@@ -3,10 +3,10 @@
  * card, collapsible tweak pane) plus the command-card view.  The layout itself is declarative HTML/CSS;
  * this module only grabs refs and attaches the few dynamic behaviours.  Split out of renderer.ts.
  */
-import Phaser from "phaser";
 import iconsUrl  from "../assets/graphics/tilesets/winter/icons.png";
 import iconsJson from "../assets/icons.json";
 import type { CommandCard } from "../game/abilities";
+import type { RendererState } from "./renderer";
 
 // Icon sheet geometry: 46×38 frames in a 5-column grid (icons.png is 230 wide).
 const ICON_W = (iconsJson as any).frameWidth  as number;   // 46
@@ -25,15 +25,15 @@ function iconBgPos(iconKey: string): string {
  *  dynamic behaviours: the tweak-panel toggle, the right-click guard, and the
  *  list of chrome panels flipped click-through during a drag-select.  The
  *  layout itself is entirely declarative HTML/CSS. */
-export function wireHud(scene: Phaser.Scene): void {
-    scene.resourceCell = document.querySelector<HTMLDivElement>("#hud-resources")!;
-    scene.portraitCell = document.querySelector<HTMLDivElement>("#hud-portrait")!;
-    scene.cardEl       = document.querySelector<HTMLDivElement>("#hud-card")!;
-    scene.tweakPaneEl  = document.querySelector<HTMLDivElement>("#hud-tweak")!;
-    scene.tweakBodyEl  = document.querySelector<HTMLDivElement>("#hud-tweak-body")!;
+export function wireHud(renderer: RendererState): void {
+    renderer.resourceCell = document.querySelector<HTMLDivElement>("#hud-resources")!;
+    renderer.portraitCell = document.querySelector<HTMLDivElement>("#hud-portrait")!;
+    renderer.cardEl       = document.querySelector<HTMLDivElement>("#hud-card")!;
+    renderer.tweakPaneEl  = document.querySelector<HTMLDivElement>("#hud-tweak")!;
+    renderer.tweakBodyEl  = document.querySelector<HTMLDivElement>("#hud-tweak-body")!;
 
     // Chrome panels capture pointer events; flipped click-through during a drag.
-    scene.interactiveCells = Array.from(
+    renderer.interactiveCells = Array.from(
         document.querySelectorAll<HTMLDivElement>(".hud-chrome"),
     );
 
@@ -42,29 +42,29 @@ export function wireHud(scene: Phaser.Scene): void {
         .addEventListener("contextmenu", e => e.preventDefault());
 
     // Tweak-panel toggle (collapsed by default; .open is added/removed here).
-    scene.tweakPaneEl.querySelector(".hud-tweak-handle")!
-        .addEventListener("click", () => setTweakOpen(scene, !scene.tweakOpen));
+    renderer.tweakPaneEl.querySelector(".hud-tweak-handle")!
+        .addEventListener("click", () => setTweakOpen(renderer, !renderer.tweakOpen));
 }
 
 /** Show/hide the tweak pane — CSS animates the width (and shrinks the frame). */
-function setTweakOpen(scene: Phaser.Scene, open: boolean): void {
-    scene.tweakOpen = open;
-    scene.tweakPaneEl.classList.toggle("open", open);
-    (scene.tweakPaneEl.firstElementChild as HTMLElement).textContent = open ? "›" : "‹";
+function setTweakOpen(renderer: RendererState, open: boolean): void {
+    renderer.tweakOpen = open;
+    renderer.tweakPaneEl.classList.toggle("open", open);
+    (renderer.tweakPaneEl.firstElementChild as HTMLElement).textContent = open ? "›" : "‹";
 }
 
 /** Enter/leave drag-select mode.  While dragging, the perimeter cells stop
  *  capturing pointer events so the drag keeps tracking across them (Phaser
  *  owns the pointer from pointerdown, but a cell with pointer-events:auto
  *  would otherwise intercept the moves and freeze the rect at its edge). */
-export function setHudDragMode(scene: Phaser.Scene, on: boolean): void {
-    for (const c of scene.interactiveCells) c.style.pointerEvents = on ? "none" : "auto";
-    if (!on) scene.cardEl.style.opacity = "1";   // restore the card fade
+export function setHudDragMode(renderer: RendererState, on: boolean): void {
+    for (const c of renderer.interactiveCells) c.style.pointerEvents = on ? "none" : "auto";
+    if (!on) renderer.cardEl.style.opacity = "1";   // restore the card fade
 }
 
 /** Draw a pre-computed command card (null = hide).  Slot clicks emit onSlot. */
-export function showCommandCard(scene: Phaser.Scene, card: CommandCard | null): void {
-    const el = scene.cardEl;
+export function showCommandCard(renderer: RendererState, card: CommandCard | null): void {
+    const el = renderer.cardEl;
     el.replaceChildren();
     if (!card) { el.style.display = "none"; return; }
     el.style.display = "grid";
@@ -95,7 +95,7 @@ export function showCommandCard(scene: Phaser.Scene, card: CommandCard | null): 
                 });
                 cell.appendChild(k);
             }
-            cell.addEventListener("click", () => scene.onSlot?.(index));
+            cell.addEventListener("click", () => renderer.onSlot?.(index));
         } else {
             cell.style.border = "1px solid rgba(255,255,255,0.10)";
             cell.style.background = "rgba(0,0,0,0.25)";

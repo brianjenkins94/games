@@ -22,6 +22,8 @@ export interface DebugScenario {
     seed?: number;
     mapInfo: MapInfo;
     spawns: { team: number; tx: number; ty: number; typeId?: number }[];
+    /** Buildings to place (footprint top-left tile); typeId must be a multi-tile building type. */
+    buildings?: { team: number; tx: number; ty: number; typeId: number }[];
 }
 
 // Runs in the sim worker (WebSocket works there; the sim state it serialises now
@@ -38,6 +40,7 @@ let _onInspectorCount: ((n: number) => void) | null = null;
 let _onCommand:      ((cmd: Command) => void) | null = null;
 let _onStep:         ((n: number) => void) | null = null;
 let _onLoadScenario: ((sc: DebugScenario) => void) | null = null;
+let _onLabel:        ((text: string) => void) | null = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -63,6 +66,7 @@ export function initDebugClient(role: string): void {
                     if (msg.cmd === 'command' && msg.command)        _onCommand?.(msg.command as Command);
                     if (msg.cmd === 'step')                          _onStep?.(typeof msg.n === 'number' ? msg.n : 1);
                     if (msg.cmd === 'load-scenario' && msg.scenario) _onLoadScenario?.(msg.scenario as DebugScenario);
+                    if (msg.cmd === 'set-label')                     _onLabel?.(typeof msg.text === 'string' ? msg.text : '');
                 }
             } catch { /* ignore */ }
         });
@@ -85,6 +89,7 @@ export function setDebugCallbacks(cbs: {
     onCommand?: (cmd: Command) => void;
     onStep?: (n: number) => void;
     onLoadScenario?: (sc: DebugScenario) => void;
+    onLabel?: (text: string) => void;
 }): void {
     _onPause          = cbs.onPause          ?? null;
     _onResume         = cbs.onResume         ?? null;
@@ -92,6 +97,7 @@ export function setDebugCallbacks(cbs: {
     _onCommand        = cbs.onCommand        ?? null;
     _onStep           = cbs.onStep           ?? null;
     _onLoadScenario   = cbs.onLoadScenario   ?? null;
+    _onLabel          = cbs.onLabel          ?? null;
 }
 
 // ── Send helpers ──────────────────────────────────────────────────────────────
