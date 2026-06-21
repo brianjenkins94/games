@@ -335,10 +335,16 @@ export function stopUnit(_world: SimWorld, eid: number): void {
  * walkable tile.  A formation move passes `false` for the per-unit slot so a blocked
  * slot is *rejected* (caller collapses that unit onto the shared destination) instead
  * of scatter-snapping it to some random nearby pocket and shredding the formation.
+ *
+ * `flowTxOpt`/`flowTyOpt` (default -1 = unset): the SHARED flow-field goal tile for a group move — the
+ * group's common destination, so all N units read ONE cached field (one Dijkstra) for long-range
+ * navigation while each still targets its own slot point (txFP/tyFP) for the local approach + settle.
+ * Unset → the flow goal IS this unit's slot tile (a standalone move navigates straight to its target).
  */
 export function setMoveTarget(
     _world: SimWorld, eid: number, txFP: number, tyFP: number,
     snapBlocked = true, avoidUnits = false,
+    flowTxOpt = -1, flowTyOpt = -1,
 ): boolean {
     const team = Unit.team[eid];
     markIdleDirty();   // this unit is (un)settling → its tile leaves/joins the path-obstacle set
@@ -401,32 +407,64 @@ export function setMoveTarget(
         }
     }
 
+    // Flow-field goal: the SHARED group destination (one cached field for the whole group), distinct from
+    // this unit's own slot tile (goalTx/goalTy) which the local layer peels it onto at the end.  A
+    // standalone move passes no flow goal → it navigates straight to its own slot tile as before.  Snap a
+    // blocked shared goal (e.g. the click landed on a tree) to the nearest passable tile so the field is
+    // computable; fall back to the slot tile if there's no passable tile near the shared goal.
+    let flowTx = flowTxOpt, flowTy = flowTyOpt;
+    if (flowTx < 0 || flowTy < 0) { flowTx = goalTx; flowTy = goalTy; }
+    else if (pass[flowTy * mapW + flowTx]) {
+        const nf = nearestPassableTile(team, flowTx, flowTy);
+        if (nf) [flowTx, flowTy] = nf; else { flowTx = goalTx; flowTy = goalTy; }
+    }
+
     const curTx = fpToTile(Position.x[eid]);
     const curTy = fpToTile(Position.y[eid]);
 
-    // Record the goal point; the movement system steers toward it via the flow field.
-    Path.goalTx[eid]       = goalTx;
-    Path.goalTy[eid]       = goalTy;
+    // Record the unit's SLOT point (its final target) and the SHARED flow goal that steers it there.
+    // Path.goalTx/goalTy is the flow-field key (shared across the group); the slot tile is derived from
+    // MoveTarget.tx/ty by the movement system for its near-goal handoff.
+    Path.goalTx[eid]       = flowTx;
+    Path.goalTy[eid]       = flowTy;
     MoveTarget.tx[eid]     = goalXFP;
     MoveTarget.ty[eid]     = goalYFP;
     Path.stuckTicks[eid]   = 0;
 
     if (curTx === goalTx && curTy === goalTy) {
-        // Already in the goal tile — just nudge toward the exact point.
+        // Already standing in the slot tile — just nudge toward the exact point (no flow needed).
         MoveTarget.active[eid] = 1;
         Path.active[eid]       = 1;
         return true;
     }
 
-    // Pre-warm the shared flow field (all N selected units cost one Dijkstra) and
-    // skip the order if this unit can't reach the goal at all.
-    const ff = getOrComputeFlowField(team, goalTx, goalTy);
+    // Pre-warm the shared flow field (all N units of a group share ONE goal → one Dijkstra) and skip the
+    // order if this unit can't reach the shared destination at all.
+    const ff = getOrComputeFlowField(team, flowTx, flowTy);
     if (!ff) return false;
     if (ff.dirs[curTy * mapW + curTx] === UNREACHABLE) return false;
 
     MoveTarget.active[eid] = 1;
     Path.active[eid]       = 1;
     return true;
+}
+
+/**
+ * Tiles currently held by a SETTLED unit *outside* `group` — seeded into a formation's `claimed`
+ * reservation set so a slot never lands on a parked unit.  Without this a slot is chosen on terrain
+ * alone; the unit then walks onto the occupied tile and `settleOnto`'s ring-search relocates it at the
+ * final tick — the "unit zooms into a different space" teleport.  Group members and still-moving units
+ * are excluded (they'll vacate their tile), as are buildings (already static terrain via passability).
+ * Deterministic: a pure scan of Position/MoveTarget in eid order.
+ */
+function occupiedTilesOutside(world: SimWorld, group: number[], mapW: number): Set<number> {
+    const inGroup = new Set(group);
+    const taken = new Set<number>();
+    for (const e of unitEids(world)) {
+        if (inGroup.has(e) || MoveTarget.active[e] === 1 || Building.fw[e] > 0) continue;
+        taken.add(fpToTile(Position.y[e]) * mapW + fpToTile(Position.x[e]));
+    }
+    return taken;
 }
 
 /**
@@ -458,6 +496,11 @@ function assignUnitsToSlots(
     const order = slots.map((_, i) => i).sort((a, b) =>
         sign * (distance(slots[a][0] - gcx, slots[a][1] - gcy) - distance(slots[b][0] - gcx, slots[b][1] - gcy)) || (a - b));
 
+    // One SHARED flow-field goal for the whole group (the click destination tile): every unit reads the
+    // same cached field for long-range navigation (one Dijkstra, not one-per-slot) and peels onto its own
+    // slot via the local layer near the end.  setMoveTarget snaps it to passable if the click was blocked.
+    const flowTx = fpToTile(txFP), flowTy = fpToTile(tyFP);
+
     const remaining = [...eids];
     const n = Math.min(eids.length, slots.length);
     for (let k = 0; k < n; k++) {
@@ -469,9 +512,11 @@ function assignUnitsToSlots(
             if (d < bd || (d === bd && e < remaining[bi])) { bd = d; bi = i; }
         }
         const e = remaining.splice(bi, 1)[0];
-        if (!setMoveTarget(world, e, sx, sy)) setMoveTarget(world, e, txFP, tyFP);
+        if (!setMoveTarget(world, e, sx, sy, true, false, flowTx, flowTy))
+            setMoveTarget(world, e, txFP, tyFP, true, false, flowTx, flowTy);
     }
-    for (const e of remaining) setMoveTarget(world, e, txFP, tyFP);  // more units than slots → centre
+    for (const e of remaining)                                      // more units than slots → centre
+        setMoveTarget(world, e, txFP, tyFP, true, false, flowTx, flowTy);
 }
 
 /**
@@ -499,7 +544,9 @@ export function setFormationTargets(world: SimWorld, eids: number[], txFP: numbe
     const cx = (sx / eids.length) | 0, cy = (sy / eids.length) | 0;
 
     // Build the formation slots: each unit's offset tile, reflowed to the nearest free passable tile.
-    const claimed = new Set<number>();
+    // Seed `claimed` with tiles held by settled non-group units so a slot never targets a parked unit
+    // (which would walk the unit there then teleport it off at settle — see occupiedTilesOutside).
+    const claimed = occupiedTilesOutside(world, eids, mapW);
     const slots: Array<[number, number]> = [];
     const maxR = Math.max(mapW, mapH);
     for (const e of eids) {
@@ -544,6 +591,10 @@ export function setGatherTargets(world: SimWorld, eids: number[], txFP: number, 
 
     const inBounds = (x: number, y: number) => x >= 0 && x < mapW && y >= 0 && y < mapH;
     const passable = (x: number, y: number) => inBounds(x, y) && !pass[y * mapW + x];
+    // A slot tile is free only if it's passable AND not held by a settled non-group unit (so the block
+    // packs around parked units instead of targeting their tile and teleporting off at settle).
+    const taken = occupiedTilesOutside(world, eids, mapW);
+    const free = (x: number, y: number) => passable(x, y) && !taken.has(y * mapW + x);
 
     // Centre the cluster on passable ground.
     let ctx = fpToTile(txFP), cty = fpToTile(tyFP);
@@ -563,7 +614,7 @@ export function setGatherTargets(world: SimWorld, eids: number[], txFP: number, 
 
     const scx: number[] = [], scy: number[] = [];   // slot centres (fixed-point)
     for (let ry = 0; ry < rows; ry++) for (let rx = 0; rx < cols; rx++) {
-        if (passable(left + rx, top + ry)) { scx.push(tileCenterFP(left + rx)); scy.push(tileCenterFP(top + ry)); }
+        if (free(left + rx, top + ry)) { scx.push(tileCenterFP(left + rx)); scy.push(tileCenterFP(top + ry)); }
     }
     const maxR = Math.max(mapW, mapH);
     for (let r = 1; r <= maxR && scx.length < count; r++) {
@@ -571,7 +622,7 @@ export function setGatherTargets(world: SimWorld, eids: number[], txFP: number, 
             for (let dx = -r; dx <= r; dx++) {
                 if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;     // ring edge only
                 if (inRect(ctx + dx, cty + dy)) continue;                      // already considered
-                if (passable(ctx + dx, cty + dy)) { scx.push(tileCenterFP(ctx + dx)); scy.push(tileCenterFP(cty + dy)); }
+                if (free(ctx + dx, cty + dy)) { scx.push(tileCenterFP(ctx + dx)); scy.push(tileCenterFP(cty + dy)); }
             }
         }
     }

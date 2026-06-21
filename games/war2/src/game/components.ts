@@ -46,7 +46,10 @@ export const UnitId     = { id: new Uint32Array(CAP) };
 // curTx/curTy = the tile the unit currently sits in (recomputed from Position each
 //   tick) — drives flow-field and vision sampling.  For buildings it is the
 //   footprint top-left, used to re-lay occupancy on snapshot restore.
-// goalTx/goalTy = destination tile (indexes the LRU flow-field cache).
+// goalTx/goalTy = the FLOW-FIELD goal tile (indexes the LRU cache).  For a group move this is the
+//   group's SHARED destination — every unit reads one cached field for long-range navigation — while
+//   each unit's own final slot is its MoveTarget.tx/ty point (the movement system derives the slot tile
+//   from it for the near-goal handoff).  For a standalone move the flow goal IS the unit's own target.
 // stuckTicks = consecutive ticks of ~no progress toward the goal; arrival logic
 //   settles a unit once this passes a threshold (replaces the old occupancy hacks).
 

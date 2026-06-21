@@ -97,6 +97,11 @@ export class MinHeap {
 
 const INF = 0x7FFFFFFF;
 
+// Count of actual reverse-Dijkstra runs (cache misses) — a shared per-group goal should make a group
+// move cost ONE, not one-per-unit.  Exposed for tests/telemetry; incremented in computeFlowField.
+let _computeCount = 0;
+export function flowComputeCount(): number { return _computeCount; }
+
 // Reusable scratch for the Dijkstra (the per-field `dirs` is the only thing allocated per call — it's
 // returned and cached).  Sized to the map; grown if the map ever gets larger.  Avoids ~19×map-size of
 // typed-array garbage — chiefly the size*8 heap — on every flow-field computation.
@@ -129,6 +134,7 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
     goalTx = Math.max(0, Math.min(mapW - 1, goalTx));
     goalTy = Math.max(0, Math.min(mapH - 1, goalTy));
 
+    _computeCount++;
     const size    = mapW * mapH;
     ensureScratch(size);
     const blocked = _blocked!, cost = _cost!, visited = _visited!, heap = _scratchHeap!;

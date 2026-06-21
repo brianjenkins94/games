@@ -83,9 +83,13 @@ export function stopUnit(eid: number): void {
 /** Bring a unit to rest.  The unit has walked (collision-off final approach) onto its goal, which is
  *  an 8px-grid-aligned position, so we rest it RIGHT THERE — no 32px tile-centre snap (that would undo
  *  sub-tile anchoring).  We just snap the rest point to the 8px grid (`snapWalkFP`, a ≤4px no-op after
- *  the walk) so a 32px box lands on 4 whole cells, then check it's free of other *settled* units
- *  (footprintSoftFreeAt ignores movers, so a mate still converging doesn't bump us).  If that exact
- *  spot is taken (a genuine, e.g. converge, conflict), search outward in 32px steps for a free one. */
+ *  the walk) so a 32px box lands on 4 whole cells, and check it's free of other *settled* units
+ *  (footprintSoftFreeAt ignores movers, so a mate still converging doesn't bump us).
+ *
+ *  If that spot is TAKEN (a genuine, e.g. converge, conflict), the unit must rest on a different tile —
+ *  but it WALKS there as a normal move rather than snapping Position across a whole tile.  An instant
+ *  one-tile Position jump is the "unit zooms into a space different from where it looked like it'd land"
+ *  pop: the sprite was gliding to its goal, then the sim teleports it.  Walking keeps it continuous. */
 function settleOnto(eid: number, rad: number, restX = Position.x[eid], restY = Position.y[eid]): void {
     freeUnit(eid);
     const bx = snapWalkFP(restX), by = snapWalkFP(restY);   // 8px-aligned rest base
@@ -161,11 +165,16 @@ function stepUnit(eid: number, mapW: number, mapH: number): void {
     // it; farther out the cached terrain-only flow field gives the direction.  Only once the unit is
     // standing IN the goal tile does it beeline the exact (sub-tile, 8px-anchored) goal point.
     const curTx = fpToTile(x), curTy = fpToTile(y);
+    // Path.goalTx/goalTy is the SHARED flow-field goal (group destination — one cached field for the whole
+    // group); slotTx/slotTy is THIS unit's own final slot, derived from its MoveTarget point.  The unit
+    // rides the shared field toward the destination, then the local layer (within LOCAL_RANGE of the slot)
+    // peels it onto its own slot — travel-as-a-block, reorganise-into-formation-on-arrival.
     const goalTx = Path.goalTx[eid], goalTy = Path.goalTy[eid];
+    const slotTx = fpToTile(goalX), slotTy = fpToTile(goalY);
     let aimX = goalX, aimY = goalY;
     let laneAxis = 0;     // flow steering a CARDINAL move: 1 = vertical (centre on X lane), 2 = horizontal (Y)
     let corridor = false; // driving along a committed pinch corridor (recentre onto the line, then thread)
-    if (!(curTx === goalTx && curTy === goalTy)) {
+    if (!(curTx === slotTx && curTy === slotTy)) {
         // (1) Committed to a pinch corridor → drive to its exit-tile CENTRE; don't re-sample the flow (so
         //     the tile-boundary direction flip and the 4-corner sampling singularity can't wedge it).
         if (Path.wpActive[eid] === 1) {
@@ -174,7 +183,7 @@ function stepUnit(eid: number, mapW: number, mapH: number): void {
             else { aimX = wcx; aimY = wcy; corridor = true; }
         }
         if (Path.wpActive[eid] === 0) {
-            const near = Math.abs(curTx - goalTx) <= LOCAL_RANGE && Math.abs(curTy - goalTy) <= LOCAL_RANGE;
+            const near = Math.abs(curTx - slotTx) <= LOCAL_RANGE && Math.abs(curTy - slotTy) <= LOCAL_RANGE;
             const localAim = near ? localNextAim(Unit.team[eid], x, y, goalX, goalY, r) : null;
             if (localAim) {
                 aimX = localAim[0]; aimY = localAim[1];
