@@ -26,6 +26,17 @@ export async function loadSingleUnit(insp: Inspector, from: [number, number], ma
     return st.host?.units?.[0]?.uid ?? 1;
 }
 
+/** Load a scenario with a team-0 mover at `from` plus stationary team-0 peasant obstacles. Returns the
+ *  mover's uid (found by its start tile). */
+export async function loadMoverWithObstacles(insp: Inspector, from: [number, number], obstacles: [number, number][], mapInfo: MapInfo = empty5()): Promise<number> {
+    const spawns = [{ team: 0, tx: from[0], ty: from[1] }, ...obstacles.map(([tx, ty]) => ({ team: 0, tx, ty }))];
+    insp.ctrl({ cmd: "load-scenario", scenario: { mapInfo, spawns } });
+    await sleep(300);
+    const st = await insp.query("state");
+    const mover = (st.host?.units ?? []).find((u: { curTx: number; curTy: number }) => u.curTx === from[0] && u.curTy === from[1]);
+    return mover?.uid ?? 1;
+}
+
 /** Issue a MOVE for `uid` toward tile `to`. */
 export function move(insp: Inspector, uid: number, to: [number, number]): void {
     insp.ctrl({ cmd: "command", command: { type: 1, unitIds: [uid], txFP: tcFP(to[0]), tyFP: tcFP(to[1]) } });

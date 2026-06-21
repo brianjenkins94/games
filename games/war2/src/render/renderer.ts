@@ -540,7 +540,8 @@ export class GameScene extends Phaser.Scene {
         const scaleX = MINIMAP_SZ / this.mapPixelW;
         const scaleY = MINIMAP_SZ / this.mapPixelH;
 
-        // Unit dots — 3×3 px squares, coloured by team.
+        // Unit dots — sized to the unit's footprint × the map scale (so they read proportionally on a
+        // tiny scenario map as well as a full one), with a 2px floor to stay visible when zoomed way out.
         // Enemy units are hidden unless their chunk is currently visible to myTeam.
         for (const u of units) {
             const wx = u.x / FP;
@@ -550,10 +551,13 @@ export class GameScene extends Phaser.Scene {
                 const ty = (wy / TILE_PX) | 0;
                 if (!this.tileVis || this.tileVis[ty * this.mapTileW + tx] < 2) continue;
             }
+            const [hw, hh] = unitBoxHalfPx(u.type);
+            const w = Math.max(2, 2 * hw * scaleX);
+            const h = Math.max(2, 2 * hh * scaleY);
             const dx = wx * scaleX;
             const dy = mmTop + wy * scaleY;
             this.uiGfx.fillStyle(u.team === 0 ? 0x00cc44 : 0xdd2222, 1);
-            this.uiGfx.fillRect(dx - 1, dy - 1, 3, 3);
+            this.uiGfx.fillRect(dx - w / 2, dy - h / 2, w, h);
         }
 
         // Camera viewport rect, clamped to the minimap square. The world fills the whole canvas, so the

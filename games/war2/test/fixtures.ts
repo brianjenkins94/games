@@ -21,6 +21,16 @@ export function tinyMap(rows: string[]): MapInfo {
 /** A 5x5 all-walkable map. */
 export const empty5 = (): MapInfo => tinyMap(["....." , ".....", ".....", ".....", "....."]);
 
+/** Diagonal-gap threading: a mover crosses a 5x5 corner-to-corner in each diagonal direction, with two
+ *  own-team peasants flanking the centre tile (2,2) — the orthogonal corners of its centre diagonal
+ *  step — so it must thread the diagonal gap BETWEEN them (localPath's diagonal-gap rule). */
+export const DIAGONAL_GAP: { dir: string; from: [number, number]; to: [number, number]; peasants: [number, number][] }[] = [
+    { dir: "NE", from: [0, 4], to: [4, 0], peasants: [[3, 2], [2, 1]] },
+    { dir: "SE", from: [0, 0], to: [4, 4], peasants: [[3, 2], [2, 3]] },
+    { dir: "SW", from: [4, 0], to: [0, 4], peasants: [[1, 2], [2, 3]] },
+    { dir: "NW", from: [4, 4], to: [0, 0], peasants: [[1, 2], [2, 1]] },
+];
+
 /** Tile index → tile-centre fixed-point (FP=1000, TILE_PX=32). */
 export const tcFP = (t: number): number => t * 32000 + 16000;
 

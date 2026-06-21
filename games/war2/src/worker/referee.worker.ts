@@ -271,7 +271,7 @@ function loadScenario(sc: DebugScenario): void {
 function scenarioRenderGids(): number[] {
     const pass = getPassability();   // 0 = walkable, 1 = blocked, for the loaded scenario
     const GRASS = 357;   // forest plain-grass tile (most uniform green LAND tile in forest.png)
-    const WALL  = 1;     // a forest impassable tile (for obstacle scenarios)
+    const WALL  = 17;    // forest stone-wall tile (3rd-from-last, first row) — reads as impassable
     const out = new Array<number>(pass.length);
     for (let i = 0; i < pass.length; i++) out[i] = pass[i] ? WALL : GRASS;
     return out;
