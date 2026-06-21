@@ -37,12 +37,3 @@ export function connectTo(peer: Peer, targetId: string): Promise<DataConnection>
         conn.once("error", reject);
     });
 }
-
-/** Peer side: wait for an incoming connection. Resolves the open DataConnection. */
-export function waitForConnection(peer: Peer): Promise<DataConnection> {
-    return new Promise((resolve) => {
-        peer.once("connection", (conn: DataConnection) => {
-            conn.once("open", () => resolve(conn));
-        });
-    });
-}

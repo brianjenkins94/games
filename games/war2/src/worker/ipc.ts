@@ -15,7 +15,8 @@
  * This module is shared by both threads and must stay free of Phaser/DOM imports.
  */
 import type { Command, UnitSnapshot } from "../net/protocol";
-import type { MapInfo, WorldSnapshot } from "../game/world";
+import type { MapInfo } from "../game/world";
+import type { WorldSnapshot } from "../game/snapshot";
 
 // ── Render snapshot (worker → main, every tick) ──────────────────────────────────
 

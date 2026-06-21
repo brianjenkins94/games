@@ -5,7 +5,7 @@
  * continuously via their boxes (see systems/movement.ts).  The grid now records only
  * building footprints, making it the authoritative *static* obstacle map: a tile is
  * statically blocked for movement/pathing iff terrain is impassable OR a building
- * sits on it (see buildingAt / buildingAtIdx).
+ * sits on it (see buildingAtIdx).
  *
  * Storage: flat Int32Array, 0 = empty, eid+1 = occupied by that entity.
  */
@@ -51,14 +51,7 @@ export function isEmpty(tx: number, ty: number): boolean {
     return occupant(tx, ty) === -1;
 }
 
-/** True if a building footprint covers tile (tx, ty).  Out-of-bounds counts as
- *  blocked so callers can clamp at map edges without a separate bounds check. */
-export function buildingAt(tx: number, ty: number): boolean {
-    if (!inBounds(tx, ty)) return true;
-    return _grid![ty * _mapW + tx] !== 0;
-}
-
-/** Index-form of buildingAt for hot loops that already hold a flat tile index.
+/** True if a building footprint covers the tile at flat index `i`.
  *  (No bounds check — caller guarantees the index is in-range.) */
 export function buildingAtIdx(i: number): boolean {
     return _grid![i] !== 0;

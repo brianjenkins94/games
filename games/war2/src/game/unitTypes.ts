@@ -36,11 +36,6 @@ export function unitTypeDef(id: number): Record<string, unknown> | undefined {
     return name ? (unitsJson as Record<string, Record<string, unknown>>)[name] : undefined;
 }
 
-/** True if the unit-type is a building (units.json `building: true`). */
-export function isBuildingType(id: number): boolean {
-    return unitTypeDef(id)?.["building"] === true;
-}
-
 /** Footprint [w, h] in tiles (defaults to [1, 1]). */
 export function unitFootprint(id: number): [number, number] {
     const ts = unitTypeDef(id)?.["tileSize"] as [number, number] | undefined;

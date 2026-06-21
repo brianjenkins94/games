@@ -53,9 +53,10 @@
 
 	<!-- Inline Script -->
 	<script type="module">
-        import { name, init, preload, preupdate, create, update } from "./game.ts";
+        import { createScene } from "../../util/phaser/scene.ts";
+        import * as game from "./game.ts";
 
-        let game;
+        let phaserGame;
 
         function resize() {
             var canvas = document.querySelector("canvas");
@@ -63,7 +64,7 @@
             const width = canvas.parentElement.clientWidth;
 
             const containerRatio = width / height;
-            const gameRatio = game.config.width / game.config.height;
+            const gameRatio = phaserGame.config.width / phaserGame.config.height;
 
             canvas.style.width = (height * gameRatio) + "px";
             canvas.style.height = height + "px";
@@ -80,7 +81,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", function (event) {
-            game = new Phaser.Game({
+            phaserGame = new Phaser.Game({
                 "type": Phaser.AUTO,
                 "render": {
                     "pixelart": true,
@@ -89,27 +90,10 @@
                 "scale": {
                     "mode": Phaser.Scale.FIT
                 },
-                "scene": function() {
-                    const scene = new Phaser.Scene(name);
-                    scene.components = {};
-                    scene.systems = {};
-
-                    scene.init = (...args) => init(scene, ...args),
-                    scene.preload = (...args) => {
-                        preload(scene, ...args)
-
-                        scene.events.once("preupdate", function() {
-                            preupdate(scene);
-                        });
-                    },
-                    scene.create = (...args) => create(scene, ...args),
-                    scene.update = (...args) => update(scene, ...args)
-
-                    return scene;
-                }
+                "scene": createScene(game),
             });
 
-            game.events.on("ready", function () {
+            phaserGame.events.on("ready", function () {
                 resize();
             })
 

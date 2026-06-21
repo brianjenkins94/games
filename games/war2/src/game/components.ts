@@ -5,7 +5,6 @@ export const WORLD_W  = 640 * FP;
 export const WORLD_H  = 480 * FP;
 export const TICK_MS  = 50;           // 20 TPS
 export const UNIT_SPD = 3 * FP;       // 3 px / tick  (~10.7 ticks per 32-px tile)
-export const MAX_LEAD = 6;            // host can run this many ticks ahead of peer
 export const TILE_PX  = 32;          // pixels per tile
 export const WALK_PX  = 8;           // collision cell size; rest positions snap to THIS grid (not 32px)
 

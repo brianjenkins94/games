@@ -12,7 +12,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createGame } from "../src/game/game";
 import { revealAll } from "../src/game/vision";
-import { setFormationTargets, setGatherTargets, setMoveTarget } from "../src/game/world";
+import { setFormationTargets, setGatherTargets, setMoveTarget } from "../src/game/orders";
 import { Position, MoveTarget } from "../src/game/components";
 import { flowComputeCount } from "../src/game/flowField";
 

@@ -1,4 +1,5 @@
-import { setMoveTarget, setFormationTargets, setGatherTargets, stopUnit, spawnUnit, spawnBuilding, canPlaceBuilding, eidForUnitId, type SimWorld } from "../world";
+import { spawnUnit, spawnBuilding, canPlaceBuilding, eidForUnitId, type SimWorld } from "../world";
+import { setMoveTarget, setFormationTargets, setGatherTargets, stopUnit } from "../orders";
 import { Position, Unit, FP, TILE_PX, fpToTile } from "../components";
 import { distance } from "../distance";
 import { CmdType, type Command } from "../../net/protocol";

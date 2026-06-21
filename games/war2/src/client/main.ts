@@ -22,10 +22,16 @@ import terrainData from "../assets/terrain.json";
 import { CmdType, type Command, type SpawnCmd, type SpeedCmd } from "../net/protocol";
 import { openPeer, connectTo } from "../net/peer";
 import type { DataConnection } from "peerjs";
-import { startPhaser, type GameScene, type UnitPrediction } from "../render/renderer";
+import {
+    startPhaser, type GameScene, type UnitPrediction,
+    rebuildMap, setRenderState, setSelectedUids, setPrediction,
+    setTargetingCursor, showPlacementGhost,
+} from "../render/renderer";
+import { showCommandCard } from "../render/hud";
 import { initGameConsole } from "../debug/console";
 import type { MainToWorker, WorkerToMain, RenderState, RenderUnit, MetricsSample } from "../worker/ipc";
-import type { MapInfo, WorldSnapshot } from "../game/world";
+import type { MapInfo } from "../game/world";
+import type { WorldSnapshot } from "../game/snapshot";
 import type { PeerReadyMsg, ConnectMsg, ClientReadyMsg } from "harness/client";
 
 // In-game console (press ` / ~). Set up first so it captures everything below.
@@ -196,7 +202,7 @@ function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
             mapTW = msg.mapW; mapTH = msg.mapH;
             break;
         case "render":          onRender(msg.state); break;
-        case "scenario-map":    scene?.rebuildMap(msg.gids, msg.mapW, msg.mapH); break;
+        case "scenario-map":    if (scene) rebuildMap(scene, msg.gids, msg.mapW, msg.mapH); break;
         case "metrics":         onMetrics(msg.sample); break;
         case "net-out":         relayChannel?.send(msg.data); break;   // relay mode
         case "inspector-count": updateInspectorBadge(msg.n); break;
@@ -253,8 +259,8 @@ function onRender(state: RenderState): void {
     }
     if (pruned) refreshCard();
 
-    scene?.setRenderState(state);
-    scene?.setSelectedUids(selectedUids);
+    if (scene) setRenderState(scene, state);
+    if (scene) setSelectedUids(scene, selectedUids);
 }
 
 // ── Networking: transfer the channel to the worker, else relay ───────────────────
@@ -363,20 +369,20 @@ async function boot(): Promise<void> {
         getOwnSelection:    ownSelection,
         snapToTile:         snapClickFP,
         emit:               emitCommand,
-        render:             (card) => scene!.showCommandCard(card),
-        setTargetingCursor: (on) => scene!.setTargetingCursor(on),
+        render:             (card) => showCommandCard(scene!, card),
+        setTargetingCursor: (on) => setTargetingCursor(scene!, on),
         log:                (m) => console.info(m),
         myTeam,
         fpToTile,
         canPlaceBuilding:   canPlaceBuildingLocal,
-        showPlacementGhost: (g) => scene!.showPlacementGhost(g),
+        showPlacementGhost: (g) => showPlacementGhost(scene!, g),
     });
 
-    scene.setPrediction(predicted);   // share the live prediction map (we mutate it)
+    setPrediction(scene, predicted);   // share the live prediction map (we mutate it)
 
     scene.onSelect = (uids) => {
         selectedUids = new Set(uids);
-        scene!.setSelectedUids(selectedUids);
+        setSelectedUids(scene!, selectedUids);
         refreshCard();
     };
 

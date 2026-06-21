@@ -246,8 +246,9 @@ export function getOrComputeFlowField(team: number, goalTx: number, goalTy: numb
 
 export function clearFlowFieldCache(): void { _cache.clear(); }
 
-/** Drop only `team`'s cached fields (its goal keys occupy a contiguous span — see the key formula). */
-export function clearFlowFieldCacheForTeam(team: number): void {
+/** Drop only `team`'s cached fields (its goal keys occupy a contiguous span — see the key formula).
+ *  Internal: invoked by getOrComputeFlowField when this team's belief turns dirty. */
+function clearFlowFieldCacheForTeam(team: number): void {
     const span = getMapW() * getMapH();
     const lo = team * span, hi = lo + span;
     for (const k of _cache.keys()) if (k >= lo && k < hi) _cache.delete(k);

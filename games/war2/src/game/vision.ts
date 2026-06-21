@@ -19,7 +19,7 @@
  * Module-singleton, mirroring passability.ts / occupancy.ts.
  */
 import { query } from "bitecs";
-import { Position, Unit, MoveTarget, Path } from "./components";
+import { Position, Unit, UnitId, MoveTarget, Path } from "./components";
 import { inRange } from "./distance";
 import { getPassability } from "./passability";
 import { unitSight } from "./unitTypes";
@@ -89,13 +89,6 @@ export function getBelievedPassability(team: number): Uint8Array | null {
     return _teams.get(team)?.believedPass ?? null;
 }
 
-/** True if tile (tx,ty) has ever been explored by `team`. */
-export function isExplored(team: number, tx: number, ty: number): boolean {
-    const tv = _teams.get(team);
-    return !!tv && tx >= 0 && tx < _mapW && ty >= 0 && ty < _mapH
-        && tv.explored[ty * _mapW + tx] === 1;
-}
-
 /** Read-and-clear a team's dirty flag: true once after its newly-explored terrain
  *  proved blocked (so the caller can drop that team's stale flow fields). */
 export function takeBelievedDirty(team: number): boolean {
@@ -134,4 +127,46 @@ export function importExplored(entries: [number, number[]][]): void {
         }
         tv.dirty = true;   // force a flow-cache clear after a restore
     }
+}
+
+// ── Per-unit visibility queries ───────────────────────────────────────────────
+// Which UIDs / tiles a team can currently see, by each unit's own sight radius.
+// (Folded in from world.ts — these are vision queries, so they belong here.)
+
+/**
+ * Returns the set of stable UnitIds visible to observerTeam.
+ * Own units are always included; an enemy unit is included if it lies within the
+ * *observing* unit's own sight radius (per-unit, unitSight; dodecagonal metric).
+ */
+export function computeVisibleUids(world: SimWorld, observerTeam: number): Set<number> {
+    const eids    = [...query(world, [Position, Unit, MoveTarget])];
+    const myEids: number[] = [];
+    const visible = new Set<number>();
+
+    // Collect own-team eids and mark them visible in one pass (avoids .filter() alloc)
+    for (const e of eids) {
+        if (Unit.team[e] === observerTeam) { visible.add(UnitId.id[e]); myEids.push(e); }
+    }
+    // Check enemy proximity against the collected own-team positions
+    for (const e of eids) {
+        if (Unit.team[e] === observerTeam) continue;
+        const etx = Path.curTx[e], ety = Path.curTy[e];
+        for (const m of myEids) {
+            if (inRange(Path.curTx[m] - etx, Path.curTy[m] - ety, unitSight(Unit.type[m]))) {
+                visible.add(UnitId.id[e]);
+                break;
+            }
+        }
+    }
+    return visible;
+}
+
+/** True if tile (tx, ty) is within sight of any unit owned by observerTeam
+ *  (each unit using its own unitSight radius). */
+export function isTileVisible(world: SimWorld, observerTeam: number, tx: number, ty: number): boolean {
+    for (const e of query(world, [Position, Unit, MoveTarget])) {
+        if (Unit.team[e] !== observerTeam) continue;
+        if (inRange(Path.curTx[e] - tx, Path.curTy[e] - ty, unitSight(Unit.type[e]))) return true;
+    }
+    return false;
 }

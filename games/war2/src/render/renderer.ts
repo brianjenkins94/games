@@ -2,11 +2,16 @@
  * Phaser renderer — reads sim state, draws it, emits input events.
  * No game logic here; no sim dependencies except reading component arrays.
  *
- * Viewport: canvas fills the window.  The camera scrolls over the full map.
- * A translucent 3×3 HUD grid (see UI) is overlaid on top: minimap bottom-left,
- * portrait bottom-centre, command card bottom-right, resource bar across the
- * top.  The centre cell is click-through; the world renders edge-to-edge behind
- * every cell.  Arrow keys pan the camera.
+ * Functional scene: rather than subclass Phaser.Scene, the renderer is a module of free functions
+ * (init/preload/create/update + the input/selection glue) that operate on the passed scene, wired up
+ * via util/phaser/scene.ts's createScene (consistent with games/dozer).  The scene's state lives on the
+ * scene object itself — typed by the `declare module "phaser"` augmentation below.
+ *
+ * This file is the coordinator; the cohesive sub-systems live alongside it:
+ *   • fog.ts   — per-tile visibility (updateFow)
+ *   • hud.ts   — the DOM HUD overlay + command card
+ *   • units.ts — the per-frame entity draw loop (drawEntities)
+ *   • Minimap.ts — the bottom-left minimap
  *
  * Coordinate spaces:
  *   screen  — pixel offset from the canvas top-left corner (pointer events)
@@ -15,843 +20,422 @@
  */
 import Phaser from "phaser";
 import { FP, TICK_MS } from "../game/components";
-import { inRange } from "../game/distance";
-import type { RenderState, RenderUnit } from "../worker/ipc";
+import type { RenderState } from "../worker/ipc";
 
 /** Local-prediction overlay for an own unit: instant facing + move marker shown
  *  the moment a command is issued, until the authoritative snapshot catches up. */
 export interface UnitPrediction { dir: number; mtx: number; mty: number; at: number; }
 import { ChunkRenderer, TILE_PX } from "./ChunkRenderer";
+import { Minimap } from "./Minimap";
+import { createScene } from "../../../../util/phaser/scene";
+import { updateFow } from "./fog";
+import { wireHud, setHudDragMode } from "./hud";
+import { drawEntities } from "./units";
+// Data-driven sprite registry — the spritesheets to load for the active tileset.
+import { allSheets } from "./sprites";
 // Debug/e2e scenarios render terrain from the forest tileset (clean plain grass), independent of the
 // boot map's tileset. Loaded in preload(); see rebuildMap().
 import forestTilesetUrl from "../assets/tilesets/forest.png";
 const SCENARIO_TILESET = "forest";
-// Command-card icon sheet.  Tileset-specific; the current map is winter, so we
-// load the winter sheet.  TODO: follow the active map's tileset like tilesetUrl.
-import iconsUrl   from "../assets/graphics/tilesets/winter/icons.png";
-import iconsJson  from "../assets/icons.json";
-import type { CommandCard } from "../game/abilities";
-import { unitTypeName, unitBuildTicks, unitSight, unitBoxHalfPx } from "../game/unitTypes";
-// Data-driven sprite registry — all unit/building/construction art resolution.
-import { allSheets, sheetForType, unitFrame, buildingDraw } from "./sprites";
 
 // The HUD is a translucent holy-grail overlay declared in client.html (markup +
-// CSS); this module only wires the dynamic bits (see wireHud).  UI gives the
-// chrome thickness of each edge in px and must match the --ui-* CSS variables in
-// client.html — the minimap math below reads it.
+// CSS); hud.ts wires the dynamic bits.  UI gives the chrome thickness of each edge
+// in px and must match the --ui-* CSS variables in client.html.
 const UI = { top: 32, right: 150, bottom: 120, left: 120 };
-const MINIMAP_SZ  = UI.left;  // minimap is a square filling the bottom-left cell
-
-// Icon sheet geometry: 46×38 frames in a 5-column grid (icons.png is 230 wide).
-const ICON_W = (iconsJson as any).frameWidth  as number;   // 46
-const ICON_H = (iconsJson as any).frameHeight as number;   // 38
-const ICON_COLS = 5;
-const ICON_FRAMES = (iconsJson as any).frames as Record<string, number>;
-
-/** CSS background-position that crops icons.png to the given icon-frame key. */
-function iconBgPos(iconKey: string): string {
-    const idx = ICON_FRAMES[iconKey] ?? 0;
-    const col = idx % ICON_COLS, row = Math.floor(idx / ICON_COLS);
-    return `-${col * ICON_W}px -${row * ICON_H}px`;
-}
-const CAM_SPEED  = 8;    // pixels per frame
-
-// Position-interpolation cadence (feel knob).  Quantizes the lerp between
-// snapshots into N sub-steps per 20 Hz tick instead of continuous 60 fps:
-//   1 → no interpolation (snap to the latest snapshot; crunchy + zero latency)
-//   2–4 → stepped, retro RTS cadence (smoother but not floaty)
-//   high (≥TICK_MS·0.06 ≈ 30) → effectively continuous/smooth
-const INTERP_SUBSTEPS = 2;
-
-// Cap on how fast the displayed sprite catches up to its authoritative position, in px/ms.
-// A unit walks ~0.06 px/ms, so normal movement keeps up exactly (no feel change).  A settle
-// *snap* (movement.ts) catches up at this rate: tuned so the tiny arrival hops (≤4px) resolve
-// in ~one frame (crisp, no visible "slide") while the rare large hop still glides a touch
-// instead of teleporting (~6px/frame at 60fps).  Render-only; never hashed.
-const MAX_CATCHUP_PX_PER_MS = 0.25;
-
-const SEL_COLOR  = 0x00ff00;
+const MINIMAP_SZ = UI.left;   // minimap is a square filling the bottom-left cell
+const CAM_SPEED  = 8;         // camera pan, pixels per frame
 
 /** Drag-select result — stable unit-ids of the units under the selection box. */
 export type SelectCallback = (uids: number[]) => void;
 
-export class GameScene extends Phaser.Scene {
-    // World-space graphics (scrolls with camera)
-    private gfx!:    Phaser.GameObjects.Graphics;
-    // Screen-space graphics (fixed — drag rect, UI bar, minimap)
-    private uiGfx!:  Phaser.GameObjects.Graphics;
+/** Convenience alias for the renderer's scene (a plain Phaser.Scene carrying the fields below). */
+export type GameScene = Phaser.Scene;
 
-    /** Rolling render frame time (ms), EMA-smoothed in update().  The client shell reads
-     *  this when assembling the perf sample — fps lives only on the main thread. */
-    frameMs = 0;
-
-    // Refs into the static HUD markup (client.html), grabbed in wireHud().
-    private resourceCell!: HTMLDivElement;   // top-centre: gold / lumber / oil / food
-    private portraitCell!: HTMLDivElement;   // bottom-centre: selected-unit portrait + stats
-    // Chrome panels that capture pointer events — flipped to pointer-events:none
-    // during a drag-select so the drag keeps tracking across them.
-    private interactiveCells: HTMLDivElement[] = [];
-
-    // Collapsible right-edge tweak panel.  tweakBodyEl is where future dev
-    // controls get mounted; toggling .open animates it (CSS) and shrinks the frame.
-    private tweakPaneEl!: HTMLDivElement;
-    private tweakBodyEl!: HTMLDivElement;
-    private tweakOpen = false;
-
-    // Command card (DOM grid living in the bottom-right cell). View only — the
-    // controller decides what card to show and what slot clicks mean.
-    private cardEl!: HTMLDivElement;
-
-    private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-
-    // Received from startPhaser() via Phaser's init(data) mechanism
-    private mapConfig:     { tilesetUrl: string; mapJson: any } | null = null;
-    private chunkRenderer: ChunkRenderer | null = null;
-
-    // Map dimensions in world pixels (set once map config is available)
-    private mapPixelW = 0;
-    private mapPixelH = 0;
-
-    // Pre-rendered terrain backdrop for the minimap
-    private minimapImg: Phaser.GameObjects.Image | null = null;
-
-    // Fog of war — set by main.ts after scene boots
-    myTeam: number = 0;
-    // Per-tile visibility (0=UNEXPLORED, 1=EXPLORED, 2=VISIBLE).
-    // tileExplored persists; tileVis is recomputed each frame from unit positions.
-    private tileVis:      Uint8Array | null = null;
-    private tileExplored: Uint8Array | null = null;
-    private mapTileW = 0;
-    private mapTileH = 0;
-
-    // One Phaser Sprite per live unit / building — keyed by stable unit-id.
-    private unitSprites = new Map<number, Phaser.GameObjects.Sprite>();
-    private buildingSprites = new Map<number, Phaser.GameObjects.Sprite>();
-    // Tileset name for the active map (used to pick building art)
-    private tilesetName = "summer";
-
-    // Latest per-tick snapshot from the sim worker — the sole source of entity
-    // state.  Set by main.ts on each "render" message.
-    private renderState: RenderState | null = null;
-    // Locally-owned selection (stable unit-ids); selection is main-thread UI state.
-    private selectedUids = new Set<number>();
-
-    // ── Interpolation: lerp positions between the last two snapshots ──────────────
-    // Previous snapshot's positions (uid → world FP) and the wall-clock time the
-    // current snapshot arrived, so update() can smooth 20 Hz sim → 60 fps render.
-    private prevPos = new Map<number, { x: number; y: number }>();
-    // Smoothed display position (uid → world px); eases toward the interpolated target so a
-    // one-tick settle snap glides instead of teleporting.
-    private dispPos = new Map<number, { x: number; y: number }>();
-    private snapAt  = 0;
-    // Measured (EMA) real interval between snapshots — the interpolation period. Tracks the live
-    // tick cadence so interpolation stays correct as game speed (or tab-throttling) changes it,
-    // without the renderer needing to know the speed. Seeded to one nominal tick.
-    private snapInterval = TICK_MS;
-
-    // ── Prediction: own-unit facing/marker overlay (uid → prediction) ────────────
-    // Shared by reference with main.ts, which adds/removes entries; we just read it.
-    private prediction = new Map<number, UnitPrediction>();
-    // Raw input events — no semantics, no mode state.  main.ts routes these to
-    // the command-card controller, which decides what they mean.
-    onSelect: SelectCallback | null = null;
-    /** Left-click on the map. Return true if consumed (skip selection). */
-    onPrimaryClick:   ((wxFP: number, wyFP: number) => boolean) | null = null;
-    /** Right-click on the map. */
-    onSecondaryClick: ((wxFP: number, wyFP: number) => void) | null = null;
-    /** A command-card slot was clicked (grid index 0-8). */
-    onSlot:   ((index: number) => void) | null = null;
-    /** Escape key pressed. */
-    onEscape: (() => void) | null = null;
-    /** A letter key was pressed — a command-card hotkey. Return true if consumed. */
-    onHotkey: ((letter: string) => boolean) | null = null;
-    /** Cursor moved over the map (world FP). Drives the placement ghost. */
-    onHover:  ((wxFP: number, wyFP: number) => void) | null = null;
-
-    // Building-placement ghost (render-only); set via showPlacementGhost.
-    private ghost: { tileX: number; tileY: number; fw: number; fh: number; valid: boolean } | null = null;
-
-    // Drag-select state (screen coords)
-    private drag = false;
-    private sx = 0; private sy = 0;
-    private ex = 0; private ey = 0;
-
-    // Minimap drag-pan state
-    private mmDragging = false;
-
-    constructor() { super({ key: "game" }); }
-
-    init(data: { tilesetUrl: string; mapJson: any }): void {
-        if (data?.mapJson) this.mapConfig = data;
+// The renderer hangs all its state on the scene (the functional-scene equivalent of class fields).
+// Shared across renderer.ts and its sub-modules (fog/hud/units/Minimap), which read these fields.
+declare module "phaser" {
+    interface Scene {
+        // World-space graphics (scrolls with camera) + screen-space graphics (fixed: drag rect, minimap).
+        gfx:   Phaser.GameObjects.Graphics;
+        uiGfx: Phaser.GameObjects.Graphics;
+        /** Rolling render frame time (ms), EMA-smoothed in update(); read by the client shell for perf. */
+        frameMs: number;
+        // Refs into the static HUD markup (client.html), grabbed in wireHud().
+        resourceCell: HTMLDivElement;   // top-centre: gold / lumber / oil / food
+        portraitCell: HTMLDivElement;   // bottom-centre: selected-unit portrait + stats
+        interactiveCells: HTMLDivElement[];   // chrome panels flipped click-through during a drag
+        // Collapsible right-edge tweak panel.
+        tweakPaneEl: HTMLDivElement;
+        tweakBodyEl: HTMLDivElement;
+        tweakOpen: boolean;
+        cardEl: HTMLDivElement;   // command-card DOM grid (view only)
+        cursors: Phaser.Types.Input.Keyboard.CursorKeys;
+        // Received from startPhaser() via Phaser's init(data) mechanism.
+        mapConfig: { tilesetUrl: string; mapJson: any } | null;
+        chunkRenderer: ChunkRenderer | null;
+        mapPixelW: number;   // map dimensions in world pixels
+        mapPixelH: number;
+        minimap: Minimap;   // bottom-left minimap (owns its terrain backdrop)
+        myTeam: number;   // fog of war — set by main.ts after scene boots
+        // Per-tile visibility (0=UNEXPLORED, 1=EXPLORED, 2=VISIBLE). tileExplored persists.
+        tileVis: Uint8Array | null;
+        tileExplored: Uint8Array | null;
+        mapTileW: number;
+        mapTileH: number;
+        // One Phaser Sprite per live unit / building — keyed by stable unit-id.
+        unitSprites: Map<number, Phaser.GameObjects.Sprite>;
+        buildingSprites: Map<number, Phaser.GameObjects.Sprite>;
+        tilesetName: string;   // active map's tileset (picks building art)
+        renderState: RenderState | null;   // latest per-tick worker snapshot
+        selectedUids: Set<number>;   // locally-owned selection (main-thread UI state)
+        // Interpolation baselines (uid → world FP / px) + snapshot timing.
+        prevPos: Map<number, { x: number; y: number }>;
+        dispPos: Map<number, { x: number; y: number }>;
+        snapAt: number;
+        snapInterval: number;
+        prediction: Map<number, UnitPrediction>;   // own-unit facing/marker overlay (read each frame)
+        // Raw input callbacks — main.ts routes these to the command-card controller.
+        onSelect: SelectCallback | null;
+        onPrimaryClick:   ((wxFP: number, wyFP: number) => boolean) | null;
+        onSecondaryClick: ((wxFP: number, wyFP: number) => void) | null;
+        onSlot:   ((index: number) => void) | null;
+        onEscape: (() => void) | null;
+        onHotkey: ((letter: string) => boolean) | null;
+        onHover:  ((wxFP: number, wyFP: number) => void) | null;
+        // Building-placement ghost (render-only) + drag-select state (screen coords).
+        ghost: { tileX: number; tileY: number; fw: number; fh: number; valid: boolean } | null;
+        drag: boolean;
+        sx: number; sy: number; ex: number; ey: number;
+        mmDragging: boolean;   // minimap drag-pan state
     }
+}
 
-    preload(): void {
-        // Scenario terrain sheet (forest plain grass), always available regardless of the boot map.
-        this.load.spritesheet(SCENARIO_TILESET, forestTilesetUrl, { frameWidth: TILE_PX, frameHeight: TILE_PX, spacing: 1, margin: 0 });
-        if (!this.mapConfig) return;
-        const { tilesetUrl, mapJson } = this.mapConfig;
+/** Initialise all scene state (the functional-scene equivalent of class field initialisers).
+ *  Runs first, before preload/create; `data` carries the map config from startPhaser. */
+export function init(scene: Phaser.Scene, data?: { tilesetUrl: string; mapJson: any }): void {
+    scene.frameMs          = 0;
+    scene.interactiveCells = [];
+    scene.tweakOpen        = false;
+    scene.mapConfig        = data?.mapJson ? data : null;
+    scene.chunkRenderer    = null;
+    scene.mapPixelW        = 0;
+    scene.mapPixelH        = 0;
+    scene.myTeam           = 0;
+    scene.tileVis          = null;
+    scene.tileExplored     = null;
+    scene.mapTileW         = 0;
+    scene.mapTileH         = 0;
+    scene.unitSprites      = new Map();
+    scene.buildingSprites  = new Map();
+    scene.tilesetName      = "summer";
+    scene.renderState      = null;
+    scene.selectedUids     = new Set();
+    scene.prevPos          = new Map();
+    scene.dispPos          = new Map();
+    scene.snapAt           = 0;
+    scene.snapInterval     = TICK_MS;
+    scene.prediction       = new Map();
+    scene.onSelect         = null;
+    scene.onPrimaryClick   = null;
+    scene.onSecondaryClick = null;
+    scene.onSlot           = null;
+    scene.onEscape         = null;
+    scene.onHotkey         = null;
+    scene.onHover          = null;
+    scene.ghost            = null;
+    scene.drag             = false;
+    scene.sx = scene.sy = scene.ex = scene.ey = 0;
+    scene.mmDragging       = false;
+}
+
+export function preload(scene: Phaser.Scene): void {
+    // Scenario terrain sheet (forest plain grass), always available regardless of the boot map.
+    scene.load.spritesheet(SCENARIO_TILESET, forestTilesetUrl, { frameWidth: TILE_PX, frameHeight: TILE_PX, spacing: 1, margin: 0 });
+    if (!scene.mapConfig) return;
+    const { tilesetUrl, mapJson } = scene.mapConfig;
+    const ts = mapJson.tilesets[0];
+    // Load as spritesheet so individual tile GIDs address frames directly.
+    scene.load.spritesheet(ts.name, tilesetUrl, {
+        frameWidth:  TILE_PX,
+        frameHeight: TILE_PX,
+        spacing:     ts.spacing ?? 0,
+        margin:      ts.margin  ?? 0,
+    });
+
+    // All unit / building / construction spritesheets for this tileset, from
+    // the data-driven sprite registry (one place, one convention).
+    scene.tilesetName = ts.name;
+    for (const s of allSheets(ts.name)) {
+        scene.load.spritesheet(s.key, s.url, { frameWidth: s.frameW, frameHeight: s.frameH });
+    }
+}
+
+export function create(scene: Phaser.Scene): void {
+    scene.minimap = new Minimap(scene, MINIMAP_SZ, UI.bottom);
+
+    // ── Terrain chunk renderer ────────────────────────────────────────────
+    if (scene.mapConfig) {
+        const { mapJson } = scene.mapConfig;
         const ts = mapJson.tilesets[0];
-        // Load as spritesheet so individual tile GIDs address frames directly.
-        this.load.spritesheet(ts.name, tilesetUrl, {
-            frameWidth:  TILE_PX,
-            frameHeight: TILE_PX,
-            spacing:     ts.spacing ?? 0,
-            margin:      ts.margin  ?? 0,
-        });
-
-        // All unit / building / construction spritesheets for this tileset, from
-        // the data-driven sprite registry (one place, one convention).
-        this.tilesetName = ts.name;
-        for (const s of allSheets(ts.name)) {
-            this.load.spritesheet(s.key, s.url, { frameWidth: s.frameW, frameHeight: s.frameH });
-        }
-    }
-
-    create(): void {
-        // ── Terrain chunk renderer ────────────────────────────────────────────
-        if (this.mapConfig) {
-            const { mapJson } = this.mapConfig;
-            const ts = mapJson.tilesets[0];
-            this.chunkRenderer = new ChunkRenderer(
-                this,
-                mapJson.layers.find((l: any) => l.type === "tilelayer").data,
-                mapJson.width,
-                mapJson.height,
-                ts.name,
-            );
-            this.mapPixelW = mapJson.width  * mapJson.tilewidth;
-            this.mapPixelH = mapJson.height * mapJson.tileheight;
-            // The HUD is a translucent overlay, so the world renders edge-to-edge:
-            // scroll bounds are simply the map size.
-            this.cameras.main.setBounds(0, 0, this.mapPixelW, this.mapPixelH);
-
-            this.mapTileW    = this.mapPixelW / TILE_PX;
-            this.mapTileH    = this.mapPixelH / TILE_PX;
-            this.tileVis     = new Uint8Array(this.mapTileW * this.mapTileH);
-            this.tileExplored = new Uint8Array(this.mapTileW * this.mapTileH);
-
-            this.createMinimapTexture(
-                mapJson.layers.find((l: any) => l.type === "tilelayer").data,
-                mapJson.width, mapJson.height, ts.name, ts.spacing ?? 0, ts.margin ?? 0,
-            );
-        }
-
-        // ── Graphics layers ───────────────────────────────────────────────────
-        // depth: terrain=-1, units(sprites)=0, overlays(gfx)=2, ui(uiGfx)=10
-        this.gfx   = this.add.graphics().setDepth(2);
-        this.uiGfx = this.add.graphics().setScrollFactor(0).setDepth(10);
-
-        // ── Keyboard ──────────────────────────────────────────────────────────
-        // Arrow keys pan (WC2/StarCraft style); letter keys are command-card
-        // hotkeys, so WASD is intentionally NOT bound to panning.
-        this.cursors = this.input.keyboard!.createCursorKeys();
-
-        this.input.keyboard!.on("keydown-ESC", () => this.onEscape?.());
-
-        // Letter keys → command-card hotkeys (A–Z only; let everything else,
-        // e.g. the console's backtick, pass through untouched).
-        this.input.keyboard!.on("keydown", (ev: KeyboardEvent) => {
-            if (ev.key.length === 1 && /[a-zA-Z]/.test(ev.key)) this.onHotkey?.(ev.key);
-        });
-
-        // ── Pointer events ────────────────────────────────────────────────────
-        this.input.mouse?.disableContextMenu();
-
-        this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
-            if (p.leftButtonDown()) {
-                if (this.isInMinimap(p.x, p.y)) {
-                    this.mmDragging = true;
-                    this.panToMinimap(p.x, p.y);
-                } else {
-                    this.drag = true;
-                    this.sx = p.x; this.sy = p.y;
-                    this.ex = p.x; this.ey = p.y;
-                    // Let the drag track across the perimeter cells (see method).
-                    this.setHudDragMode(true);
-                }
-            }
-        });
-
-        this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
-            if (this.mmDragging) {
-                this.panToMinimap(p.x, p.y);
-            } else if (this.drag) {
-                this.ex = p.x; this.ey = p.y;
-            }
-            // Drive the placement ghost (game area only — not over the minimap).
-            // Perimeter HUD cells capture their own pointer events, so the only
-            // non-game region that reaches the canvas is the minimap.
-            if (this.onHover && !this.isInMinimap(p.x, p.y)) {
-                const w = this.cameras.main.getWorldPoint(p.x, p.y);
-                this.onHover(w.x * FP, w.y * FP);
-            }
-        });
-
-        this.input.on("pointerup", (p: Phaser.Input.Pointer) => {
-            if (this.mmDragging) {
-                this.mmDragging = false;
-            } else if (this.drag) {
-                this.drag = false;
-                this.setHudDragMode(false);
-                this.finishSelect();
-            }
-            // Right-clicks only fire in the game area, not over the minimap.
-            if (p.rightButtonReleased() && !this.isInMinimap(p.x, p.y)) {
-                const w = this.cameras.main.getWorldPoint(p.x, p.y);
-                this.onSecondaryClick?.(w.x * FP, w.y * FP);
-            }
-        });
-
-        // ── DOM HUD ───────────────────────────────────────────────────────────
-        this.wireHud();
-    }
-
-    // ── HUD wiring ─────────────────────────────────────────────────────────────
-
-    /** Grab refs into the static HUD markup (client.html) and attach the few
-     *  dynamic behaviours: the tweak-panel toggle, the right-click guard, and the
-     *  list of chrome panels flipped click-through during a drag-select.  The
-     *  layout itself is entirely declarative HTML/CSS. */
-    private wireHud(): void {
-        this.resourceCell = document.querySelector<HTMLDivElement>("#hud-resources")!;
-        this.portraitCell = document.querySelector<HTMLDivElement>("#hud-portrait")!;
-        this.cardEl       = document.querySelector<HTMLDivElement>("#hud-card")!;
-        this.tweakPaneEl  = document.querySelector<HTMLDivElement>("#hud-tweak")!;
-        this.tweakBodyEl  = document.querySelector<HTMLDivElement>("#hud-tweak-body")!;
-
-        // Chrome panels capture pointer events; flipped click-through during a drag.
-        this.interactiveCells = Array.from(
-            document.querySelectorAll<HTMLDivElement>(".hud-chrome"),
+        scene.chunkRenderer = new ChunkRenderer(
+            scene,
+            mapJson.layers.find((l: any) => l.type === "tilelayer").data,
+            mapJson.width,
+            mapJson.height,
+            ts.name,
         );
+        scene.mapPixelW = mapJson.width  * mapJson.tilewidth;
+        scene.mapPixelH = mapJson.height * mapJson.tileheight;
+        // The HUD is a translucent overlay, so the world renders edge-to-edge:
+        // scroll bounds are simply the map size.
+        scene.cameras.main.setBounds(0, 0, scene.mapPixelW, scene.mapPixelH);
 
-        // Right-click on the chrome shouldn't pop the browser context menu.
-        document.querySelector("#hud")!
-            .addEventListener("contextmenu", e => e.preventDefault());
+        scene.mapTileW    = scene.mapPixelW / TILE_PX;
+        scene.mapTileH    = scene.mapPixelH / TILE_PX;
+        scene.tileVis     = new Uint8Array(scene.mapTileW * scene.mapTileH);
+        scene.tileExplored = new Uint8Array(scene.mapTileW * scene.mapTileH);
 
-        // Tweak-panel toggle (collapsed by default; .open is added/removed here).
-        this.tweakPaneEl.querySelector(".hud-tweak-handle")!
-            .addEventListener("click", () => this.setTweakOpen(!this.tweakOpen));
-    }
-
-    /** Show/hide the tweak pane — CSS animates the width (and shrinks the frame). */
-    private setTweakOpen(open: boolean): void {
-        this.tweakOpen = open;
-        this.tweakPaneEl.classList.toggle("open", open);
-        (this.tweakPaneEl.firstElementChild as HTMLElement).textContent = open ? "›" : "‹";
-    }
-
-    /** Enter/leave drag-select mode.  While dragging, the perimeter cells stop
-     *  capturing pointer events so the drag keeps tracking across them (Phaser
-     *  owns the pointer from pointerdown, but a cell with pointer-events:auto
-     *  would otherwise intercept the moves and freeze the rect at its edge). */
-    private setHudDragMode(on: boolean): void {
-        for (const c of this.interactiveCells) c.style.pointerEvents = on ? "none" : "auto";
-        if (!on) this.cardEl.style.opacity = "1";   // restore the card fade
-    }
-
-    // ── Command card (view only) ─────────────────────────────────────────────────
-
-    /** Draw a pre-computed command card (null = hide).  Slot clicks emit onSlot. */
-    showCommandCard(card: CommandCard | null): void {
-        const el = this.cardEl;
-        el.replaceChildren();
-        if (!card) { el.style.display = "none"; return; }
-        el.style.display = "grid";
-
-        card.forEach((ability, index) => {
-            const cell = document.createElement("div");
-            Object.assign(cell.style, {
-                width: `${ICON_W}px`, height: `${ICON_H}px`,
-                position: "relative", boxSizing: "border-box",
-            });
-            if (ability) {
-                Object.assign(cell.style, {
-                    backgroundImage: `url(${iconsUrl})`,
-                    backgroundPosition: iconBgPos(ability.icon),
-                    backgroundRepeat: "no-repeat",
-                    imageRendering: "pixelated",
-                    border: "1px solid #2a4", cursor: "pointer",
-                });
-                cell.title = ability.hotkey.length === 1
-                    ? `${ability.label} (${ability.hotkey})` : ability.label;
-                if (ability.hotkey.length === 1) {
-                    const k = document.createElement("span");
-                    k.textContent = ability.hotkey;
-                    Object.assign(k.style, {
-                        position: "absolute", left: "1px", bottom: "0px",
-                        font: "bold 10px monospace", color: "#ff4",
-                        textShadow: "0 0 2px #000, 0 0 2px #000", pointerEvents: "none",
-                    });
-                    cell.appendChild(k);
-                }
-                cell.addEventListener("click", () => this.onSlot?.(index));
-            } else {
-                cell.style.border = "1px solid rgba(255,255,255,0.10)";
-                cell.style.background = "rgba(0,0,0,0.25)";
-            }
-            el.appendChild(cell);
-        });
-    }
-
-    // ── Fog of war ────────────────────────────────────────────────────────────
-
-    /**
-     * Recompute per-tile visibility for myTeam and push it to the ChunkRenderer.
-     *
-     * tileVis values:
-     *   0 = UNEXPLORED — never seen; solid ~100% black
-     *   1 = EXPLORED   — seen before but not current view; 50% dim terrain
-     *   2 = VISIBLE    — currently in sight; full terrain + fog edge tiles
-     */
-    private updateFow(units: RenderUnit[]): void {
-        if (!this.chunkRenderer || !this.tileVis || !this.tileExplored) return;
-
-        const mapW = this.mapTileW;
-        const mapH = this.mapTileH;
-        const vis  = this.tileVis;
-        const exp  = this.tileExplored;
-
-        // Start from explored state, then mark current visibility on top
-        for (let i = 0; i < vis.length; i++) vis[i] = exp[i];
-
-        // Mark tiles currently in sight of any own unit as VISIBLE (2)
-        for (const u of units) {
-            if (u.team !== this.myTeam) continue;
-            // Per-unit sight (unitSight), matching the sim's vision/visibility.
-            const sight = unitSight(u.type);
-            const utx = (u.x / FP / TILE_PX) | 0;
-            const uty = (u.y / FP / TILE_PX) | 0;
-            const tx0 = Math.max(0,       utx - sight);
-            const tx1 = Math.min(mapW - 1, utx + sight);
-            const ty0 = Math.max(0,       uty - sight);
-            const ty1 = Math.min(mapH - 1, uty + sight);
-            for (let ty = ty0; ty <= ty1; ty++) {
-                for (let tx = tx0; tx <= tx1; tx++) {
-                    const _dx = tx - utx, _dy = ty - uty;
-                    // Dodecagonal metric — the single source of truth shared with the sim
-                    // (world.ts isTileVisible / computeVisibleUids). Keeps the drawn fog
-                    // identical to actual gameplay vision at any radius.
-                    if (inRange(_dx, _dy, sight)) {
-                        vis[ty * mapW + tx] = 2;
-                    }
-                }
-            }
-        }
-
-        // Persist newly visible tiles as explored
-        for (let i = 0; i < vis.length; i++) {
-            if (vis[i] === 2) exp[i] = 1;
-        }
-
-        this.chunkRenderer.updateFog(vis, mapW, mapH);
-    }
-
-    // ── Minimap terrain pre-render ────────────────────────────────────────────
-
-    /**
-     * Bake the entire map at minimap resolution onto an off-screen canvas once,
-     * register it as a Phaser texture, and show it as a scrollFactor(0) Image
-     * behind the unit dots.  Uses the raw tileset HTMLImageElement so that
-     * canvas drawImage handles the downscale — no Phaser stamp loop needed.
-     */
-    private createMinimapTexture(tileData: number[], mapW: number, mapH: number, tsName: string, spacing: number, margin: number): void {
-        const srcImage = this.textures.get(tsName).getSourceImage() as HTMLImageElement;
-        const tsColumns = Math.floor(
-            (srcImage.width - 2 * margin + spacing) / (TILE_PX + spacing),
+        scene.minimap.rebuild(
+            mapJson.layers.find((l: any) => l.type === "tilelayer").data,
+            mapJson.width, mapJson.height, ts.name, ts.spacing ?? 0, ts.margin ?? 0,
         );
-
-        // ── Step 1: draw each tile as 1px onto a mapW×mapH canvas ──────────────
-        // This lets the browser average all 32×32 source pixels down to a single
-        // representative colour per tile — far better than a direct 4096→120 scale.
-        const inter    = document.createElement("canvas");
-        inter.width    = mapW;
-        inter.height   = mapH;
-        const ictx     = inter.getContext("2d")!;
-        ictx.imageSmoothingEnabled = true;
-        ictx.imageSmoothingQuality = "high";
-        ictx.fillStyle = "#000000";
-        ictx.fillRect(0, 0, mapW, mapH);
-
-        for (let row = 0; row < mapH; row++) {
-            for (let col = 0; col < mapW; col++) {
-                const gid = tileData[row * mapW + col];
-                if (gid < 1) continue;
-
-                const frame  = gid - 1;
-                const srcCol = frame % tsColumns;
-                const srcRow = Math.floor(frame / tsColumns);
-                const srcX   = margin + srcCol * (TILE_PX + spacing);
-                const srcY   = margin + srcRow * (TILE_PX + spacing);
-
-                ictx.drawImage(srcImage, srcX, srcY, TILE_PX, TILE_PX, col, row, 1, 1);
-            }
-        }
-
-        // ── Step 2: scale the 1px-per-tile canvas to MINIMAP_SZ ─────────────
-        // If the map is larger than MINIMAP_SZ use smooth downscaling; if smaller
-        // use nearest-neighbour upscaling to keep the pixelated look.
-        const canvas  = document.createElement("canvas");
-        canvas.width  = MINIMAP_SZ;
-        canvas.height = MINIMAP_SZ;
-        const ctx     = canvas.getContext("2d")!;
-        const needsDownscale = mapW > MINIMAP_SZ;
-        ctx.imageSmoothingEnabled = needsDownscale;
-        if (needsDownscale) ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(inter, 0, 0, MINIMAP_SZ, MINIMAP_SZ);
-
-        // Re-register each restart (hot-reload etc.)
-        if (this.textures.exists("minimapTerrain")) this.textures.remove("minimapTerrain");
-        this.textures.addCanvas("minimapTerrain", canvas);
-
-        this.minimapImg?.destroy();   // replace any prior minimap (e.g. on a scenario map change)
-        this.minimapImg = this.add.image(0, this.scale.height - UI.bottom, "minimapTerrain")
-            .setScrollFactor(0)
-            .setOrigin(0, 0)
-            .setDepth(9);   // below uiGfx (depth 10) which draws dots + viewport rect
     }
 
-    // ── Minimap helpers ───────────────────────────────────────────────────────
+    // ── Graphics layers ───────────────────────────────────────────────────
+    // depth: terrain=-1, units(sprites)=0, overlays(gfx)=2, ui(uiGfx)=10
+    scene.gfx   = scene.add.graphics().setDepth(2);
+    scene.uiGfx = scene.add.graphics().setScrollFactor(0).setDepth(10);
 
-    /** True if screen point (sx, sy) falls inside the minimap zone. */
-    private isInMinimap(sx: number, sy: number): boolean {
-        return sx >= 0 && sx < MINIMAP_SZ
-            && sy >= this.scale.height - UI.bottom
-            && sy < this.scale.height;
-    }
+    // ── Keyboard ──────────────────────────────────────────────────────────
+    // Arrow keys pan (WC2/StarCraft style); letter keys are command-card
+    // hotkeys, so WASD is intentionally NOT bound to panning.
+    scene.cursors = scene.input.keyboard!.createCursorKeys();
 
-    /** Pan the main camera so the clicked minimap point is centred on screen. */
-    private panToMinimap(sx: number, sy: number): void {
-        if (!this.mapPixelW || !this.mapPixelH) return;
-        const scaleX = MINIMAP_SZ / this.mapPixelW;
-        const scaleY = MINIMAP_SZ / this.mapPixelH;
-        const wx = sx / scaleX;
-        const wy = (sy - (this.scale.height - UI.bottom)) / scaleY;
-        const cam = this.cameras.main;
-        cam.scrollX = wx - cam.width  / 2;
-        cam.scrollY = wy - cam.height / 2;
-    }
+    scene.input.keyboard!.on("keydown-ESC", () => scene.onEscape?.());
 
-    /** Draw minimap background, unit dots, camera viewport rect, and border. */
-    private drawMinimap(units: RenderUnit[]): void {
-        if (!this.mapPixelW || !this.mapPixelH) return;
+    // Letter keys → command-card hotkeys (A–Z only; let everything else,
+    // e.g. the console's backtick, pass through untouched).
+    scene.input.keyboard!.on("keydown", (ev: KeyboardEvent) => {
+        if (ev.key.length === 1 && /[a-zA-Z]/.test(ev.key)) scene.onHotkey?.(ev.key);
+    });
 
-        const sh     = this.scale.height;
-        const mmTop  = sh - UI.bottom;
-        const scaleX = MINIMAP_SZ / this.mapPixelW;
-        const scaleY = MINIMAP_SZ / this.mapPixelH;
+    // ── Pointer events ────────────────────────────────────────────────────
+    scene.input.mouse?.disableContextMenu();
 
-        // Unit dots — sized to the unit's footprint × the map scale (so they read proportionally on a
-        // tiny scenario map as well as a full one), with a 2px floor to stay visible when zoomed way out.
-        // Enemy units are hidden unless their chunk is currently visible to myTeam.
-        for (const u of units) {
-            const wx = u.x / FP;
-            const wy = u.y / FP;
-            if (u.team !== this.myTeam) {
-                const tx = (wx / TILE_PX) | 0;
-                const ty = (wy / TILE_PX) | 0;
-                if (!this.tileVis || this.tileVis[ty * this.mapTileW + tx] < 2) continue;
-            }
-            const [hw, hh] = unitBoxHalfPx(u.type);
-            const w = Math.max(2, 2 * hw * scaleX);
-            const h = Math.max(2, 2 * hh * scaleY);
-            const dx = wx * scaleX;
-            const dy = mmTop + wy * scaleY;
-            this.uiGfx.fillStyle(u.team === 0 ? 0x00cc44 : 0xdd2222, 1);
-            this.uiGfx.fillRect(dx - w / 2, dy - h / 2, w, h);
-        }
-
-        // Camera viewport rect, clamped to the minimap square. The world fills the whole canvas, so the
-        // visible region is the full cam extent — but on a tiny scenario map the cam sees well beyond the
-        // map, which would balloon the rect past the minimap; clamp each edge to [0, MINIMAP_SZ].
-        const cam   = this.cameras.main;
-        const left   = Math.max(0,                   cam.scrollX * scaleX);
-        const top    = Math.max(mmTop,               mmTop + cam.scrollY * scaleY);
-        const right  = Math.min(MINIMAP_SZ,          (cam.scrollX + cam.width)  * scaleX);
-        const bottom = Math.min(mmTop + MINIMAP_SZ,  mmTop + (cam.scrollY + cam.height) * scaleY);
-        this.uiGfx.lineStyle(1, 0xffffff, 0.8);
-        this.uiGfx.strokeRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
-
-        // Border
-        this.uiGfx.lineStyle(1, 0x444466, 1);
-        this.uiGfx.strokeRect(0, mmTop, MINIMAP_SZ, MINIMAP_SZ);
-    }
-
-    override update(_time: number, delta: number): void {
-        // Rolling render frame time (ms) for the perf overlay — EMA to smooth jitter.
-        this.frameMs += (delta - this.frameMs) * 0.1;
-
-        // ── Terrain chunks ────────────────────────────────────────────────────
-        this.chunkRenderer?.update(this.cameras.main);
-
-        // ── Camera scroll ─────────────────────────────────────────────────────
-        const cam = this.cameras.main;
-        if (this.cursors.left.isDown)  cam.scrollX -= CAM_SPEED;
-        if (this.cursors.right.isDown) cam.scrollX += CAM_SPEED;
-        if (this.cursors.up.isDown)    cam.scrollY -= CAM_SPEED;
-        if (this.cursors.down.isDown)  cam.scrollY += CAM_SPEED;
-
-        if (!this.renderState) return;
-        const units = this.renderState.units;
-        this.updateFow(units);
-        this.gfx.clear();
-        this.uiGfx.clear();
-
-        // The translucent DOM grid provides the HUD backgrounds; the canvas only
-        // draws the minimap contents + the drag rect on top of the world.
-        const sw = this.scale.width;
-        const sh = this.scale.height;
-        // Keep the minimap terrain backdrop pinned to the bottom-left on resize.
-        this.minimapImg?.setY(sh - UI.bottom);
-
-        // ── Minimap ───────────────────────────────────────────────────────────
-        this.drawMinimap(units);
-
-        // ── Units (world space) ───────────────────────────────────────────────
-        const now        = Date.now();
-        // Interpolation factor: 0 just after a snapshot arrives → 1 a tick later.
-        // Quantized into INTERP_SUBSTEPS sub-steps for a stepped, less-floaty feel
-        // (1 = snap to the latest snapshot, no interpolation).
-        const raw        = Math.min(1, (performance.now() - this.snapAt) / this.snapInterval);
-        const t          = INTERP_SUBSTEPS <= 1 ? 1 : Math.round(raw * INTERP_SUBSTEPS) / INTERP_SUBSTEPS;
-        const maxCatchup = MAX_CATCHUP_PX_PER_MS * delta;   // per-frame display catch-up cap (px)
-        const currentSet = new Set(units.map(u => u.uid));
-
-        // Destroy sprites for units / buildings that no longer exist
-        for (const [uid, sprite] of this.unitSprites) {
-            if (!currentSet.has(uid)) {
-                sprite.destroy();
-                this.unitSprites.delete(uid);
-                this.dispPos.delete(uid);
-            }
-        }
-        for (const [uid, sprite] of this.buildingSprites) {
-            if (!currentSet.has(uid)) {
-                sprite.destroy();
-                this.buildingSprites.delete(uid);
-            }
-        }
-
-        for (const u of units) {
-            // Buildings render as their own sprite (separate pool, no walk cycle).
-            if (u.fw > 0) { this.drawBuilding(u); continue; }
-
-            // Position: lerp from the previous snapshot toward this one, then ease the displayed
-            // sprite toward that target at a capped speed so a one-tick settle snap glides in.
-            const prev = this.prevPos.get(u.uid);
-            const tgx = (prev ? prev.x + (u.x - prev.x) * t : u.x) / FP;
-            const tgy = (prev ? prev.y + (u.y - prev.y) * t : u.y) / FP;
-            let disp = this.dispPos.get(u.uid);
-            if (!disp) { disp = { x: tgx, y: tgy }; this.dispPos.set(u.uid, disp); }
-            const ddx = tgx - disp.x, ddy = tgy - disp.y, dd = Math.hypot(ddx, ddy);
-            if (dd > maxCatchup) { disp.x += ddx * maxCatchup / dd; disp.y += ddy * maxCatchup / dd; }
-            else                 { disp.x = tgx; disp.y = tgy; }
-            const px = disp.x, py = disp.y;
-
-            // Facing/animation: a pending local prediction overrides the snapshot
-            // (instant turn) until the authoritative state catches up.
-            const pred   = this.prediction.get(u.uid);
-            const dir    = pred ? pred.dir : u.dir;
-            const moving = pred ? true : !!u.moving;
-
-            // ── Sprite + frame from the registry (keyed by unit type) ─────────
-            // Units without sprite data fall back to the team worker sheet.
-            const typeName = unitTypeName(u.type);
-            let sheet = sheetForType(typeName, this.tilesetName);
-            let drawType = typeName;
-            if (!sheet) { drawType = u.team === 0 ? "unit-peasant" : "unit-peon"; sheet = sheetForType(drawType, this.tilesetName)!; }
-            const key = sheet.key;
-            const { frame, flipX } = unitFrame(drawType, dir, moving, now);
-
-            let sprite = this.unitSprites.get(u.uid);
-            if (!sprite) {
-                sprite = this.add.sprite(px, py, key, frame).setDepth(0);
-                this.unitSprites.set(u.uid, sprite);
+    scene.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
+        if (p.leftButtonDown()) {
+            if (scene.minimap.contains(p.x, p.y)) {
+                scene.mmDragging = true;
+                scene.minimap.panCameraTo(p.x, p.y, scene.mapPixelW, scene.mapPixelH);
             } else {
-                sprite.setPosition(px, py);
-                sprite.setTexture(key, frame);
-            }
-            sprite.setFlipX(flipX);
-
-            // ── Selection ring ────────────────────────────────────────────────
-            if (this.selectedUids.has(u.uid)) {
-                // Box matches the unit's own collision size (32×32 ground, 64×64 ships/flyers).
-                const [shw, shh] = unitBoxHalfPx(u.type);
-                this.gfx.lineStyle(1.5, SEL_COLOR, 1);
-                this.gfx.strokeRect(px - shw, py - shh, shw * 2, shh * 2);
-            }
-
-            // ── Move-target dot ────────────────────────────────────────────────
-            // Predicted target shows instantly; otherwise the authoritative one.
-            if (pred) {
-                this.gfx.fillStyle(0xffffff, 0.3);
-                this.gfx.fillCircle(pred.mtx / FP, pred.mty / FP, 3);
-            } else if (u.mtActive) {
-                this.gfx.fillStyle(0xffffff, 0.3);
-                this.gfx.fillCircle(u.mtx / FP, u.mty / FP, 3);
+                scene.drag = true;
+                scene.sx = p.x; scene.sy = p.y;
+                scene.ex = p.x; scene.ey = p.y;
+                // Let the drag track across the perimeter cells (see hud.setHudDragMode).
+                setHudDragMode(scene, true);
             }
         }
+    });
 
-        // ── Building-placement ghost (world space) ────────────────────────────
-        if (this.ghost) {
-            const { tileX, tileY, fw, fh, valid } = this.ghost;
-            const color = valid ? 0x33ff33 : 0xff3333;
-            const x = tileX * TILE_PX, y = tileY * TILE_PX, w = fw * TILE_PX, h = fh * TILE_PX;
-            this.gfx.fillStyle(color, 0.28);
-            this.gfx.fillRect(x, y, w, h);
-            this.gfx.lineStyle(1.5, color, 0.9);
-            this.gfx.strokeRect(x, y, w, h);
+    scene.input.on("pointermove", (p: Phaser.Input.Pointer) => {
+        if (scene.mmDragging) {
+            scene.minimap.panCameraTo(p.x, p.y, scene.mapPixelW, scene.mapPixelH);
+        } else if (scene.drag) {
+            scene.ex = p.x; scene.ey = p.y;
         }
+        // Drive the placement ghost (game area only — not over the minimap).
+        // Perimeter HUD cells capture their own pointer events, so the only
+        // non-game region that reaches the canvas is the minimap.
+        if (scene.onHover && !scene.minimap.contains(p.x, p.y)) {
+            const w = scene.cameras.main.getWorldPoint(p.x, p.y);
+            scene.onHover(w.x * FP, w.y * FP);
+        }
+    });
 
-        // ── Drag-select rect (screen space) ───────────────────────────────────
-        if (this.drag) {
-            this.uiGfx.lineStyle(1, 0x88ff88, 0.8);
-            this.uiGfx.strokeRect(
-                Math.min(this.sx, this.ex), Math.min(this.sy, this.ey),
-                Math.abs(this.ex - this.sx), Math.abs(this.ey - this.sy),
-            );
-            // Fade the command card when the drag sweeps into its cell so the
-            // selection box / units underneath stay visible.
-            const dr = Math.max(this.sx, this.ex), db = Math.max(this.sy, this.ey);
-            const overCard = dr >= sw - UI.right && db >= sh - UI.bottom;
-            this.cardEl.style.opacity = overCard ? "0.2" : "1";
+    scene.input.on("pointerup", (p: Phaser.Input.Pointer) => {
+        if (scene.mmDragging) {
+            scene.mmDragging = false;
+        } else if (scene.drag) {
+            scene.drag = false;
+            setHudDragMode(scene, false);
+            finishSelect(scene);
         }
+        // Right-clicks only fire in the game area, not over the minimap.
+        if (p.rightButtonReleased() && !scene.minimap.contains(p.x, p.y)) {
+            const w = scene.cameras.main.getWorldPoint(p.x, p.y);
+            scene.onSecondaryClick?.(w.x * FP, w.y * FP);
+        }
+    });
+
+    // ── DOM HUD ───────────────────────────────────────────────────────────
+    wireHud(scene);
+}
+
+export function update(scene: Phaser.Scene, _time: number, delta: number): void {
+    // Rolling render frame time (ms) for the perf overlay — EMA to smooth jitter.
+    scene.frameMs += (delta - scene.frameMs) * 0.1;
+
+    // ── Terrain chunks ────────────────────────────────────────────────────
+    scene.chunkRenderer?.update(scene.cameras.main);
+
+    // ── Camera scroll ─────────────────────────────────────────────────────
+    const cam = scene.cameras.main;
+    if (scene.cursors.left.isDown)  cam.scrollX -= CAM_SPEED;
+    if (scene.cursors.right.isDown) cam.scrollX += CAM_SPEED;
+    if (scene.cursors.up.isDown)    cam.scrollY -= CAM_SPEED;
+    if (scene.cursors.down.isDown)  cam.scrollY += CAM_SPEED;
+
+    if (!scene.renderState) return;
+    const units = scene.renderState.units;
+    updateFow(scene, units);
+    scene.gfx.clear();
+    scene.uiGfx.clear();
+
+    // The translucent DOM grid provides the HUD backgrounds; the canvas only
+    // draws the minimap contents + the drag rect on top of the world.
+    const sw = scene.scale.width;
+    const sh = scene.scale.height;
+    // Keep the minimap terrain backdrop pinned to the bottom-left on resize.
+    scene.minimap.reposition();
+    scene.minimap.draw(
+        scene.uiGfx, units, scene.mapPixelW, scene.mapPixelH, scene.myTeam,
+        (tx, ty) => !!scene.tileVis && scene.tileVis[ty * scene.mapTileW + tx] >= 2,
+    );
+
+    // ── Units + buildings (world space) ───────────────────────────────────
+    drawEntities(scene, units, delta);
+
+    // ── Building-placement ghost (world space) ────────────────────────────
+    if (scene.ghost) {
+        const { tileX, tileY, fw, fh, valid } = scene.ghost;
+        const color = valid ? 0x33ff33 : 0xff3333;
+        const x = tileX * TILE_PX, y = tileY * TILE_PX, w = fw * TILE_PX, h = fh * TILE_PX;
+        scene.gfx.fillStyle(color, 0.28);
+        scene.gfx.fillRect(x, y, w, h);
+        scene.gfx.lineStyle(1.5, color, 0.9);
+        scene.gfx.strokeRect(x, y, w, h);
     }
 
-    /** Debug/e2e: tear down the boot terrain and rebuild it for a loaded scenario — a fresh
-     *  ChunkRenderer at the scenario's dimensions, fully lit (scenarios run without fog). `gids` are
-     *  real tileset frame ids (grass for walkable, wall for blocked), built by the worker. The camera
-     *  is re-bounded and zoomed to fit the (usually tiny) scenario so you can watch it. */
-    rebuildMap(gids: number[], mapW: number, mapH: number): void {
-        if (!this.tilesetName) return;
+    // ── Drag-select rect (screen space) ───────────────────────────────────
+    if (scene.drag) {
+        scene.uiGfx.lineStyle(1, 0x88ff88, 0.8);
+        scene.uiGfx.strokeRect(
+            Math.min(scene.sx, scene.ex), Math.min(scene.sy, scene.ey),
+            Math.abs(scene.ex - scene.sx), Math.abs(scene.ey - scene.sy),
+        );
+        // Fade the command card when the drag sweeps into its cell so the
+        // selection box / units underneath stay visible.
+        const dr = Math.max(scene.sx, scene.ex), db = Math.max(scene.sy, scene.ey);
+        const overCard = dr >= sw - UI.right && db >= sh - UI.bottom;
+        scene.cardEl.style.opacity = overCard ? "0.2" : "1";
+    }
+}
 
-        // Blank slate: drop the old map's unit sprites + interpolation baselines so the new scenario's
-        // units appear at their tiles instead of tweening in from their previous (old-map) positions.
-        for (const s of this.unitSprites.values()) s.destroy();
-        this.unitSprites.clear();
-        for (const s of this.buildingSprites.values()) s.destroy();
-        this.buildingSprites.clear();
-        this.renderState = null;
-        this.prevPos.clear();
-        this.dispPos.clear();
+/** Debug/e2e: tear down the boot terrain and rebuild it for a loaded scenario — a fresh
+ *  ChunkRenderer at the scenario's dimensions, fully lit (scenarios run without fog). `gids` are
+ *  real tileset frame ids (grass for walkable, wall for blocked), built by the worker. The camera
+ *  is re-bounded and zoomed to fit the (usually tiny) scenario so you can watch it. */
+export function rebuildMap(scene: Phaser.Scene, gids: number[], mapW: number, mapH: number): void {
+    if (!scene.tilesetName) return;
 
-        this.chunkRenderer?.destroy();
-        this.chunkRenderer = new ChunkRenderer(this, gids, mapW, mapH, SCENARIO_TILESET);
-        this.createMinimapTexture(gids, mapW, mapH, SCENARIO_TILESET, 1, 0);   // regen minimap for the new map
+    // Blank slate: drop the old map's unit sprites + interpolation baselines so the new scenario's
+    // units appear at their tiles instead of tweening in from their previous (old-map) positions.
+    for (const s of scene.unitSprites.values()) s.destroy();
+    scene.unitSprites.clear();
+    for (const s of scene.buildingSprites.values()) s.destroy();
+    scene.buildingSprites.clear();
+    scene.renderState = null;
+    scene.prevPos.clear();
+    scene.dispPos.clear();
 
-        this.mapTileW  = mapW;
-        this.mapTileH  = mapH;
-        this.mapPixelW = mapW * TILE_PX;
-        this.mapPixelH = mapH * TILE_PX;
-        this.tileVis      = new Uint8Array(mapW * mapH).fill(2);   // VISIBLE everywhere (no fog)
-        this.tileExplored = new Uint8Array(mapW * mapH).fill(1);
+    scene.chunkRenderer?.destroy();
+    scene.chunkRenderer = new ChunkRenderer(scene, gids, mapW, mapH, SCENARIO_TILESET);
+    scene.minimap.rebuild(gids, mapW, mapH, SCENARIO_TILESET, 1, 0);   // regen minimap for the new map
 
-        const cam = this.cameras.main;
-        // No bounds: a scenario map is smaller than the viewport, and bounds would clamp the scroll to
-        // the top-left and defeat centring. Centre the (native-scale) map in the window instead.
-        cam.removeBounds();
-        cam.setZoom(1);   // native 1:1 (reset any prior scenario's fit-zoom)
-        cam.centerOn(this.mapPixelW / 2, this.mapPixelH / 2);
+    scene.mapTileW  = mapW;
+    scene.mapTileH  = mapH;
+    scene.mapPixelW = mapW * TILE_PX;
+    scene.mapPixelH = mapH * TILE_PX;
+    scene.tileVis      = new Uint8Array(mapW * mapH).fill(2);   // VISIBLE everywhere (no fog)
+    scene.tileExplored = new Uint8Array(mapW * mapH).fill(1);
 
-        this.chunkRenderer.update(cam);
-        this.chunkRenderer.updateFog(this.tileVis, mapW, mapH);
+    const cam = scene.cameras.main;
+    // No bounds: a scenario map is smaller than the viewport, and bounds would clamp the scroll to
+    // the top-left and defeat centring. Centre the (native-scale) map in the window instead.
+    cam.removeBounds();
+    cam.setZoom(1);   // native 1:1 (reset any prior scenario's fit-zoom)
+    cam.centerOn(scene.mapPixelW / 2, scene.mapPixelH / 2);
+
+    scene.chunkRenderer.update(cam);
+    scene.chunkRenderer.updateFog(scene.tileVis, mapW, mapH);
+}
+
+/** Push the latest worker snapshot.  Rolls the current positions into the
+ *  interpolation baseline so update() can lerp toward the new snapshot. */
+export function setRenderState(scene: Phaser.Scene, state: RenderState): void {
+    if (scene.renderState) {
+        scene.prevPos.clear();
+        for (const u of scene.renderState.units) scene.prevPos.set(u.uid, { x: u.x, y: u.y });
+    }
+    scene.renderState = state;
+    const now = performance.now();
+    // Track the real gap between snapshots (EMA-smoothed, sanity-clamped) so interpolation
+    // matches the current tick cadence — game speed changes it; a stalled tab inflates it.
+    if (scene.snapAt > 0) {
+        const dt = now - scene.snapAt;
+        if (dt > 0 && dt < 1000) scene.snapInterval = scene.snapInterval * 0.8 + dt * 0.2;
+    }
+    scene.snapAt = now;
+}
+
+/** Share the live prediction map (main.ts mutates it; we read it each frame). */
+export function setPrediction(scene: Phaser.Scene, prediction: Map<number, UnitPrediction>): void {
+    scene.prediction = prediction;
+}
+
+/** Update the locally-owned selection (stable unit-ids) for selection rings. */
+export function setSelectedUids(scene: Phaser.Scene, uids: Set<number>): void {
+    scene.selectedUids = uids;
+}
+
+/** Toggle the targeting (crosshair) cursor for armed abilities. */
+export function setTargetingCursor(scene: Phaser.Scene, on: boolean): void {
+    scene.input.setDefaultCursor(on ? "crosshair" : "default");
+}
+
+/** Set (or clear, with null) the building-placement ghost. Drawn in update(). */
+export function showPlacementGhost(scene: Phaser.Scene, ghost: { tileX: number; tileY: number; fw: number; fh: number; valid: boolean } | null): void {
+    scene.ghost = ghost;
+}
+
+/** Resolve a drag-select (or single click) into a selection, honouring an armed ability's
+ *  target-consuming primary click.  Emits onSelect with the hit unit-ids. */
+function finishSelect(scene: Phaser.Scene): void {
+    if (!scene.onSelect) return;
+
+    // An armed ability consumes the click as its target — no selection change.
+    const cam  = scene.cameras.main;
+    if (scene.onPrimaryClick) {
+        const cp = cam.getWorldPoint(scene.ex, scene.ey);
+        if (scene.onPrimaryClick(cp.x * FP, cp.y * FP)) return;
     }
 
-    /** Push the latest worker snapshot.  Rolls the current positions into the
-     *  interpolation baseline so update() can lerp toward the new snapshot. */
-    setRenderState(state: RenderState): void {
-        if (this.renderState) {
-            this.prevPos.clear();
-            for (const u of this.renderState.units) this.prevPos.set(u.uid, { x: u.x, y: u.y });
-        }
-        this.renderState = state;
-        const now = performance.now();
-        // Track the real gap between snapshots (EMA-smoothed, sanity-clamped) so interpolation
-        // matches the current tick cadence — game speed changes it; a stalled tab inflates it.
-        if (this.snapAt > 0) {
-            const dt = now - this.snapAt;
-            if (dt > 0 && dt < 1000) this.snapInterval = this.snapInterval * 0.8 + dt * 0.2;
-        }
-        this.snapAt = now;
+    // Convert screen-space drag corners to world space
+    const tl   = cam.getWorldPoint(Math.min(scene.sx, scene.ex), Math.min(scene.sy, scene.ey));
+    const br   = cam.getWorldPoint(Math.max(scene.sx, scene.ex), Math.max(scene.sy, scene.ey));
+    const x0 = tl.x * FP, y0 = tl.y * FP;
+    const x1 = br.x * FP, y1 = br.y * FP;
+
+    const hits: number[] = [];
+    for (const u of scene.renderState?.units ?? []) {
+        if (u.x >= x0 && u.x <= x1 && u.y >= y0 && u.y <= y1) hits.push(u.uid);
     }
 
-    /** Share the live prediction map (main.ts mutates it; we read it each frame). */
-    setPrediction(prediction: Map<number, UnitPrediction>): void { this.prediction = prediction; }
-
-    /** Update the locally-owned selection (stable unit-ids) for selection rings. */
-    setSelectedUids(uids: Set<number>): void { this.selectedUids = uids; }
-
-    /** Toggle the targeting (crosshair) cursor for armed abilities. */
-    setTargetingCursor(on: boolean): void {
-        this.input.setDefaultCursor(on ? "crosshair" : "default");
-    }
-
-    /** Set (or clear, with null) the building-placement ghost. Drawn in update(). */
-    showPlacementGhost(ghost: { tileX: number; tileY: number; fw: number; fh: number; valid: boolean } | null): void {
-        this.ghost = ghost;
-    }
-
-    /** Render a building: a staged construction-site sprite while building, then
-     *  the finished building (frame 0).  Footprint selection box; coloured-rect
-     *  fallback if a texture is unavailable. */
-    private drawBuilding(u: RenderUnit): void {
-        const w = u.fw * TILE_PX, h = u.fh * TILE_PX;
-        const cx = u.x / FP, cy = u.y / FP;
-        const left = cx - w / 2, top = cy - h / 2;
-        const typeName = unitTypeName(u.type);
-
-        // Registry decides texture/frame/anchor from construction progress.
-        const { key, frame, centered } = buildingDraw(typeName, u.buildLeft, unitBuildTicks(u.type));
-
-        if (this.textures.exists(key)) {
-            let spr = this.buildingSprites.get(u.uid);
-            if (!spr) { spr = this.add.sprite(0, 0, key, 0).setDepth(0); this.buildingSprites.set(u.uid, spr); }
-            const maxFrame = this.textures.get(key).frameTotal - 2;   // exclude __BASE
-            spr.setTexture(key, Math.min(frame, Math.max(0, maxFrame)));
-            if (centered) spr.setOrigin(0.5, 0.5).setPosition(cx, cy);   // small site, centred on footprint
-            else          spr.setOrigin(0, 0).setPosition(left, top);     // building fills footprint
-        } else {
-            // Texture missing — coloured footprint rect fallback.
-            const color = u.team === 0 ? 0x3366cc : 0xcc3333;
-            this.gfx.fillStyle(color, u.buildLeft > 0 ? 0.35 : 0.7);
-            this.gfx.fillRect(left, top, w, h);
-            this.gfx.lineStyle(2, 0x000000, 0.8);
-            this.gfx.strokeRect(left, top, w, h);
-        }
-
-        // Selection box around the footprint
-        if (this.selectedUids.has(u.uid)) {
-            this.gfx.lineStyle(2, SEL_COLOR, 1);
-            this.gfx.strokeRect(left - 2, top - 2, w + 4, h + 4);
-        }
-    }
-
-    private finishSelect(): void {
-        if (!this.onSelect) return;
-
-        // An armed ability consumes the click as its target — no selection change.
-        const cam  = this.cameras.main;
-        if (this.onPrimaryClick) {
-            const cp = cam.getWorldPoint(this.ex, this.ey);
-            if (this.onPrimaryClick(cp.x * FP, cp.y * FP)) return;
-        }
-
-        // Convert screen-space drag corners to world space
-        const tl   = cam.getWorldPoint(Math.min(this.sx, this.ex), Math.min(this.sy, this.ey));
-        const br   = cam.getWorldPoint(Math.max(this.sx, this.ex), Math.max(this.sy, this.ey));
-        const x0 = tl.x * FP, y0 = tl.y * FP;
-        const x1 = br.x * FP, y1 = br.y * FP;
-
-        const hits: number[] = [];
-        for (const u of this.renderState?.units ?? []) {
-            if (u.x >= x0 && u.x <= x1 && u.y >= y0 && u.y <= y1) hits.push(u.uid);
-        }
-
-        // Single click with no drag → deselect all
-        if (Math.abs(this.ex - this.sx) < 4 && Math.abs(this.ey - this.sy) < 4 && hits.length === 0) {
-            this.onSelect([]);
-        } else {
-            this.onSelect(hits);
-        }
+    // Single click with no drag → deselect all
+    if (Math.abs(scene.ex - scene.sx) < 4 && Math.abs(scene.ey - scene.sy) < 4 && hits.length === 0) {
+        scene.onSelect([]);
+    } else {
+        scene.onSelect(hits);
     }
 }
 
@@ -872,10 +456,10 @@ export function startPhaser(
             },
         });
         game.events.once("ready", () => {
-            // game.scene.add(key, class, autoStart, initData)
-            // Phaser passes initData to init() before preload()
-            game.scene.add("game", GameScene, true, mapConfig);
-            const scene = game.scene.getScene("game") as GameScene;
+            // Build the functional scene from this module's lifecycle hooks, then add it.
+            // game.scene.add(key, sceneInstance, autoStart, initData) → Phaser calls init(initData).
+            const scene = createScene({ name: "game", init, preload, create, update })();
+            game.scene.add("game", scene, true, mapConfig);
             scene.events.once("create", () => resolve(scene));
         });
     });

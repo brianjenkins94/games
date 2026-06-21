@@ -6,20 +6,23 @@
  * stays fully decoupled from transport concerns.
  */
 import {
-    createSimWorld, stepWorld, unitEids as _unitEids, worldHashOwn,
+    createSimWorld, stepWorld, unitEids as _unitEids,
     spawnUnit as _spawnUnit, spawnRandom as _spawnRandom, despawnUnit,
-    setMoveTarget as _setMoveTarget, previewMoveTarget as _previewMoveTarget,
     canPlaceBuilding as _canPlaceBuilding,
-    takeSnapshot as _takeSnapshot, applySnapshot as _applySnapshot,
     registerObservers as _registerObservers,
     consumeUnitId, eidForUnitId, setNextUnitId, initUnitIdCounter,
-    computeVisibleUids, ownSnapshotsVisibleTo, isTileVisible,
-    snapshotUnit as _snapshotUnit,
+    type SimWorld, type UnitLifecycle, type MapInfo, type UnitSnapshot,
+} from "./world";
+import { setMoveTarget as _setMoveTarget, previewMoveTarget as _previewMoveTarget } from "./orders";
+import {
+    worldHashOwn, takeSnapshot as _takeSnapshot, applySnapshot as _applySnapshot,
+    ownSnapshotsVisibleTo, snapshotUnit as _snapshotUnit,
     addKnownUnit as _addKnownUnit, updateKnownUnit as _updateKnownUnit,
     removeKnownUnit as _removeKnownUnit,
     addOwnUnit as _addOwnUnit, reconcileOwnUnit as _reconcileOwnUnit,
-    type SimWorld, type UnitLifecycle, type MapInfo, type WorldSnapshot, type UnitSnapshot,
-} from "./world";
+    type WorldSnapshot,
+} from "./snapshot";
+import { computeVisibleUids, isTileVisible } from "./vision";
 
 export type { WorldSnapshot, UnitSnapshot };
 
