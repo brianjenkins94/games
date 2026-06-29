@@ -21,6 +21,14 @@ let overlay: HTMLDivElement | null = null;
 let listEl:  HTMLDivElement | null = null;
 let visible = false;
 let started = false;
+let sink: ((level: Level, msg: string) => void) | null = null;
+
+/** Register a forwarder for this thread's OWN console lines (e.g. relay to the debug server). Called
+ *  only from the main-thread console patch, not from pushConsole, so relayed worker lines aren't doubled. */
+export function setConsoleSink(fn: (level: Level, msg: string) => void): void {
+    if (!import.meta.env.DEV) return;   // dev-only; lets the whole overlay tree-shake out of prod
+    sink = fn;
+}
 
 const LEVEL_COLOR: Record<Level, string> = {
     log:   "#cdd",
@@ -84,13 +92,16 @@ function toggle(): void {
 
 /** Patch console + global error handlers, and bind the toggle key. Idempotent. */
 export function initGameConsole(): void {
+    if (!import.meta.env.DEV) return;   // dev aid only — never patch console / bind listeners in prod
     if (started) return;
     started = true;
 
     for (const level of ["log", "info", "warn", "error", "debug"] as Level[]) {
         const original = console[level].bind(console);
         console[level] = (...args: unknown[]) => {
-            push(level, format(args));
+            const m = format(args);
+            push(level, m);
+            try { sink?.(level, m); } catch { /* never let the relay break logging */ }
             original(...args);
         };
     }
@@ -104,4 +115,12 @@ export function initGameConsole(): void {
         e.preventDefault();
         toggle();
     }, true);
+}
+
+/** Feed an externally-sourced line (e.g. relayed worker console — see debug/workerConsole.ts) into the
+ *  overlay, tagged so its origin is clear. */
+export function pushConsole(level: string, msg: string): void {
+    if (!import.meta.env.DEV) return;   // overlay is dev-only
+    const lvl: Level = (["log", "info", "warn", "error", "debug"] as Level[]).includes(level as Level) ? (level as Level) : "log";
+    push(lvl, `[worker] ${msg}`);
 }

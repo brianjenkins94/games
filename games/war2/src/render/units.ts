@@ -7,8 +7,23 @@ import { FP } from "../game/components";
 import { TILE_PX } from "./ChunkRenderer";
 import type { RenderUnit } from "../worker/ipc";
 import { unitTypeName, unitBuildTicks, unitBoxHalfPx } from "../game/unitTypes";
-import { sheetForType, unitFrame, buildingDraw } from "./sprites";
+import { sheetForType, constructionSheet, unitFrame, buildingDraw, type SheetDef } from "./sprites";
 import type { RendererState } from "./renderer";
+
+/** Lazily load a spritesheet the first time an entity needs it (replaces the old eager bulk preload of
+ *  all ~127 registered sheets).  Returns true once the texture is ready to draw.  Phaser's loader runs
+ *  after boot, so we queue the sheet and (re)start the loader; the texture lands a frame or two later —
+ *  callers skip (units) or fall back to a rect (buildings) until then. */
+function ensureSheet(renderer: RendererState, sheet: SheetDef): boolean {
+    const scene = renderer.scene;
+    if (scene.textures.exists(sheet.key)) return true;
+    if (!renderer.pendingSheets.has(sheet.key)) {
+        renderer.pendingSheets.add(sheet.key);
+        scene.load.spritesheet(sheet.key, sheet.url, { frameWidth: sheet.frameW, frameHeight: sheet.frameH });
+        if (!scene.load.isLoading()) scene.load.start();
+    }
+    return false;
+}
 
 // Position-interpolation cadence (feel knob).  Quantizes the lerp between
 // snapshots into N sub-steps per 20 Hz tick instead of continuous 60 fps:
@@ -87,6 +102,10 @@ export function drawEntities(renderer: RendererState, units: RenderUnit[], delta
         const key = sheet.key;
         const { frame, flipX } = unitFrame(drawType, dir, moving, now);
 
+        // Lazy-load this type's sheet on first sighting; skip drawing until it's ready (a frame or two).
+        // dispPos was already updated above, so the sprite appears at the right interpolated spot.
+        if (!ensureSheet(renderer, sheet)) continue;
+
         let sprite = renderer.unitSprites.get(u.uid);
         if (!sprite) {
             sprite = renderer.scene.add.sprite(px, py, key, frame).setDepth(0);
@@ -128,6 +147,13 @@ function drawBuilding(renderer: RendererState, u: RenderUnit): void {
 
     // Registry decides texture/frame/anchor from construction progress.
     const { key, frame, centered } = buildingDraw(typeName, u.buildLeft, unitBuildTicks(u.type));
+
+    // Kick the lazy load for whichever sheet this key needs (building vs construction site); the rect
+    // fallback below covers the gap until the texture lands.
+    const sheet = key.startsWith("con:")
+        ? constructionSheet(key.slice(4), renderer.tilesetName)
+        : sheetForType(typeName, renderer.tilesetName);
+    if (sheet) ensureSheet(renderer, sheet);
 
     if (renderer.scene.textures.exists(key)) {
         let spr = renderer.buildingSprites.get(u.uid);

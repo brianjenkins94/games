@@ -17,12 +17,13 @@
  */
 import { createGame, type GameInstance, type MapInfo, type WorldSnapshot } from "../game/game";
 import { validateCommand } from "../game/validate";
-import { UnitId, TICK_MS, tileCenterFP, Building } from "../game/components";
+import { hasComponent } from "bitecs";
+import { UnitId, MoveTarget, Path, Unit, TICK_MS, tileCenterFP, fpToTile, Building } from "../game/components";
 import { CmdType, type Command, type UnitSnapshot, type StateUpdatePayload } from "../net/protocol";
 import { LocalRefereeClient, RemoteRefereeClient, type RefereeClient } from "../net/transport";
 import { getPassability } from "../game/passability";
 import { revealAll } from "../game/vision";
-import { initDebugClient, sendDebugState, sendDebugCommands, setDebugCallbacks, type DebugScenario } from "../debug/client";
+import { initDebugClient, sendDebugState, sendDebugCommands, sendIncident, sendDiagError, wireBoxConsole, setDebugCallbacks, type DebugScenario } from "../debug/client";
 import {
     renderUnitFromSnapshot,
     type MainToWorker, type WorkerToMain, type RenderState, type MetricsSample, type WorkerInit, type SimDebugState, type SimDebugUnit,
@@ -30,6 +31,9 @@ import {
 
 const post = (msg: WorkerToMain, transfer?: Transferable[]) =>
     (self as unknown as Worker).postMessage(msg, transfer ?? []);
+
+// Wire this box's console (worker → overlay + server) and get the relay for its main-thread console.
+const relayClientConsole = wireBoxConsole(post);
 
 // ── Runtime state ─────────────────────────────────────────────────────────────
 
@@ -55,6 +59,27 @@ let historyEnabled = false;
 const HISTORY_MAX = 2400;                        // ~2 min at 20 TPS; oldest snapshots drop off
 const history: { tick: number; snap: WorldSnapshot }[] = [];
 
+// Pathing-incident capture (dev only): a small always-on snapshot ring so a flag captures the LEAD-UP
+// to a pathology, not just the moment it's noticed.  The current map is kept so an incident is a
+// self-contained, replayable repro (deterministic sim → exact reproduction).
+let currentMap: MapInfo | null = null;
+const INCIDENT_SNAP_EVERY = 30;                  // snapshot ~every 1.5 s
+const INCIDENT_RING_MAX = 6;                     // keep ~9 s of lead-up
+const incidentRing: { tick: number; snap: WorldSnapshot }[] = [];
+
+// Pathing-pathology auto-detector (dev only): a read-only post-step scan of unit state. Surfaces a
+// live count to the HUD and auto-flags sustained episodes as incidents (debounced + per-signature dedup).
+const STUCK_FLAG = 24;                            // grinding ~2/3 toward the settle limit (36)
+const AUTOFLAG_COOLDOWN = 100;                    // ≥5 s between ANY auto-captures
+const AUTOFLAG_SUSTAIN = 20;                      // a stuck unit must persist this long before auto-flag
+const AUTOFLAG_DEDUP = 600;                       // don't re-flag the SAME unit+kind within ~30 s
+const OSC_WINDOW = 6;                             // distinct-consecutive tiles to look back over for bouncing
+interface PathoTrack { prevMove: number; prevSlotTx: number; prevSlotTy: number; tiles: number[]; stuckSince: number }
+const pathoTracks = new Map<number, PathoTrack>();   // uid → per-unit tracking
+const autoFlagged = new Map<string, number>();   // "<kind>:<uid>" → tick last auto-flagged (dedup)
+let pathoCount = -1;                              // last count posted to the HUD (−1 = force first post)
+let lastAutoFlag = -1e9;                          // tick of the last auto-flag (debounce)
+
 // ── Game speed (authoritative) ──────────────────────────────────────────────────
 // A positive multiplier on the wall-clock tick cadence — NOT the logical timestep. Each tick
 // still advances the sim by the same fixed amount, so the tick sequence/results are identical at
@@ -68,7 +93,9 @@ let tickTimer: ReturnType<typeof setTimeout> | undefined;
 
 function scheduleTick(): void {
     if (tickTimer !== undefined) clearTimeout(tickTimer);
-    tickTimer = setTimeout(() => { tickTimer = undefined; tick(); scheduleTick(); }, TICK_MS / speed);
+    // try/finally so a throw in tick() (e.g. a dev-only diagnostic) can never kill the self-rescheduling
+    // loop and freeze the host permanently.
+    tickTimer = setTimeout(() => { tickTimer = undefined; try { tick(); } finally { scheduleTick(); } }, TICK_MS / speed);
 }
 
 function setSpeed(s: number): void {
@@ -211,6 +238,9 @@ function tick(): void {
     // Off the tickMs budget: record the reverse-debug history (all forward ticks, incl. manual steps),
     // then arm breakpoints — but only on the free-running loop, since a manual step is already a halt.
     recordHistory();
+    // Dev-only diagnostics must never break the sim loop — isolate any throw.
+    try { recordIncidentSnap(); detectPathologies(applied); }
+    catch (e) { console.error("[referee] incident/pathology diagnostic threw (ignored):", e); sendDiagError(String((e as Error)?.stack ?? e)); }
     if (!stepping && (bpFns.length > 0 || dataBps.length > 0)) checkBreakpoints();
 }
 
@@ -250,6 +280,7 @@ function loadScenario(sc: DebugScenario): void {
     seed = sc.seed ?? seed;
     mapW = sc.mapInfo.mapW;
     mapH = sc.mapInfo.mapH;
+    currentMap = sc.mapInfo;
     game = createGame(seed, sc.mapInfo satisfies MapInfo);
     game.initUnitIdCounter(0);
     for (const u of sc.spawns) {
@@ -263,6 +294,7 @@ function loadScenario(sc: DebugScenario): void {
     simPaused = true;
     started   = true;
     history.length = 0;
+    resetIncidentState();   // old session's snapshots / pathology tracking must not bleed into a new scenario
     post({ kind: "ready", passability: getPassability(), mapW, mapH });
     post({ kind: "scenario-map", gids: scenarioRenderGids(), mapW, mapH });   // redraw the terrain
     renderHost();                                                // initial frame to the host renderer
@@ -374,6 +406,121 @@ function recordHistory(): void {
     while (history.length > HISTORY_MAX) history.shift();
 }
 
+/** Dev-only: feed the incident snapshot ring (~every 1.5 s) so a flag has lead-up to replay. */
+function recordIncidentSnap(): void {
+    if (!import.meta.env.DEV) return;
+    const t = game.world.tick;
+    if (t % INCIDENT_SNAP_EVERY !== 0) return;
+    incidentRing.push({ tick: t, snap: game.takeSnapshot() });
+    while (incidentRing.length > INCIDENT_RING_MAX) incidentRing.shift();
+}
+
+/** Capture the current moment as a replayable incident: the oldest buffered snapshot (max lead-up) plus
+ *  the map, shipped to the debug server (which enriches it with the recent command log). */
+function flagIncident(label: string): void {
+    if (!currentMap) return;
+    const base = incidentRing[0] ?? { tick: game.world.tick, snap: game.takeSnapshot() };
+    // flagHash = own-team hash at the flag tick; the regression runner replays base→flag and asserts it
+    // matches, proving the captured repro reproduces exactly before checking the outcome.
+    sendIncident({ flagTick: game.world.tick, baseTick: base.tick, snapshot: base.snap, map: currentMap, flagHash: game.hashOwn(myTeam), label });
+    console.info(`[referee] incident flagged: base tick ${base.tick} → flag tick ${game.world.tick}`);
+}
+
+/** Clear detector + incident state — a new scenario/replay must start with a clean slate. */
+function resetIncidentState(): void {
+    incidentRing.length = 0;
+    pathoTracks.clear();
+    autoFlagged.clear();
+    pathoCount = -1;
+    lastAutoFlag = -1e9;
+}
+
+/**
+ * Read-only post-step scan for pathing pathologies — never mutates the sim (determinism holds). Flags a
+ * unit as: GIVE-UP (ordered to move this tick but ended it idle and not at the target), STUCK (moving but
+ * grinding near the settle limit), SETTLED-SHORT (settled because walled, not arrived), or OSCILLATING
+ * (tile bouncing A↔B). Pushes the live count to the HUD and auto-flags a sustained episode (debounced).
+ */
+function detectPathologies(applied: Command[]): void {
+    if (!import.meta.env.DEV) return;
+    const tick = game.world.tick;
+    const bad = new Map<number, string>();   // uid → pathology kind (first/worst wins)
+
+    // GIVE-UP: a unit commanded to move this tick that ended it not moving and not at the target tile.
+    for (const cmd of applied) {
+        if (cmd.type !== CmdType.MOVE) continue;
+        const ttx = fpToTile(cmd.txFP), tty = fpToTile(cmd.tyFP);
+        for (const uid of cmd.unitIds) {
+            const eid = game.eidForUnitId(uid);
+            if (eid !== undefined && MoveTarget.active[eid] === 0 && (Path.curTx[eid] !== ttx || Path.curTy[eid] !== tty)) bad.set(uid, "give-up");
+        }
+    }
+
+    for (const eid of game.unitEids()) {
+        if (hasComponent(game.world, eid, Building) || Unit.movable[eid] !== 1) continue;
+        const uid = UnitId.id[eid];
+        const move = MoveTarget.active[eid];
+        const stuck = Path.stuckTicks[eid];
+        const tileKey = Path.curTy[eid] * 4096 + Path.curTx[eid];
+        const tr = pathoTracks.get(uid) ?? { prevMove: 0, prevSlotTx: -999, prevSlotTy: -999, tiles: [], stuckSince: -1 };
+
+        // STUCK: moving but grinding toward the settle limit.
+        if (move === 1 && stuck >= STUCK_FLAG) { if (!bad.has(uid)) bad.set(uid, "stuck"); if (tr.stuckSince < 0) tr.stuckSince = tick; }
+        else tr.stuckSince = -1;
+
+        // SETTLED-SHORT: just settled (move 1→0) more than a tile from the slot it was steering toward
+        // (its last live MoveTarget) — it stopped somewhere other than where it was ordered, for ANY
+        // reason (walled, slot taken, reflow), not just the walled case.
+        if (tr.prevMove === 1 && move === 0 && !bad.has(uid)
+            && Math.abs(Path.curTx[eid] - tr.prevSlotTx) + Math.abs(Path.curTy[eid] - tr.prevSlotTy) > 1) bad.set(uid, "settled-short");
+
+        // OSCILLATION: bouncing between ≤2 tiles over the last OSC_WINDOW distinct-consecutive tiles
+        // (a clean A↔B 2-cycle that persists, not a one-off detour).
+        if (tr.tiles[tr.tiles.length - 1] !== tileKey) { tr.tiles.push(tileKey); if (tr.tiles.length > OSC_WINDOW) tr.tiles.shift(); }
+        if (move === 1 && tr.tiles.length >= OSC_WINDOW && new Set(tr.tiles).size <= 2 && !bad.has(uid)) bad.set(uid, "oscillating");
+
+        tr.prevMove = move;
+        if (move === 1) { tr.prevSlotTx = fpToTile(MoveTarget.tx[eid]); tr.prevSlotTy = fpToTile(MoveTarget.ty[eid]); }
+        pathoTracks.set(uid, tr);
+    }
+
+    // Prune tracking for despawned units so the maps can't grow unbounded.
+    if (pathoTracks.size > 512) for (const uid of [...pathoTracks.keys()]) if (game.eidForUnitId(uid) === undefined) pathoTracks.delete(uid);
+
+    if (bad.size !== pathoCount) { pathoCount = bad.size; post({ kind: "pathology", n: bad.size }); }
+
+    // Auto-flag the worst current pathology (debounced + per-signature dedup): an instantaneous event, or
+    // a stuck unit that's persisted — but never the same unit+kind twice within AUTOFLAG_DEDUP.
+    if (bad.size > 0 && tick - lastAutoFlag >= AUTOFLAG_COOLDOWN) {
+        let pick: { uid: number; kind: string; sig: string } | null = null;
+        for (const [uid, kind] of bad) {
+            const sig = `${kind}:${uid}`;
+            if (tick - (autoFlagged.get(sig) ?? -1e9) < AUTOFLAG_DEDUP) continue;   // recently flagged this exact pathology
+            if (kind === "give-up" || kind === "settled-short") { pick = { uid, kind, sig }; break; }
+            const tr = pathoTracks.get(uid);
+            if (kind === "stuck" && tr && tr.stuckSince >= 0 && tick - tr.stuckSince >= AUTOFLAG_SUSTAIN) pick = { uid, kind, sig };
+        }
+        if (pick) { lastAutoFlag = tick; autoFlagged.set(pick.sig, tick); flagIncident(`auto: ${pick.kind} uid${pick.uid}`); }
+    }
+}
+
+/** Replay an incident: rebuild the sim on its map, restore its snapshot, leave it paused for stepping. */
+function restoreIncident(snap: WorldSnapshot, map: MapInfo): void {
+    currentMap = map;
+    mapW = map.mapW;
+    mapH = map.mapH;
+    game = createGame(seed, map satisfies MapInfo);
+    game.applySnapshot(snap);            // restores units / explored / rng / tick onto the rebuilt map
+    simPaused = true;
+    started   = true;
+    history.length = 0;
+    resetIncidentState();
+    post({ kind: "ready", passability: getPassability(), mapW, mapH });
+    post({ kind: "scenario-map", gids: scenarioRenderGids(), mapW, mapH });
+    renderHost();
+    sendDebugState(game.world, game.hashOwn(myTeam), "host");
+}
+
 /** Push the current (e.g. just-rewound) state to the host's renderer, leaving the guest untouched. */
 function renderHost(): void {
     hostClient.sendSnapshot(game.world.tick, fogSnapshot(myTeam), 0, speed);
@@ -420,6 +567,7 @@ function start(init: WorkerInit): void {
     mapH    = init.mapH;
     seed    = init.seed;
 
+    currentMap = init.mapInfo;
     game = createGame(init.seed, init.mapInfo satisfies MapInfo);
     game.initUnitIdCounter(0);      // single id space — the referee mints every unit
 
@@ -446,6 +594,8 @@ function start(init: WorkerInit): void {
         onStep:           (n)   => { if (started) stepTicks(n); },                // advance N ticks (load paused first)
         onLoadScenario:   (sc)  => loadScenario(sc),                              // rebuild from a tiny map
         onLabel:          (text) => post({ kind: "scenario-label", text }),       // e2e: show the running test name
+        onFlag:           (label) => flagIncident(label),                         // capture a pathing incident
+        onRestore:        (snap, map) => restoreIncident(snap, map),              // replay a captured incident
     });
 
     started = true;
@@ -475,5 +625,7 @@ self.onmessage = (ev: MessageEvent<MainToWorker>) => {
         case "set-reverse":          historyEnabled = msg.enabled; if (!msg.enabled) history.length = 0; break;
         case "step-back":            stepBack(); break;
         case "reverse-continue":     reverseContinue(); break;
+        case "flag-incident":        flagIncident(msg.label ?? ""); break;
+        case "client-console":       relayClientConsole(msg.level, msg.msg); break;   // relay this box's main-thread console
     }
 };

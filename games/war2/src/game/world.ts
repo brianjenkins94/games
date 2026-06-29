@@ -2,7 +2,10 @@ import { createWorld, addEntity, removeEntity, addComponent, hasComponent, query
 import { Position, MoveTarget, Unit, UnitId, Path, UnitAnim, Building, FP, TILE_PX, WORLD_W, WORLD_H, fpToTile } from "./components";
 import { unitFootprint, unitBuildTicks, unitRadiusPx } from "./unitTypes";
 export type { UnitSnapshot } from "./types";
+import type { Order, ProductionState } from "./types";
 import { movementSystem } from "./systems/movement";
+import { advanceOrderQueues } from "./orders";
+import { productionSystem } from "./production";
 import { seedRng, rngRange } from "./rng";
 import { initPassability, getPassability, getMapW } from "./passability";
 import { initOccupancy, occupyRect, freeRect, rectEmpty } from "./occupancy";
@@ -29,6 +32,15 @@ export interface SimWorld extends Record<string, unknown> {
      *  fills in contiguously with no holes (see systems/movement.ts).  Cleared by any
      *  non-converge move for the team. */
     gatherSlots?: Record<number, Array<[number, number]>>;
+    /** Per-unit action queue, keyed by stable UnitId (survives eid recycling / resync).  Shift-queued
+     *  orders wait here; advanceOrderQueues (game/orders.ts) pops the head when the unit settles. */
+    orders?: Record<number, Order[]>;
+    /** Per-building production queue, keyed by stable UnitId.  productionSystem (game/production.ts)
+     *  counts down the head item and spawns the trained unit. */
+    production?: Record<number, ProductionState>;
+    /** Per-building rally point (fixed-point), keyed by stable UnitId.  Freshly trained units get a
+     *  move order toward it. */
+    rally?: Record<number, { txFP: number; tyFP: number }>;
 }
 
 // ── Observers (bitecs 0.4) ────────────────────────────────────────────────────
@@ -174,7 +186,12 @@ export function despawnUnit(world: SimWorld, eid: number): void {
     }
     Path.active[eid] = 0;
     markIdleDirty();             // a unit left the path-obstacle set
-    _unitIdToEid.delete(UnitId.id[eid]);
+    const uid = UnitId.id[eid];
+    _unitIdToEid.delete(uid);
+    // Drop any queue state this uid held (action queue, production, rally) so a recycled uid starts clean.
+    if (world.orders)     delete world.orders[uid];
+    if (world.production) delete world.production[uid];
+    if (world.rally)      delete world.rally[uid];
     removeEntity(world, eid);
 }
 
@@ -264,7 +281,9 @@ export function refreshPathObstacles(world: SimWorld): void {
 export function stepWorld(world: SimWorld): void {
     refreshPathObstacles(world);   // settled-unit obstacle grid current before movers path this tick
     movementSystem(world);
+    advanceOrderQueues(world);     // settled units pick up their next shift-queued order
     buildingSystem(world);
+    productionSystem(world);       // buildings advance their production queues (spawn + rally on complete)
     visionSystem(world);   // accumulate explored tiles from post-move LOS (deterministic)
     world.tick++;
 }

@@ -38,6 +38,13 @@ export function validateCommand(world: SimWorld, team: number, cmd: Command): bo
         case CmdType.SPAWN:
         case CmdType.BUILD:
             return cmd.team === team && teamUnitCount(world, team) < MAX_LIVE_UNITS;
+        case CmdType.PRODUCE:
+        case CmdType.CANCEL_PRODUCE:
+        case CmdType.SET_RALLY: {
+            // The building must exist and belong to the issuer (apply-time re-checks train legality).
+            const eid = eidForUnitId(cmd.buildingUid);
+            return cmd.team === team && eid !== undefined && Unit.team[eid] === team;
+        }
         case CmdType.SPEED:
             return false;   // control-plane; the referee handles it before validation (never simulated)
     }

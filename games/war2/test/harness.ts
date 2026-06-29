@@ -21,12 +21,17 @@ import { ensureWar2 } from "./browser";
 import { tcFP, type MapInfo } from "./fixtures";
 import { createGame } from "../src/game/game";
 import { revealAll } from "../src/game/vision";
-import { Position, MoveTarget, UnitId, Building, FP, TILE_PX } from "../src/game/components";
+import { Position, MoveTarget, Unit, UnitId, Building, FP, TILE_PX } from "../src/game/components";
 import { CmdType } from "../src/net/protocol";
 
 export interface UnitState { uid: number; curTx: number; curTy: number; moveActive: boolean; }
 export interface Spawn { team?: number; tx: number; ty: number; typeId?: number; }
 export interface BuildingSpawn { team?: number; tx: number; ty: number; typeId: number; }
+
+/** A building's production state (queued product typeIds + head countdown). */
+export interface ProdState { queue: number[]; ticksLeft: number; ticksTotal: number; }
+/** Full per-unit view for queue/production assertions (a superset of UnitState). */
+export interface FullUnit extends UnitState { type: number; team: number; prod?: ProdState; rally?: { txFP: number; tyFP: number }; }
 
 export interface Driver {
     /** True for the browser-attached mode (vs in-process). */
@@ -35,12 +40,25 @@ export interface Driver {
     load(spawns: Spawn[], buildings: BuildingSpawn[], mapInfo: MapInfo): Promise<number[]>;
     /** Issue a group MOVE (real formation/gather dispatch) toward tile `to`. */
     move(ids: number[], to: [number, number]): Promise<void>;
-    /** Advance until every id settles (moveActive=0), then return their final state. Settle-driven. */
-    settle(ids: number[]): Promise<UnitState[]>;
+    /** Advance until every id settles (moveActive=0), then return their final state. Settle-driven.
+     *  Browser mode also asserts the live detector auto-flagged NO pathing incident while ticking
+     *  (a quiet detector is part of "the scenario pathed cleanly"); pass `expectIncidents` to opt a
+     *  deliberately-pathological scenario out of that guard.  In-process mode never runs the detector,
+     *  so the guard is a no-op there. */
+    settle(ids: number[], expectIncidents?: boolean): Promise<UnitState[]>;
     /** Current state of the given ids. */
     state(ids: number[]): Promise<UnitState[]>;
     /** Tiles a unit's centre passed through since load (oldest→newest). */
     trace(id: number): Promise<[number, number][]>;
+    /** Every live unit, with type/team/tile/queue state — for production & action-queue assertions. */
+    allUnits(): Promise<FullUnit[]>;
+    /** Enqueue a product (PRODUCE) at a building. */
+    produce(buildingUid: number, productTypeId: number, team?: number): Promise<void>;
+    /** Point a building's freshly trained units at tile `to` (SET_RALLY). */
+    setRally(buildingUid: number, to: [number, number], team?: number): Promise<void>;
+    /** Advance exactly `n` ticks (deterministic; not settle-driven). Same browser-mode incident guard
+     *  as settle() — opt out with `expectIncidents`. */
+    step(n: number, expectIncidents?: boolean): Promise<void>;
     /** Show a label (e.g. the running test name) in the host's upper-left badge.  No-op in-process. */
     label(name: string): void;
     close(): Promise<void>;
@@ -94,13 +112,32 @@ function inProcessDriver(): Driver {
         async move(ids, to) {
             game.applyCommands([{ type: CmdType.MOVE, unitIds: ids, txFP: tcFP(to[0]), tyFP: tcFP(to[1]) }]);
         },
-        async settle(ids) {
+        async settle(ids, _expectIncidents) {
             // Settle-driven: step until idle (generous safety cap — deterministic, never hit normally).
+            // The pathology detector lives in referee.worker, not the sim, so there's nothing to guard here.
             for (let i = 0; i < 5000 && ids.some(id => stateOf(id).moveActive); i++) { game.step(); record(); }
             return ids.map(stateOf);
         },
         async state(ids) { return ids.map(stateOf); },
         async trace(id)  { return traces.get(id) ?? []; },
+        async allUnits() {
+            return game.unitEids().map(e => {
+                const uid = UnitId.id[e];
+                return {
+                    uid, type: Unit.type[e], team: Unit.team[e],
+                    curTx: tileOf(Position.x[e]), curTy: tileOf(Position.y[e]),
+                    moveActive: MoveTarget.active[e] === 1,
+                    prod: game.world.production?.[uid], rally: game.world.rally?.[uid],
+                };
+            });
+        },
+        async produce(buildingUid, productTypeId, team = 0) {
+            game.applyCommands([{ type: CmdType.PRODUCE, buildingUid, productTypeId, team }]);
+        },
+        async setRally(buildingUid, to, team = 0) {
+            game.applyCommands([{ type: CmdType.SET_RALLY, buildingUid, txFP: tcFP(to[0]), tyFP: tcFP(to[1]), team }]);
+        },
+        async step(n, _expectIncidents) { for (let i = 0; i < n; i++) { game.step(); record(); } },
         label()          { /* headless — no host badge */ },
         async close()    { /* nothing to tear down */ },
     };
@@ -116,6 +153,30 @@ function browserDriver(insp: Inspector, browser: { close: () => Promise<void> } 
             const u = units.find(x => x.uid === id);
             return { uid: id, curTx: u?.curTx ?? -1, curTy: u?.curTy ?? -1, moveActive: !!u?.moveActive };
         });
+    };
+
+    // ── Incident guard ────────────────────────────────────────────────────────
+    // The live referee's read-only detector auto-flags pathing incidents (stuck/give-up/settled-short/
+    // oscillating) onto the debug server as the host ticks.  `markIncidents()` records the high-water id
+    // at scenario load; `assertQuiet()` (run at the end of every host-ticking step) fails the *current*
+    // test — with the offending label — if any NEW incident appeared, so a quiet detector is asserted, not
+    // just spot-checked.  Incident ids are `inc_<n>` (monotonic).
+    const seqOf = (id: string): number => Number(id.split("_")[1]) || 0;
+    const incidentsNow = async (): Promise<{ id: string; label: string }[]> =>
+        (await insp.query("incidents")).incidents ?? [];
+    let incidentMark = -1;   // high-water incident seq at the current scenario's load
+    const markIncidents = async () => {
+        incidentMark = (await incidentsNow()).reduce((m, i) => Math.max(m, seqOf(i.id)), -1);
+    };
+    const assertQuiet = async (expectIncidents?: boolean) => {
+        if (expectIncidents) return;
+        const fresh = (await incidentsNow()).filter(i => seqOf(i.id) > incidentMark);
+        if (fresh.length) {
+            await markIncidents();   // don't re-report the same incident on a later guard in this test
+            throw new Error(
+                `pathing incident(s) auto-flagged during the run: ${fresh.map(i => i.label || i.id).join("; ")}` +
+                ` — replay_incident <id> to investigate, or settle/step(…, expectIncidents=true) if intended`);
+        }
     };
     return {
         browser: true,
@@ -134,6 +195,7 @@ function browserDriver(insp: Inspector, browser: { close: () => Promise<void> } 
                 units = (await insp.query("state")).host?.units ?? [];
                 if (spawns.every(s => units.some(u => u.curTx === s.tx && u.curTy === s.ty))) break;
             }
+            await markIncidents();   // baseline so the guard only counts incidents from THIS scenario
             return spawns
                 .map(s => units.find(u => u.curTx === s.tx && u.curTy === s.ty)?.uid)
                 .filter((u): u is number => u != null);
@@ -142,7 +204,7 @@ function browserDriver(insp: Inspector, browser: { close: () => Promise<void> } 
             // Queued while paused; applies on the first tick of the next settle() (no idle ticks first).
             insp.ctrl({ cmd: "command", command: { type: CmdType.MOVE, unitIds: ids, txFP: tcFP(to[0]), tyFP: tcFP(to[1]) } });
         },
-        async settle(ids) {
+        async settle(ids, expectIncidents) {
             // Run the host at speed (20 TPS × SPEED) until settled, then pause again.  Poll-driven, not a
             // per-step sleep cap; the loop bound is just a safety net.
             insp.ctrl({ cmd: "command", command: { type: CmdType.SPEED, speed: SPEED } });
@@ -154,12 +216,37 @@ function browserDriver(insp: Inspector, browser: { close: () => Promise<void> } 
             }
             await sleep(500);   // let the renderer visibly glide into place
             insp.ctrl({ cmd: "pause" });
+            await assertQuiet(expectIncidents);   // the detector stayed silent over this settle
             return fetch(ids);
         },
         state: (ids) => fetch(ids),
         async trace(id) {
             const tr = await insp.query("trace", { uid: id, from: 0 });
             return (tr.units?.[id] ?? []).map((s: { tx: number; ty: number }) => [s.tx, s.ty] as [number, number]);
+        },
+        async allUnits() {
+            const units: any[] = (await insp.query("state")).host?.units ?? [];
+            return units.map(u => ({
+                uid: u.uid, type: u.type, team: u.team,
+                curTx: u.curTx ?? -1, curTy: u.curTy ?? -1, moveActive: !!u.moveActive,
+                prod: u.prod, rally: u.rally,
+            }));
+        },
+        async produce(buildingUid, productTypeId, team = 0) {
+            insp.ctrl({ cmd: "command", command: { type: CmdType.PRODUCE, buildingUid, productTypeId, team } });
+        },
+        async setRally(buildingUid, to, team = 0) {
+            insp.ctrl({ cmd: "command", command: { type: CmdType.SET_RALLY, buildingUid, txFP: tcFP(to[0]), tyFP: tcFP(to[1]), team } });
+        },
+        async step(n, expectIncidents) {
+            // The host is paused after load(); buffered commands apply on the first stepped tick.  Poll the
+            // server's latest tick until it advances by n (not a fixed sleep), then let the blob settle.
+            const tickNow = async () => (await insp.query("state")).tick ?? 0;
+            const target = (await tickNow()) + n;
+            insp.ctrl({ cmd: "step", n });
+            for (let i = 0; i < 100; i++) { await sleep(50); if ((await tickNow()) >= target) break; }
+            await sleep(150);
+            await assertQuiet(expectIncidents);   // the detector stayed silent over these ticks
         },
         label(name) { insp.ctrl({ cmd: "set-label", text: name }); },
         async close() { insp.close(); await browser?.close(); },

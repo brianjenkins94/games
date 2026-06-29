@@ -29,8 +29,7 @@ import { createScene } from "../../../../util/phaser/scene";
 import { updateFow } from "./fog";
 import { wireHud, setHudDragMode } from "./hud";
 import { drawEntities } from "./units";
-// Data-driven sprite registry — the spritesheets to load for the active tileset.
-import { allSheets } from "./sprites";
+// Data-driven sprite registry — sheets are lazy-loaded per type in units.ts (ensureSheet).
 // Debug/e2e scenarios render terrain from the forest tileset (clean plain grass), independent of the
 // boot map's tileset. Loaded in preload(); see rebuildMap().
 import forestTilesetUrl from "../assets/tilesets/forest.png";
@@ -68,6 +67,7 @@ export interface RendererState {
     tweakBodyEl: HTMLDivElement;
     tweakOpen: boolean;
     cardEl: HTMLDivElement;   // command-card DOM grid (view only)
+    statusEl: HTMLDivElement;   // .hud-status — selection's action / production queue (view only)
     cursors: Phaser.Types.Input.Keyboard.CursorKeys;
     mapConfig: { tilesetUrl: string; mapJson: any } | null;   // from startPhaser via init(data)
     chunkRenderer: ChunkRenderer | null;
@@ -83,6 +83,8 @@ export interface RendererState {
     // One Phaser Sprite per live unit / building — keyed by stable unit-id.
     unitSprites: Map<number, Phaser.GameObjects.Sprite>;
     buildingSprites: Map<number, Phaser.GameObjects.Sprite>;
+    // Sheet keys already queued/loaded by the lazy loader (units.ts ensureSheet) — dedupes load requests.
+    pendingSheets: Set<string>;
     tilesetName: string;   // active map's tileset (picks building art)
     renderState: RenderState | null;   // latest per-tick worker snapshot
     selectedUids: Set<number>;   // locally-owned selection (main-thread UI state)
@@ -95,8 +97,9 @@ export interface RendererState {
     // Raw input callbacks — main.ts routes these to the command-card controller.
     onSelect: SelectCallback | null;
     onPrimaryClick:   ((wxFP: number, wyFP: number) => boolean) | null;
-    onSecondaryClick: ((wxFP: number, wyFP: number) => void) | null;
+    onSecondaryClick: ((wxFP: number, wyFP: number, shift: boolean) => void) | null;
     onSlot:   ((index: number) => void) | null;
+    onProductionCancel: ((index: number) => void) | null;   // .hud-status item click → CANCEL_PRODUCE
     onEscape: (() => void) | null;
     onHotkey: ((letter: string) => boolean) | null;
     onHover:  ((wxFP: number, wyFP: number) => void) | null;
@@ -134,6 +137,7 @@ function createState(scene: Phaser.Scene): RendererState {
         mapTileH: 0,
         unitSprites: new Map(),
         buildingSprites: new Map(),
+        pendingSheets: new Set(),
         tilesetName: "summer",
         renderState: null,
         selectedUids: new Set(),
@@ -146,6 +150,7 @@ function createState(scene: Phaser.Scene): RendererState {
         onPrimaryClick: null,
         onSecondaryClick: null,
         onSlot: null,
+        onProductionCancel: null,
         onEscape: null,
         onHotkey: null,
         onHover: null,
@@ -180,12 +185,10 @@ function preload(scene: Phaser.Scene): void {
         margin:      ts.margin  ?? 0,
     });
 
-    // All unit / building / construction spritesheets for this tileset, from
-    // the data-driven sprite registry (one place, one convention).
+    // Unit / building / construction sheets are NOT bulk-loaded here — a match touches only a handful of
+    // the ~127 registered types.  units.ts lazy-loads each sheet from the registry the first time an
+    // entity of that type is drawn (ensureSheet).  Only terrain (above) is needed immediately.
     renderer.tilesetName = ts.name;
-    for (const s of allSheets(ts.name)) {
-        scene.load.spritesheet(s.key, s.url, { frameWidth: s.frameW, frameHeight: s.frameH });
-    }
 }
 
 function create(scene: Phaser.Scene): void {
@@ -282,7 +285,7 @@ function create(scene: Phaser.Scene): void {
         // Right-clicks only fire in the game area, not over the minimap.
         if (p.rightButtonReleased() && !renderer.minimap.contains(p.x, p.y)) {
             const w = scene.cameras.main.getWorldPoint(p.x, p.y);
-            renderer.onSecondaryClick?.(w.x * FP, w.y * FP);
+            renderer.onSecondaryClick?.(w.x * FP, w.y * FP, (p.event as MouseEvent | undefined)?.shiftKey ?? false);
         }
     });
 

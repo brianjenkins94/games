@@ -9,7 +9,8 @@
  * produces identical MoveTarget/Path state.
  */
 import { hasComponent } from "bitecs";
-import { Position, MoveTarget, Unit, Path, UnitAnim, Building, FP, TILE_PX, WALK_PX, tileCenterFP, fpToTile, snapWalkFP } from "./components";
+import { Position, MoveTarget, Unit, UnitId, Path, UnitAnim, Building, FP, TILE_PX, WALK_PX, tileCenterFP, fpToTile, snapWalkFP } from "./components";
+import type { Order } from "./types";
 import { unitRadiusPx } from "./unitTypes";
 import { distance } from "./distance";
 import { getMapW, getMapH } from "./passability";
@@ -123,6 +124,58 @@ function nearestPassableTile(team: number, tx: number, ty: number): [number, num
 /** Authoritative halt — clears movement/path/anim state (occupancy unchanged). */
 export function stopUnit(_world: SimWorld, eid: number): void {
     _stopUnit(eid);
+}
+
+// ── Action queue (shift-queued orders) ────────────────────────────────────────
+// A per-unit FIFO of pending orders kept on world.orders (keyed by stable uid).  The CURRENTLY-running
+// order is the unit's live MoveTarget; the queue holds what comes after.  Plain orders replace the
+// queue; shift-queued orders append.  advanceOrderQueues (called from stepWorld after movementSystem)
+// pops the next order the tick a unit settles.  Deterministic: pure functions of shared state, walked
+// in canonical eid order.
+
+/** Apply one order to a unit immediately (move → setMoveTarget standalone; stop → halt). */
+function applyOrder(world: SimWorld, eid: number, order: Order): void {
+    if (order.kind === "move") setMoveTarget(world, eid, order.txFP, order.tyFP, true, true);
+    else                       stopUnit(world, eid);
+}
+
+/** Drop a unit's pending action queue (replace semantics — the live order is untouched). */
+export function clearOrderQueue(world: SimWorld, eid: number): void {
+    if (world.orders) delete world.orders[UnitId.id[eid]];
+}
+
+/**
+ * Issue an order.  `queue=false` (plain click) clears the pending queue and applies it now; `queue=true`
+ * (shift-click) appends — run immediately only if the unit is idle with nothing already queued, else it
+ * waits its turn.
+ */
+export function enqueueOrder(world: SimWorld, eid: number, order: Order, queue: boolean): void {
+    const uid = UnitId.id[eid];
+    if (!queue) { clearOrderQueue(world, eid); applyOrder(world, eid, order); return; }
+    const existing = world.orders?.[uid];
+    if (MoveTarget.active[eid] === 0 && !(existing && existing.length)) { applyOrder(world, eid, order); return; }
+    ((world.orders ??= {})[uid] ??= []).push(order);
+}
+
+/** Pop and apply the unit's next queued order, if any.  Returns whether one was applied. */
+export function applyNextOrder(world: SimWorld, eid: number): boolean {
+    const uid = UnitId.id[eid];
+    const q = world.orders?.[uid];
+    if (!q || q.length === 0) return false;
+    const order = q.shift()!;
+    if (q.length === 0) delete world.orders![uid];   // keep the map tidy (no empty arrays in snapshots)
+    applyOrder(world, eid, order);
+    return true;
+}
+
+/** Per-tick pass (after movementSystem): hand each settled unit its next queued order. */
+export function advanceOrderQueues(world: SimWorld): void {
+    if (!world.orders) return;
+    for (const eid of unitEids(world)) {
+        if (MoveTarget.active[eid] === 1) continue;          // still running its current order
+        if (hasComponent(world, eid, Building)) continue;     // buildings have production queues, not orders
+        if (world.orders[UnitId.id[eid]]?.length) applyNextOrder(world, eid);
+    }
 }
 
 /**

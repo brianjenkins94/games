@@ -17,19 +17,27 @@ import type { UnitSnapshot } from "../game/types";
 export type { UnitSnapshot };
 
 export const enum PacketType { STATE_UPDATE = 5, CLIENT_COMMAND = 6 }
-export const enum CmdType    { MOVE = 1, SPAWN = 2, STOP = 3, BUILD = 4, SPEED = 5 }
+export const enum CmdType    { MOVE = 1, SPAWN = 2, STOP = 3, BUILD = 4, SPEED = 5, PRODUCE = 6, SET_RALLY = 7, CANCEL_PRODUCE = 8 }
 
 // Commands are intents.  The referee assigns unit ids for SPAWN/BUILD (clients no
 // longer mint them); `team` is the issuing client's team and is validated/stamped
 // by the referee.
-export interface MoveCmd  { type: CmdType.MOVE;  unitIds: number[]; txFP: number; tyFP: number; }
+// `queue` (MOVE/STOP): true = append to the unit's action queue (shift-click); absent/false = replace
+// the current order and clear the queue.  See game/orders.ts (enqueueOrder / advanceOrderQueues).
+export interface MoveCmd  { type: CmdType.MOVE;  unitIds: number[]; txFP: number; tyFP: number; queue?: boolean; }
 export interface SpawnCmd { type: CmdType.SPAWN; xFP: number; yFP: number; team: number; typeId: number; }
-export interface StopCmd  { type: CmdType.STOP;  unitIds: number[]; }
+export interface StopCmd  { type: CmdType.STOP;  unitIds: number[]; queue?: boolean; }
 export interface BuildCmd { type: CmdType.BUILD; typeId: number; team: number; tileX: number; tileY: number; }
 // Control-plane (not a world mutation): requests the *authoritative* game-speed multiplier. The
 // referee applies + broadcasts it (StateUpdatePayload.speed); it never reaches applyCommands.
 export interface SpeedCmd { type: CmdType.SPEED; speed: number; }
-export type Command = MoveCmd | SpawnCmd | StopCmd | BuildCmd | SpeedCmd;
+// Building production queue (see game/production.ts).  PRODUCE enqueues a product (a trainable unit
+// typeId) at a building; CANCEL_PRODUCE drops the queue item at `index`; SET_RALLY points freshly
+// trained units at a destination.  `buildingUid` is the building's stable UnitId.
+export interface ProduceCmd       { type: CmdType.PRODUCE;        buildingUid: number; productTypeId: number; team: number; }
+export interface CancelProduceCmd { type: CmdType.CANCEL_PRODUCE; buildingUid: number; index: number; team: number; }
+export interface SetRallyCmd      { type: CmdType.SET_RALLY;      buildingUid: number; txFP: number; tyFP: number; team: number; }
+export type Command = MoveCmd | SpawnCmd | StopCmd | BuildCmd | SpeedCmd | ProduceCmd | CancelProduceCmd | SetRallyCmd;
 
 // ── Packet payloads ─────────────────────────────────────────────────────────────
 
@@ -52,7 +60,14 @@ export function unitSnapshotChanged(a: UnitSnapshot, b: UnitSnapshot): boolean {
         || a.curTx !== b.curTx || a.curTy !== b.curTy
         || a.goalTx !== b.goalTx || a.goalTy !== b.goalTy || a.pathActive !== b.pathActive
         || a.type !== b.type || a.team !== b.team
-        || a.bw !== b.bw || a.bh !== b.bh || a.buildLeft !== b.buildLeft;
+        || a.bw !== b.bw || a.bh !== b.bh || a.buildLeft !== b.buildLeft
+        // Queue state (HUD): production countdown ticks every tick while busy; queue/order length and the
+        // rally point change on enqueue/cancel/complete.  Length+head is enough (items only push/shift).
+        || (a.prod?.ticksLeft ?? -1) !== (b.prod?.ticksLeft ?? -1)
+        || (a.prod?.queue.length ?? 0) !== (b.prod?.queue.length ?? 0)
+        || (a.orders?.length ?? 0) !== (b.orders?.length ?? 0)
+        || (a.rally?.txFP ?? -1) !== (b.rally?.txFP ?? -1)
+        || (a.rally?.tyFP ?? -1) !== (b.rally?.tyFP ?? -1);
 }
 
 /** client → referee: the player's commands for this tick. */

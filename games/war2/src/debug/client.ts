@@ -14,7 +14,19 @@ import { unitBoxHalfPx } from '../game/unitTypes';
 import { debugReservedRegion } from '../game/walkGrid';
 import type { MapInfo, SimWorld } from '../game/world';
 import { unitEids } from '../game/world';
+import type { WorldSnapshot } from '../game/snapshot';
 import type { Command } from '../net/protocol';
+import { forwardWorkerConsole } from './workerConsole';
+
+/** A flagged pathing incident, shipped to the debug server for retroactive analysis. */
+export interface IncidentCapture {
+    flagTick:  number;
+    baseTick:  number;          // tick of `snapshot` — the lead-up start
+    snapshot:  WorldSnapshot;   // full deterministic state → exact replay
+    map:       MapInfo;         // the map it was captured on (self-contained repro)
+    flagHash:  number;          // own-team hash at flagTick — the runner's replay-faithfulness check
+    label:     string;
+}
 
 /** A tiny e2e/debug scenario: a fresh map + explicit per-unit placements (tile coords). The referee
  *  rebuilds the sim from this (paused) so a test can step deterministically. See referee.worker.ts. */
@@ -41,6 +53,8 @@ let _onCommand:      ((cmd: Command) => void) | null = null;
 let _onStep:         ((n: number) => void) | null = null;
 let _onLoadScenario: ((sc: DebugScenario) => void) | null = null;
 let _onLabel:        ((text: string) => void) | null = null;
+let _onFlag:         ((label: string) => void) | null = null;
+let _onRestore:      ((snap: WorldSnapshot, map: MapInfo) => void) | null = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -67,6 +81,9 @@ export function initDebugClient(role: string): void {
                     if (msg.cmd === 'step')                          _onStep?.(typeof msg.n === 'number' ? msg.n : 1);
                     if (msg.cmd === 'load-scenario' && msg.scenario) _onLoadScenario?.(msg.scenario as DebugScenario);
                     if (msg.cmd === 'set-label')                     _onLabel?.(typeof msg.text === 'string' ? msg.text : '');
+                    // Pathing-incident capture + replay.
+                    if (msg.cmd === 'flag')                          _onFlag?.(typeof msg.label === 'string' ? msg.label : '');
+                    if (msg.cmd === 'restore' && msg.snapshot)       _onRestore?.(msg.snapshot as WorldSnapshot, msg.map as MapInfo);
                 }
             } catch { /* ignore */ }
         });
@@ -90,6 +107,8 @@ export function setDebugCallbacks(cbs: {
     onStep?: (n: number) => void;
     onLoadScenario?: (sc: DebugScenario) => void;
     onLabel?: (text: string) => void;
+    onFlag?: (label: string) => void;
+    onRestore?: (snap: WorldSnapshot, map: MapInfo) => void;
 }): void {
     _onPause          = cbs.onPause          ?? null;
     _onResume         = cbs.onResume         ?? null;
@@ -98,6 +117,36 @@ export function setDebugCallbacks(cbs: {
     _onStep           = cbs.onStep           ?? null;
     _onLoadScenario   = cbs.onLoadScenario   ?? null;
     _onLabel          = cbs.onLabel          ?? null;
+    _onFlag           = cbs.onFlag           ?? null;
+    _onRestore        = cbs.onRestore        ?? null;
+}
+
+/** Ship a flagged incident to the debug server for retroactive analysis. */
+export function sendIncident(incident: IncidentCapture): void {
+    if (!ready()) return;
+    socket!.send(JSON.stringify({ type: 'incident', ...incident }));
+}
+
+/** Relay a worker-side error to the server (its stdout is readable; the worker console isn't). Debug aid. */
+export function sendDiagError(msg: string): void {
+    if (!ready()) return;
+    socket!.send(JSON.stringify({ type: 'diag-error', msg }));
+}
+
+/** Relay a console line to the debug server so it's readable via the `get_console` tool / `console` query
+ *  without opening the in-game overlay. `origin` = "worker" (sim) | "client" (main thread). */
+export function sendConsole(origin: string, level: string, msg: string): void {
+    if (!ready()) return;
+    try { socket!.send(JSON.stringify({ type: 'console', origin, level, msg })); } catch { /* never break logging */ }
+}
+
+/** Wire a game box's WORKER console to the in-game overlay (via `post`) AND the debug server, and return
+ *  the relay for its MAIN-THREAD console (which main.ts hands back through `setConsoleSink` → a
+ *  client-console message → this fn).  Both boxes (host/peer) call this identically — see referee.worker
+ *  / client.worker.  (Pairs with `initDebugClient(role)`, which opens the WS this relays over.) */
+export function wireBoxConsole(post: (msg: { kind: "worker-console"; level: string; msg: string }) => void): (level: string, msg: string) => void {
+    forwardWorkerConsole((level, msg) => { post({ kind: "worker-console", level, msg }); sendConsole("worker", level, msg); });
+    return (level, msg) => sendConsole("client", level, msg);
 }
 
 // ── Send helpers ──────────────────────────────────────────────────────────────
@@ -117,6 +166,7 @@ export function sendDebugState(world: SimWorld, hash: number, role: string): voi
         eid,
         uid:        UnitId.id[eid],
         team:       Unit.team[eid],
+        type:       Unit.type[eid],
         px:         Position.x[eid],
         py:         Position.y[eid],
         hw:         hwPx,
@@ -130,6 +180,11 @@ export function sendDebugState(world: SimWorld, hash: number, role: string): voi
         moveActive: MoveTarget.active[eid],
         dir:        UnitAnim.dir[eid],
         moving:     UnitAnim.moving[eid],
+        // Queue state for the inspector/MCP (undefined fields are dropped by JSON): a building's
+        // production countdown, a unit's pending action-queue length, and a building's rally point.
+        prod:       world.production?.[UnitId.id[eid]],
+        orders:     world.orders?.[UnitId.id[eid]]?.length || undefined,
+        rally:      world.rally?.[UnitId.id[eid]],
         };
     });
 

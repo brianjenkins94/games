@@ -29,9 +29,15 @@ import {
     renderUnitFromSnapshot,
     type MainToWorker, type WorkerToMain, type RenderState, type RenderUnit, type MetricsSample, type WorkerInit,
 } from "./ipc";
+import { initDebugClient, wireBoxConsole } from "../debug/client";
 
 const post = (msg: WorkerToMain, transfer?: Transferable[]) =>
     (self as unknown as Worker).postMessage(msg, transfer ?? []);
+
+// Wire this box's console (worker → overlay + server) + connect the debug WS so get_console sees the
+// peer box too (the guest doesn't stream state — console only).  Symmetric with referee.worker.
+const relayClientConsole = wireBoxConsole(post);
+initDebugClient("peer");
 
 // Divergence that snaps a predicted unit back to authority (FP).  While a unit is
 // still moving, tolerate up to 2 tiles so the normal ~RTT lead doesn't snap; once
@@ -52,7 +58,9 @@ let speed = 1;
 let tickTimer: ReturnType<typeof setTimeout> | undefined;
 function scheduleTick(): void {
     if (tickTimer !== undefined) clearTimeout(tickTimer);
-    tickTimer = setTimeout(() => { tickTimer = undefined; tick(); scheduleTick(); }, TICK_MS / speed);
+    // try/finally so a throw in tick() (e.g. a prediction edge case) can never kill the self-rescheduling
+    // loop and silently freeze local prediction — mirrors the referee's tick guard.
+    tickTimer = setTimeout(() => { tickTimer = undefined; try { tick(); } finally { scheduleTick(); } }, TICK_MS / speed);
 }
 
 // Perf probes (flushed to the host page ~4 Hz, off the render hot path).
@@ -75,6 +83,10 @@ function sendToReferee(cmds: Command[]): void {
 
 // ── Authoritative reconciliation ────────────────────────────────────────────────
 
+// Own-unit queue state from the wire (the predicted local game doesn't carry world.orders/production/
+// rally, so we stash it here keyed by uid and merge it into RenderUnits for the HUD).
+const queueByUid = new Map<number, Pick<RenderUnit, "orders" | "prod" | "rally">>();
+
 function onBytes(ab: ArrayBuffer): void {
     bytesIn += ab.byteLength;
     if (packetType(ab) !== PacketType.STATE_UPDATE) return;
@@ -89,6 +101,8 @@ function onBytes(ab: ArrayBuffer): void {
         seen.add(s.uid);
         const eid = game.eidForUnitId(s.uid);
         if (s.team === myTeam) {
+            // Mirror the building/unit queue state for the HUD (rides the wire on own snapshots).
+            queueByUid.set(s.uid, { orders: s.orders, prod: s.prod, rally: s.rally });
             // Own units: predicted — add new, else snap only if prediction diverged.
             if (eid === undefined) {
                 game.addOwnUnit(s);
@@ -108,12 +122,14 @@ function onBytes(ab: ArrayBuffer): void {
         // Full set: anything absent is gone (own died, enemy left sight).
         for (const eid of game.unitEids()) {
             if (seen.has(UnitId.id[eid])) continue;
+            queueByUid.delete(UnitId.id[eid]);
             if (Unit.team[eid] === myTeam) game.despawnUnit(eid);
             else                          game.removeKnownUnit(eid);
         }
     } else {
         // Delta: only the explicitly-removed uids are gone; absence means unchanged.
         for (const uid of p.removed) {
+            queueByUid.delete(uid);
             const eid = game.eidForUnitId(uid);
             if (eid === undefined) continue;
             if (Unit.team[eid] === myTeam) game.despawnUnit(eid);
@@ -136,7 +152,12 @@ function tick(): void {
 function buildRenderState(): RenderState {
     // Own units (predicted) + enemies (display-only) both live in the local game.
     const units: RenderUnit[] = [];
-    for (const eid of game.unitEids()) units.push(renderUnitFromSnapshot(game.snapshotUnit(eid)));
+    for (const eid of game.unitEids()) {
+        const ru = renderUnitFromSnapshot(game.snapshotUnit(eid));
+        const q = queueByUid.get(ru.uid);   // merge the wire-carried queue state (HUD)
+        if (q) { ru.orders = q.orders; ru.prod = q.prod; ru.rally = q.rally; }
+        units.push(ru);
+    }
     return { tick: game.world.tick, units };
 }
 
@@ -179,5 +200,6 @@ self.onmessage = (ev: MessageEvent<MainToWorker>) => {
             break;
         case "pause":   simPaused = true;  break;
         case "resume":  simPaused = false; break;
+        case "client-console": relayClientConsole(msg.level, msg.msg); break;   // relay this box's main-thread console
     }
 };

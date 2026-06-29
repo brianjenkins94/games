@@ -35,7 +35,7 @@
 				},
 				{ "run": "pnpm config set --location=project --json allowBuilds \"{ \\\"esbuild\\\": true }\"" },
 				{ "run": "pnpm config set --location=project strict-dep-builds false" },
-				{ "env": { "PAT": "${{ secrets.PAT }}" }, "run": "pnpm install" },
+				{ "env": { "PAT": "${{ secrets.PAT }}" }, "run": "pnpm install --config.minimumReleaseAge=10080" },
 				{ "run": "pnpm run build" },
 				{ "run": "pnpm run --if-present test" },
 				{

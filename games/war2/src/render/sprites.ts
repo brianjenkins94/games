@@ -68,8 +68,6 @@ export function unitFrame(typeName: string, dir: number, moving: boolean, now: n
 
 // ── Construction frame layout ─────────────────────────────────────────────────
 
-export const CONSTRUCTION_TYPES = ["construction-land", "construction-wall"] as const;
-
 type ConStage = { percent: number; file: string; frame: number };
 
 function pickStage(stages: ConStage[], percent: number): ConStage {
@@ -108,19 +106,6 @@ export function constructionSheet(conType: string, tileset: string): SheetDef | 
     if (!u) return undefined;
     const [cw, ch] = def.size as [number, number];
     return { key: "con:" + conType, url: u, frameW: cw, frameH: ch };
-}
-
-/** Every spritesheet to preload for a tileset (units, buildings, construction).
- *  De-duplicated by texture key.  Call once in the scene's preload(). */
-export function allSheets(tileset: string): SheetDef[] {
-    const out: SheetDef[] = [];
-    const seen = new Set<string>();
-    const push = (s?: SheetDef) => { if (s && !seen.has(s.key)) { seen.add(s.key); out.push(s); } };
-
-    for (const typeName of Object.keys(SPRITES)) push(sheetForType(typeName, tileset));   // mobile units
-    for (const typeName of Object.keys(UNITS)) if (UNITS[typeName].building) push(sheetForType(typeName, tileset));
-    for (const conType of CONSTRUCTION_TYPES) push(constructionSheet(conType, tileset));
-    return out;
 }
 
 // ── Building draw resolution (construction staging) ───────────────────────────

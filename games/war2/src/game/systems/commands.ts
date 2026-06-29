@@ -1,6 +1,7 @@
 import { spawnUnit, spawnBuilding, canPlaceBuilding, eidForUnitId, type SimWorld } from "../world";
-import { setMoveTarget, setFormationTargets, setGatherTargets, stopUnit } from "../orders";
-import { Position, Unit, FP, TILE_PX, fpToTile } from "../components";
+import { setMoveTarget, setFormationTargets, setGatherTargets, stopUnit, enqueueOrder, clearOrderQueue } from "../orders";
+import { enqueueProduction, cancelProduction, setRally, buildingTrains } from "../production";
+import { Position, Unit, Building, FP, TILE_PX, fpToTile } from "../components";
 import { distance } from "../distance";
 import { CmdType, type Command } from "../../net/protocol";
 
@@ -65,18 +66,39 @@ export function applyCommands(world: SimWorld, cmds: Command[]): void {
                 const eid = eidForUnitId(uid);
                 if (eid !== undefined) eids.push(eid);
             }
-            if (eids.length > 0) applyMove(world, eids, cmd.txFP, cmd.tyFP);
+            if (eids.length === 0) continue;
+            if (cmd.queue) {
+                // Shift-queue: append a move to each selected unit's action queue (formation logic is
+                // for the live, non-queued group move only).
+                for (const eid of eids) enqueueOrder(world, eid, { kind: "move", txFP: cmd.txFP, tyFP: cmd.tyFP }, true);
+            } else {
+                for (const eid of eids) clearOrderQueue(world, eid);   // replace: drop pending orders
+                applyMove(world, eids, cmd.txFP, cmd.tyFP);
+            }
         } else if (cmd.type === CmdType.SPAWN) {
             spawnUnit(world, cmd.xFP, cmd.yFP, cmd.team, undefined, cmd.typeId);
         } else if (cmd.type === CmdType.STOP) {
             for (const uid of cmd.unitIds) {
                 const eid = eidForUnitId(uid);
-                if (eid !== undefined) stopUnit(world, eid);
+                if (eid === undefined) continue;
+                if (cmd.queue) enqueueOrder(world, eid, { kind: "stop" }, true);
+                else { clearOrderQueue(world, eid); stopUnit(world, eid); }
             }
         } else if (cmd.type === CmdType.BUILD) {
             if (canPlaceBuilding(world, cmd.tileX, cmd.tileY, cmd.typeId)) {
                 spawnBuilding(world, cmd.tileX, cmd.tileY, cmd.team, cmd.typeId);
             }
+        } else if (cmd.type === CmdType.PRODUCE) {
+            // Re-check legality at apply-time (deterministic source of truth): building exists, finished,
+            // and actually trains the product.
+            const beid = eidForUnitId(cmd.buildingUid);
+            if (beid !== undefined && Building.buildLeft[beid] === 0 && buildingTrains(Unit.type[beid], cmd.productTypeId)) {
+                enqueueProduction(world, cmd.buildingUid, cmd.productTypeId);
+            }
+        } else if (cmd.type === CmdType.CANCEL_PRODUCE) {
+            cancelProduction(world, cmd.buildingUid, cmd.index);
+        } else if (cmd.type === CmdType.SET_RALLY) {
+            if (eidForUnitId(cmd.buildingUid) !== undefined) setRally(world, cmd.buildingUid, cmd.txFP, cmd.tyFP);
         }
     }
 }

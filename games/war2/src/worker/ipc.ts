@@ -17,6 +17,7 @@
 import type { Command, UnitSnapshot } from "../net/protocol";
 import type { MapInfo } from "../game/world";
 import type { WorldSnapshot } from "../game/snapshot";
+import type { Order, ProductionState } from "../game/types";
 
 // ── Render snapshot (worker → main, every tick) ──────────────────────────────────
 
@@ -36,6 +37,11 @@ export interface RenderUnit {
     fw:       number;   // building footprint (tiles); 0 for mobile units
     fh:       number;
     buildLeft: number;
+    // Own-unit queue state (HUD .hud-status + waypoint/rally render).  Filled by client.worker from the
+    // wire snapshot — NOT by renderUnitFromSnapshot, since the predicted local game doesn't hold it.
+    orders?:  Order[];                         // mobile unit's queued actions
+    prod?:    ProductionState;                 // building's production queue
+    rally?:   { txFP: number; tyFP: number };  // building's rally point
 }
 
 export interface RenderState {
@@ -59,12 +65,15 @@ export interface MetricsSample {
     bytesOut: number;   // bytes sent over the channel since the last sample
 }
 
-/** Build a RenderUnit from a fog-view UnitSnapshot (shared by host + guest render). */
+/** Build a RenderUnit from a fog-view UnitSnapshot (shared by host + guest render).
+ *  Queue state rides the snapshot for the HOST (referee snapshots carry it); on the GUEST the local
+ *  predicted snapshot has none, so client.worker overrides these from its wire stash (see buildRenderState). */
 export function renderUnitFromSnapshot(s: UnitSnapshot): RenderUnit {
     return {
         uid: s.uid, type: s.type, team: s.team, x: s.x, y: s.y,
         dir: s.dir, moving: s.moving, mtActive: s.moveActive, mtx: s.mtx, mty: s.mty,
         fw: s.bw, fh: s.bh, buildLeft: s.buildLeft,
+        orders: s.orders, prod: s.prod, rally: s.rally,
     };
 }
 
@@ -133,7 +142,12 @@ export type MainToWorker =
     /** Reverse debugging: restore the previous tick from the snapshot ring (one reverse step). */
     | { kind: "step-back" }
     /** Reverse debugging: rewind until a breakpoint expression holds, or to the earliest snapshot. */
-    | { kind: "reverse-continue" };
+    | { kind: "reverse-continue" }
+    /** Pathing-incident capture: flag the current moment (snapshot ring + recent commands) for
+     *  retroactive analysis via the inspector.  See debug/client.ts + tools/debug-server.mjs. */
+    | { kind: "flag-incident"; label?: string }
+    /** A main-thread console line to relay to the debug server (the worker holds the debug WS). */
+    | { kind: "client-console"; level: string; msg: string };
 
 // ── Messages: worker → main ──────────────────────────────────────────────────────
 
@@ -155,6 +169,12 @@ export type WorkerToMain =
     | { kind: "inspector-count"; n: number }
     /** e2e scenario/test label to show in the host's upper-left badge (DOM). */
     | { kind: "scenario-label"; text: string }
+    /** Pathing auto-detector: count of units currently in a pathological state (stuck/give-up/etc.),
+     *  shown as a HUD warning badge.  Posted only when the count changes. */
+    | { kind: "pathology"; n: number }
+    /** Relayed worker console line — the worker has no DOM, so main feeds these into the box's in-game
+     *  console overlay (debug/console.ts). */
+    | { kind: "worker-console"; level: string; msg: string }
     /** Step debugger: the sim halted (manual pause, a completed step, or a breakpoint hit). `hit`
      *  describes the matched breakpoint (the expression, or the changed dataId). */
     | { kind: "stopped"; tick: number; reason: "pause" | "step" | "breakpoint"; hit?: string }

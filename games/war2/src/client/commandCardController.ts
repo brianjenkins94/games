@@ -42,6 +42,9 @@ export interface PlacementGhost {
 export interface CardControllerDeps {
     /** Stable unit-ids of the player's own currently-selected units. */
     getOwnSelection: () => number[];
+    /** Uid of the selected building if a single production-capable building is selected (else undefined)
+     *  — when set, a right-click sets its rally point rather than issuing a move. */
+    getRallyableBuildingUid?: () => number | undefined;
     /** Snap an FP world coordinate to its tile centre. */
     snapToTile: (fp: number) => number;
     /** Hand a finalized command to the sim worker. */
@@ -76,8 +79,9 @@ export interface CommandCardController {
     hoverTile(wxFP: number, wyFP: number): void;
     /** Left-click on the map. Returns true if consumed by an armed ability. */
     primaryClick(wxFP: number, wyFP: number): boolean;
-    /** Right-click on the map: cancel an armed ability, else issue a move. */
-    secondaryClick(wxFP: number, wyFP: number): void;
+    /** Right-click on the map: cancel an armed ability, set a selected building's rally, else issue a
+     *  move (shift = append to the action queue). */
+    secondaryClick(wxFP: number, wyFP: number, shift?: boolean): void;
     /** Escape: go back one navigation level (transient → menu → root). */
     escape(): void;
     /** True while an ability is armed and waiting for a target click. */
@@ -137,11 +141,11 @@ export function createCommandCardController(deps: CardControllerDeps): CommandCa
         return [deps.fpToTile(wxFP) - (fw >> 1), deps.fpToTile(wyFP) - (fh >> 1)];
     }
 
-    function issueMove(txFP: number, tyFP: number): void {
+    function issueMove(txFP: number, tyFP: number, queue = false): void {
         const sel = deps.getOwnSelection();
         if (!sel.length) return;
         const sx = deps.snapToTile(txFP), sy = deps.snapToTile(tyFP);
-        deps.emit({ type: CmdType.MOVE, unitIds: sel, txFP: sx, tyFP: sy });
+        deps.emit({ type: CmdType.MOVE, unitIds: sel, txFP: sx, tyFP: sy, ...(queue ? { queue: true } : {}) });
     }
     function issueStop(): void {
         const sel = deps.getOwnSelection();
@@ -190,10 +194,16 @@ export function createCommandCardController(deps: CardControllerDeps): CommandCa
                     deps.setTargetingCursor?.(true);
                     break;
                 }
-                case "produce":
+                case "produce": {
+                    // Enqueue a unit at the selected building (research/upgrades fall through harmlessly:
+                    // the referee only accepts products the building actually trains).
                     dropTransient();
-                    log(`${ability.id}: not yet implemented`);
+                    const buildingUid = deps.getOwnSelection()[0];
+                    if (buildingUid !== undefined) {
+                        deps.emit({ type: CmdType.PRODUCE, buildingUid, productTypeId: unitTypeId(it.product), team: deps.myTeam });
+                    }
                     break;
+                }
             }
         },
 
@@ -239,9 +249,16 @@ export function createCommandCardController(deps: CardControllerDeps): CommandCa
             return false;
         },
 
-        secondaryClick(wxFP: number, wyFP: number): void {
+        secondaryClick(wxFP: number, wyFP: number, shift = false): void {
             if (dropTransient()) return;   // abort targeting/placement
-            issueMove(wxFP, wyFP);          // otherwise: smart move
+            // A selected production building: right-click sets its rally point instead of moving.
+            const rallyBuilding = deps.getRallyableBuildingUid?.();
+            if (rallyBuilding !== undefined) {
+                deps.emit({ type: CmdType.SET_RALLY, buildingUid: rallyBuilding,
+                            txFP: deps.snapToTile(wxFP), tyFP: deps.snapToTile(wyFP), team: deps.myTeam });
+                return;
+            }
+            issueMove(wxFP, wyFP, shift);   // otherwise: smart move (shift = queue/append)
         },
 
         escape(): void { back(); },

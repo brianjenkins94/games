@@ -27,8 +27,9 @@ import {
     rebuildMap, setRenderState, setSelectedUids, setPrediction,
     setTargetingCursor, showPlacementGhost,
 } from "../render/renderer";
-import { showCommandCard } from "../render/hud";
-import { initGameConsole } from "../debug/console";
+import { showCommandCard, showStatus } from "../render/hud";
+import productionJson from "../assets/production.json";
+import { initGameConsole, pushConsole, setConsoleSink } from "../debug/console";
 import type { MainToWorker, WorkerToMain, RenderState, RenderUnit, MetricsSample } from "../worker/ipc";
 import type { MapInfo } from "../game/world";
 import type { WorldSnapshot } from "../game/snapshot";
@@ -117,6 +118,31 @@ function refreshCard(): void {
     const primary = ownSelection()[0];
     const type = primary !== undefined ? unitTypeName(latestUnits.get(primary)!.type) : null;
     cardController.setSelection(type);
+    refreshStatus();
+}
+
+/** Uid of the selected building iff a single production-capable building is selected (drives rally). */
+function rallyableBuildingUid(): number | undefined {
+    const sel = ownSelection();
+    if (sel.length !== 1) return undefined;
+    const u = latestUnits.get(sel[0]);
+    if (!u || u.fw === 0) return undefined;
+    const trains = (productionJson as Record<string, { trains?: string[] }>)[unitTypeName(u.type)]?.trains;
+    return trains && trains.length ? sel[0] : undefined;
+}
+
+/** Push the primary selection's queue (production / action) into .hud-status. */
+function refreshStatus(): void {
+    if (!renderer) return;
+    const primary = ownSelection()[0];
+    const u = primary !== undefined ? latestUnits.get(primary) : undefined;
+    if (u?.prod && u.prod.queue.length) {
+        showStatus(renderer, { kind: "production", prod: { items: u.prod.queue, ticksLeft: u.prod.ticksLeft, ticksTotal: u.prod.ticksTotal } });
+    } else if (u?.orders && u.orders.length) {
+        showStatus(renderer, { kind: "orders", count: u.orders.length });
+    } else {
+        showStatus(renderer, null);
+    }
 }
 
 /** Hand a command to the worker and update the local prediction overlay. */
@@ -147,9 +173,18 @@ function requestSpeed(s: number): void {
 }
 
 window.addEventListener("keydown", (e) => {
-    if (e.key !== "[" && e.key !== "]") return;
-    speedIdx = Math.max(0, Math.min(SPEEDS.length - 1, speedIdx + (e.key === "]" ? 1 : -1)));
-    requestSpeed(SPEEDS[speedIdx]);
+    if (e.key === "[" || e.key === "]") {
+        speedIdx = Math.max(0, Math.min(SPEEDS.length - 1, speedIdx + (e.key === "]" ? 1 : -1)));
+        requestSpeed(SPEEDS[speedIdx]);
+        return;
+    }
+    // Backslash (\) flags the current moment as a pathing incident — the referee captures a snapshot
+    // ring + recent commands for retroactive analysis via the inspector (dev only).  (Backquote is the
+    // in-game console toggle — see debug/console.ts — so the flag key must not collide with it.)
+    if (import.meta.env.DEV && e.code === "Backslash" && worker) {
+        worker.postMessage({ kind: "flag-incident" } satisfies MainToWorker);
+        console.info("flagged pathing incident @ current tick");
+    }
 });
 
 /** Placement-ghost validity, computed locally from the latest snapshot + static
@@ -216,6 +251,30 @@ function updateScenarioBadge(text: string): void {
     }
 }
 
+/** Pathing auto-detector badge (upper-right): count of units currently in a pathological state. */
+function updatePathologyBadge(n: number): void {
+    if (!import.meta.env.DEV) return;   // detector that drives this is dev-only; lets the body tree-shake
+    const ID = "pathology-badge";
+    let badge = document.getElementById(ID);
+    if (n > 0) {
+        if (!badge) {
+            badge = document.createElement("div");
+            badge.id = ID;
+            badge.style.cssText = [
+                "position:fixed", "top:8px", "right:8px",
+                "background:#d97706", "color:#fff",
+                "font:bold 11px/1 monospace", "padding:4px 8px",
+                "border-radius:4px", "z-index:9999", "pointer-events:none",
+                "letter-spacing:0.05em", "white-space:nowrap",
+            ].join(";");
+            document.body.appendChild(badge);
+        }
+        badge.textContent = `⚠ ${n} pathing`;
+    } else {
+        badge?.remove();
+    }
+}
+
 // ── Worker messages ─────────────────────────────────────────────────────────────
 
 function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
@@ -231,6 +290,8 @@ function onWorkerMessage(ev: MessageEvent<WorkerToMain>): void {
         case "net-out":         relayChannel?.send(msg.data); break;   // relay mode
         case "inspector-count": updateInspectorBadge(msg.n); break;
         case "scenario-label":  updateScenarioBadge(msg.text); break;
+        case "pathology":       updatePathologyBadge(msg.n); break;
+        case "worker-console":  pushConsole(msg.level, msg.msg); break;
         // Host-state heartbeat → host page, which restores it into a reloaded host box (popout etc.).
         case "snapshot":        host.postMessage({ type: "host-snapshot", snap: msg.snap }, "*"); break;
         // Step debugger: surface sim halts + state up to the host page (→ the VS Code adapter).
@@ -286,6 +347,7 @@ function onRender(state: RenderState): void {
 
     if (renderer) setRenderState(renderer, state);
     if (renderer) setSelectedUids(renderer, selectedUids);
+    refreshStatus();   // keep the production progress bar / queued-step count live
 }
 
 // ── Networking: transfer the channel to the worker, else relay ───────────────────
@@ -365,6 +427,10 @@ async function boot(): Promise<void> {
         : new Worker(new URL("../worker/client.worker.ts", import.meta.url), { type: "module" });
     worker.onmessage = onWorkerMessage;
 
+    // Relay this box's main-thread console to the debug server (→ get_console) via the worker, which holds
+    // the debug WS.  Both host and peer workers connect now (wireBoxConsole + initDebugClient), so no gate.
+    setConsoleSink((level, msg) => worker?.postMessage({ kind: "client-console", level, msg } satisfies MainToWorker));
+
     // The referee creates both teams' initial units; the guest worker ignores spawns.
     const spawns = isHost ? [
         { team: 0, sx: p0x, sy: p0y, count: SPAWN_COUNT, typeId: unitTypeId("unit-peasant") },
@@ -392,6 +458,7 @@ async function boot(): Promise<void> {
 
     cardController = createCommandCardController({
         getOwnSelection:    ownSelection,
+        getRallyableBuildingUid: rallyableBuildingUid,
         snapToTile:         snapClickFP,
         emit:               emitCommand,
         render:             (card) => showCommandCard(renderer!, card),
@@ -412,9 +479,10 @@ async function boot(): Promise<void> {
     };
 
     // Raw input → the controller decides what it means.
-    renderer.onSlot           = (index)      => cardController!.slot(index);
-    renderer.onPrimaryClick   = (wxFP, wyFP) => cardController!.primaryClick(wxFP, wyFP);
-    renderer.onSecondaryClick = (wxFP, wyFP) => cardController!.secondaryClick(wxFP, wyFP);
+    renderer.onSlot             = (index)             => cardController!.slot(index);
+    renderer.onProductionCancel = (index)             => { const b = ownSelection()[0]; if (b !== undefined) emitCommand({ type: CmdType.CANCEL_PRODUCE, buildingUid: b, index, team: myTeam }); };
+    renderer.onPrimaryClick     = (wxFP, wyFP)        => cardController!.primaryClick(wxFP, wyFP);
+    renderer.onSecondaryClick   = (wxFP, wyFP, shift) => cardController!.secondaryClick(wxFP, wyFP, shift);
     renderer.onEscape         = ()           => cardController!.escape();
     renderer.onHotkey         = (letter)     => cardController!.hotkey(letter);
     renderer.onHover          = (wxFP, wyFP) => cardController!.hoverTile(wxFP, wyFP);

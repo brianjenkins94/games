@@ -10,7 +10,7 @@
  */
 import { addEntity, removeEntity, addComponent, hasComponent } from "bitecs";
 import { Position, MoveTarget, Unit, UnitId, Path, UnitAnim, Building } from "./components";
-import type { UnitSnapshot } from "./types";
+import type { UnitSnapshot, Order, ProductionState } from "./types";
 import { occupyRect, freeRect, resetOccupancy } from "./occupancy";
 import { reserveUnit, freeUnit, resetWalkGrid } from "./walkGrid";
 import { resetIdleGrids, markIdleDirty } from "./pathObstacles";
@@ -47,8 +47,15 @@ export function snapshotUnit(world: SimWorld, eid: number): UnitSnapshot {
     // Footprint only when the entity actually has the Building component — never read the (module-global,
     // possibly recycled) fw/fh array as a proxy for "is a building".
     const isBuilding = hasComponent(world, eid, Building);
+    const uid = UnitId.id[eid];
+    // Queue state (copied, not aliased): the wire delta comparator (protocol.unitSnapshotChanged) diffs
+    // successive snapshots, so it must see independent values — production mutates its state object in
+    // place each tick, which would otherwise read as "unchanged".
+    const orders = world.orders?.[uid];
+    const prod   = isBuilding ? world.production?.[uid] : undefined;
+    const rally  = isBuilding ? world.rally?.[uid] : undefined;
     return {
-        uid:        UnitId.id[eid],
+        uid,
         team:       Unit.team[eid],
         type:       Unit.type[eid],
         x:          Position.x[eid],
@@ -67,6 +74,9 @@ export function snapshotUnit(world: SimWorld, eid: number): UnitSnapshot {
         bw:         isBuilding ? Building.fw[eid] : 0,
         bh:         isBuilding ? Building.fh[eid] : 0,
         buildLeft:  isBuilding ? Building.buildLeft[eid] : 0,
+        ...(orders && orders.length ? { orders: orders.map(o => ({ ...o })) } : {}),
+        ...(prod  ? { prod: { queue: [...prod.queue], ticksLeft: prod.ticksLeft, ticksTotal: prod.ticksTotal } } : {}),
+        ...(rally ? { rally: { ...rally } } : {}),
     };
 }
 
@@ -180,6 +190,15 @@ export interface WorldSnapshot {
     rngState: number;
     units: UnitSnapshot[];
     explored: [number, number[]][];   // per-team explored maps (drive fog-aware pathing)
+    // Queue state keyed by stable uid — reproduces action/production/rally on restore + replay.
+    orders?: Record<number, Order[]>;
+    production?: Record<number, ProductionState>;
+    rally?: Record<number, { txFP: number; tyFP: number }>;
+}
+
+/** Deep-copy a plain-data Record so the snapshot is independent of later sim mutation (or undefined). */
+function cloneMap<T>(m: Record<number, T> | undefined): Record<number, T> | undefined {
+    return m ? structuredClone(m) : undefined;
 }
 
 export function takeSnapshot(world: SimWorld): WorldSnapshot {
@@ -189,6 +208,9 @@ export function takeSnapshot(world: SimWorld): WorldSnapshot {
         rngState:   getRngState(),
         units:      unitEids(world).map(e => snapshotUnit(world, e)),
         explored:   exportExplored(),
+        orders:     cloneMap(world.orders),
+        production: cloneMap(world.production),
+        rally:      cloneMap(world.rally),
     };
 }
 
@@ -204,6 +226,11 @@ export function applySnapshot(world: SimWorld, snap: WorldSnapshot): void {
     world.tick     = snap.tick;
     resetUnitRegistry(snap.nextUnitId);   // _nextUnitId = snap.nextUnitId; clear the uid→eid map
     setRngState(snap.rngState);
+    // Restore queue state (entities were removed via removeEntity above, which bypasses despawn cleanup,
+    // so replace the maps wholesale from the snapshot — independent copies).
+    world.orders     = cloneMap(snap.orders);
+    world.production = cloneMap(snap.production);
+    world.rally      = cloneMap(snap.rally);
     resetOccupancy();
     resetWalkGrid();
     resetIdleGrids();

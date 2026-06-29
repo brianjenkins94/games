@@ -21,6 +21,9 @@ export function tinyMap(rows: string[]): MapInfo {
 /** A 5x5 all-walkable map. */
 export const empty5 = (): MapInfo => tinyMap(["....." , ".....", ".....", ".....", "....."]);
 
+/** A w×h all-walkable map. */
+export const emptyMap = (w: number, h: number): MapInfo => tinyMap(Array.from({ length: h }, () => ".".repeat(w)));
+
 /** Is tile (tx,ty) walkable in this map? (gid 0 = blocked; out of bounds = blocked.) */
 export function isWalkable(map: MapInfo, tx: number, ty: number): boolean {
     if (tx < 0 || ty < 0 || tx >= map.mapW || ty >= map.mapH) return false;

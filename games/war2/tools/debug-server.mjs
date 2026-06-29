@@ -37,6 +37,8 @@
 
 import { createServer } from 'http';
 import { randomUUID } from 'crypto';
+import { mkdirSync, writeFileSync } from 'fs';
+import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -62,6 +64,40 @@ const stateHistory = new Map();
 
 /** [{ tick, role, commands }] */
 const cmdHistory = [];
+
+/** Captured pathing incidents (flagged in-game or via the flag_incident tool), newest last, capped.
+ *  Each: { id, flagTick, baseTick, label, snapshot, map, commands, createdAt }. */
+const incidents = [];
+let incidentSeq = 0;
+const INCIDENTS_MAX = 50;
+
+/** Recent console output per game box (host/peer), relayed from each box's main thread + sim worker —
+ *  so a fresh inspector can read what each game printed (via get_console) without the in-game overlay. */
+const consoleHistory = { host: [], peer: [] };
+const CONSOLE_MAX = 400;
+const INCIDENT_TEST_DIR = fileURLToPath(new URL('../test/incidents/', import.meta.url));
+
+/** Promote a captured incident to a permanent regression fixture (test/incidents/<id>.json). The focus
+ *  unit + goal come from the last MOVE in the window; the runner (test/pathing.incidents.test.ts) globs
+ *  these, replays each deterministically, and asserts the outcome. Returns { path, focus } or { error }. */
+function saveIncidentTest(id) {
+    const inc = incidents.find(i => i.id === id);
+    if (!inc) return { error: `no incident: ${id}` };
+    const lastMove = inc.commands.flatMap(c => c.commands).reverse().find(x => x.type === 1);   // CmdType.MOVE
+    const focus = lastMove ? { uid: lastMove.unitIds?.[0], goal: [Math.floor(lastMove.txFP / 32000), Math.floor(lastMove.tyFP / 32000)] } : null;
+    const fixture = {
+        id: inc.id, label: inc.label, baseTick: inc.baseTick, flagTick: inc.flagTick, expectHash: inc.flagHash,
+        map: inc.map, snapshot: inc.snapshot, commands: inc.commands, focus,
+        // Default expectation: the focus unit reaches its goal. REVIEW before relying on it — a
+        // legitimately-unreachable give-up isn't a bug (delete the fixture or change `expect`).
+        expect: { reachesGoal: !!focus, settleBudget: 600 },
+    };
+    mkdirSync(INCIDENT_TEST_DIR, { recursive: true });
+    const path = INCIDENT_TEST_DIR + `${inc.id}.json`;
+    writeFileSync(path, JSON.stringify(fixture, null, 1));
+    console.log(`[debug] wrote regression fixture ${path}`);
+    return { path, focus, expect: fixture.expect };
+}
 
 /** game-role ("host"/"peer") → [{ t, fields }, …] ring buffer of perf samples, pushed by
  *  the host page's metrics bridge (src/debug/metricsForward.ts) at ~4 Hz.  Trimmed to
@@ -242,6 +278,24 @@ function runQuery(query, params) {
             const from = params.from ?? 0;
             const to   = params.to   ?? latestTick;
             return { from, to, commands: cmdHistory.filter(c => c.tick >= from && c.tick <= to) };
+        }
+
+        case 'console': {
+            const last = params.last ?? 80;
+            const fmt = (role) => consoleHistory[role].slice(-last).map(e => `${new Date(e.t).toTimeString().slice(0, 8)} [${e.origin}:${e.level}] ${e.msg}`);
+            if (params.role === 'host' || params.role === 'peer') return { role: params.role, lines: fmt(params.role) };
+            return { host: fmt('host'), peer: fmt('peer') };
+        }
+
+        case 'incidents':
+            return { incidents: incidents.map(i => ({ id: i.id, baseTick: i.baseTick, flagTick: i.flagTick, label: i.label, commands: i.commands.length, units: i.snapshot?.units?.length ?? 0, ageMs: Date.now() - i.createdAt })) };
+
+        case 'incident': {
+            // NB: `incidentId`, not `id` — the inspector query envelope reserves `id` for request tracking.
+            const inc = incidents.find(i => i.id === params.incidentId);
+            if (!inc) return { error: `no incident: ${params.incidentId}` };
+            const units = (inc.snapshot?.units ?? []).map(u => ({ uid: u.uid, type: u.type, team: u.team, tx: Math.floor(u.x / 32000), ty: Math.floor(u.y / 32000), bw: u.bw, bh: u.bh }));
+            return { id: inc.id, baseTick: inc.baseTick, flagTick: inc.flagTick, label: inc.label, commands: inc.commands, units };
         }
 
         case 'divergence': {
@@ -430,7 +484,7 @@ function fmtState(blob) {
     };
 }
 
-function renderMap(blob, teamFilter, ascii) {
+function renderMap(blob, teamFilter) {
     if (!blob) return 'no state at that tick';
     const inTeam = (t) => teamFilter == null || t === teamFilter;
     const gather    = blob.gatherSlots ?? {};
@@ -441,52 +495,22 @@ function renderMap(blob, teamFilter, ascii) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const { x, y } of unitPts) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
     for (const [x, y] of slotTiles) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
-    minX--; minY--; maxX++; maxY++;
-    const W = maxX - minX + 1, H = maxY - minY + 1;
-    if (W > 160 || H > 160) return `region too large to render (${W}×${H}) — the units are spread out, not gathered.`;
-    const unitAt = new Map();
-    for (const p of unitPts) unitAt.set(`${p.x},${p.y}`, p.u);
-    const rows = [];
-    for (let y = minY; y <= maxY; y++) {
-        let row = '';
-        for (let x = minX; x <= maxX; x++) {
-            const key = `${x},${y}`;
-            const u = unitAt.get(key);
-            if (u)                     { const c = u.team === 0 ? 'a' : 'b'; row += u.moveActive ? c : c.toUpperCase(); }
-            else if (slotSet.has(key)) row += 'o';
-            else                       row += '·';
-        }
-        rows.push(row);
-    }
+    const unitAt     = new Set(unitPts.map(p => `${p.x},${p.y}`));
     const filled     = slotTiles.filter(([x, y]) => unitAt.has(`${x},${y}`)).length;
     const moving     = unitPts.filter(p => p.u.moveActive).length;
     const stragglers = slotSet.size ? unitPts.filter(p => !slotSet.has(`${p.x},${p.y}`)).length : 0;
-    const summary = [
-        `${unitPts.length} units (moving ${moving}, settled ${unitPts.length - moving}) in tiles [${minX + 1},${minY + 1}]‥[${maxX - 1},${maxY - 1}]`,
+    return [
+        `${unitPts.length} units (moving ${moving}, settled ${unitPts.length - moving}) in tiles [${minX},${minY}]‥[${maxX},${maxY}]`,
         slotTiles.length ? `gather slots: ${slotTiles.length}  filled ${filled}  HOLES ${slotTiles.length - filled}  stragglers ${stragglers}` : 'no active gather block',
-    ];
-    if (ascii) summary.push('legend: UPPER=settled lower=moving (a/A team0, b/B team1), o=hole, ·=empty', '', ...rows);
-    return summary.join('\n');
+    ].join('\n');
 }
 
-function renderWalkMap(blob, teamFilter, ascii) {
+function renderWalkMap(blob, teamFilter) {
     if (!blob) return 'no state at that tick';
     const CELL = 8;
     const inTeam = (t) => teamFilter == null || t === teamFilter;
     const units = (blob.units ?? []).filter(u => inTeam(u.team) && u.px != null);
     if (!units.length) return '(no units with position data — reload the dev game so it streams px/hw)';
-    const boxes = units.map(u => {
-        const cx = u.px / 1000, cy = u.py / 1000, hw = u.hw ?? 16, hh = u.hh ?? 16;
-        return { u,
-            l: Math.floor((cx - hw) / CELL), r: Math.floor((cx + hw - 1) / CELL),
-            t: Math.floor((cy - hh) / CELL), b: Math.floor((cy + hh - 1) / CELL),
-            ccx: Math.floor(cx / CELL), ccy: Math.floor(cy / CELL) };
-    });
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const b of boxes) { minX = Math.min(minX, b.l); maxX = Math.max(maxX, b.r); minY = Math.min(minY, b.t); maxY = Math.max(maxY, b.b); }
-    const PAD = 2; minX -= PAD; minY -= PAD; maxX += PAD; maxY += PAD;
-    const W = maxX - minX + 1, H = maxY - minY + 1;
-    if (W > 220 || H > 220) return `region too large at 8px resolution (${W}×${H} cells) — filter by team or zoom in by tick.`;
     const footByEid = new Map();
     const footSet = new Set();
     for (const u of (blob.units ?? [])) {
@@ -500,9 +524,6 @@ function renderWalkMap(blob, teamFilter, ascii) {
     }
     const reserved = blob.reserved ?? [];
     const resAt = new Map(reserved.map(([cx, cy, owner]) => [`${cx},${cy}`, owner]));
-    for (const [cx, cy] of reserved) { minX = Math.min(minX, cx); maxX = Math.max(maxX, cx); minY = Math.min(minY, cy); maxY = Math.max(maxY, cy); }
-    const W2 = maxX - minX + 1, H2 = maxY - minY + 1;
-    if (W2 > 240 || H2 > 240) return `region too large (${W2}×${H2})`;
     const uidOf = new Map(blob.units.map(u => [u.eid, u.uid]));
     const phantomCells = [];
     for (const [cx, cy, owner] of reserved) {
@@ -514,23 +535,13 @@ function renderWalkMap(blob, teamFilter, ascii) {
     const unreserved = [...footSet].filter(k => !resAt.has(k)).length;
     const offOf = (u) => [Math.round(((u.px / 1000 % 32) + 32) % 32 - 16), Math.round(((u.py / 1000 % 32) + 32) % 32 - 16)];
     const offGrid = units.filter(u => { const [ox, oy] = offOf(u); return ox || oy; });
-    const out = [
+    return [
         `${units.length} units: ${units.length - offGrid.length} grid-aligned, ${offGrid.length} off-centre`,
         ...offGrid.map(u => { const [ox, oy] = offOf(u); return `  uid${u.uid} tile(${u.curTx},${u.curTy}) off(${ox},${oy}) stuck${u.stuckTicks ?? 0} ${u.moveActive ? 'active' : 'settled'}`; }),
         reserved.length ? `reservations ${reserved.length}; PHANTOMS ${phantomCells.length}; overlaps ${overlaps.length}; footprint-unreserved ${unreserved}` : 'no reservation data (reload dev game)',
         ...phantomCells.slice(0, 24).map(([cx, cy, o]) => `  PHANTOM cell(${cx},${cy}) owner uid${uidOf.get(o) ?? '?'}`),
         ...overlaps.slice(0, 12).map(k => `  OVERLAP cell(${k})`),
-    ];
-    if (!ascii) return out.join('\n');
-    const grid = Array.from({ length: H2 }, () => Array(W2).fill('·'));
-    for (let cy = minY; cy <= maxY; cy++) for (let cx = minX; cx <= maxX; cx++) {
-        const key = `${cx},${cy}`, gx = cx - minX, gy = cy - minY, owner = resAt.get(key);
-        if (owner != null) grid[gy][gx] = footByEid.get(owner)?.has(key) ? ((uidOf.get(owner) != null && blob.units.find(u => u.eid === owner)?.team === 0) ? 'a' : 'b') : 'X';
-        else if (footSet.has(key)) grid[gy][gx] = 'o';
-    }
-    for (const b of boxes) { const gx = b.ccx - minX, gy = b.ccy - minY; if (grid[gy]?.[gx] && grid[gy][gx] !== 'X') grid[gy][gx] = b.u.team === 0 ? 'A' : 'B'; }
-    out.push(`legend: UPPER=centre, lower=ok, X=PHANTOM, o=unreserved, ·=free  cells[${minX},${minY}]‥[${maxX},${maxY}]`, '', ...grid.map(r => r.join('')));
-    return out.join('\n');
+    ].join('\n');
 }
 
 function fmtTrace(res) {
@@ -571,7 +582,7 @@ const TOOLS = [
     { name: 'get_status', description: 'Check whether host/peer are connected, the current tick, and how much history is available.', inputSchema: { type: 'object', properties: {} } },
     { name: 'get_metrics', description: 'Realtime perf per box (host/peer): fps, frame time (ms), sim tick duration (tickMs, vs the ~50ms budget), rtt/lead (guest only — host plays in-process so both read 0), entity count, and wire bytesIn/bytesOut per ~250ms sample. Samples are buffered ~4 Hz (up to ~150s, cleared on game reload). Called with no args it returns a SNAPSHOT: each box\'s latest sample (with ageMs) plus a summary (last/min/max/avg/p95) over the last 30s. Pass selection params for an arbitrary slice of history.', inputSchema: { type: 'object', properties: { last: { type: 'number', description: 'Return the last N samples per box (raw series)' }, sinceMs: { type: 'number', description: 'Samples within the last X milliseconds' }, from: { type: 'number', description: 'Absolute start time (ms epoch, matches sample.t)' }, to: { type: 'number', description: 'Absolute end time (ms epoch)' }, fields: { type: 'array', items: { type: 'string' }, description: 'Restrict to these field names (e.g. ["fps","tickMs"])' }, raw: { type: 'boolean', description: 'Include raw samples even in snapshot mode' }, aggregate: { type: 'boolean', description: 'With a selection, return only the summary (omit raw samples)' } } } },
     { name: 'get_state', description: 'Get full game state (all units, hash) for host and peer at a tick. Omit tick for latest.', inputSchema: { type: 'object', properties: { tick: { type: 'number', description: 'Tick to inspect (omit = latest)' } } } },
-    { name: 'get_map', description: 'Compact spatial diagnostic of units (host) at a tick: per-unit off-centre offsets, and lists of phantom/overlap/hole cells. Pass fine=true for the 8px walk grid (reservations + sub-tile offsets) vs the default 32px tile summary. Pass ascii=true to also include the full character-grid picture (token-heavy — only when you need the visual shape).', inputSchema: { type: 'object', properties: { tick: { type: 'number', description: 'Tick to inspect (omit = latest)' }, team: { type: 'number', description: 'Only show this team (omit = all)' }, fine: { type: 'boolean', description: 'Use the 8px walk grid (reservations, sub-tile) instead of 32px tiles' }, ascii: { type: 'boolean', description: 'Also dump the full ASCII grid (expensive; default off)' } } } },
+    { name: 'get_map', description: 'Compact spatial diagnostic of units (host) at a tick: unit counts + tile bbox, per-unit off-centre offsets, and lists of phantom/overlap/hole cells. Pass fine=true for the 8px walk grid (reservations + sub-tile offsets) vs the default 32px tile summary.', inputSchema: { type: 'object', properties: { tick: { type: 'number', description: 'Tick to inspect (omit = latest)' }, team: { type: 'number', description: 'Only show this team (omit = all)' }, fine: { type: 'boolean', description: 'Use the 8px walk grid (reservations, sub-tile) instead of 32px tiles' } } } },
     { name: 'get_unit', description: 'Get one unit\'s state on both host and peer at a tick.', inputSchema: { type: 'object', properties: { uid: { type: 'number', description: 'Unit ID' }, tick: { type: 'number', description: 'Tick to inspect (omit = latest)' } }, required: ['uid'] } },
     { name: 'get_region', description: 'Units within a tile box around (tx,ty), plus pairwise DIAMOND clearances (L1 centre distance minus summed radii; negative = overlap, tightest listed first).', inputSchema: { type: 'object', properties: { tx: { type: 'number', description: 'Centre tile X' }, ty: { type: 'number', description: 'Centre tile Y' }, r: { type: 'number', description: 'Box radius in tiles (default 4)' }, team: { type: 'number', description: 'Only this team (omit = all)' }, tick: { type: 'number', description: 'Tick to inspect (omit = latest)' } }, required: ['tx', 'ty'] } },
     { name: 'trace_unit', description: 'Compact trajectory of one or more units (host) over a tick range, compressed to tile-change segments with dwell time and max stall. Defaults to since the last command → latest.', inputSchema: { type: 'object', properties: { uids: { type: 'array', items: { type: 'number' }, description: 'Unit IDs to trace (or use uid)' }, uid: { type: 'number', description: 'Single unit ID (shorthand for uids:[uid])' }, from: { type: 'number', description: 'Start tick (omit = last command tick)' }, to: { type: 'number', description: 'End tick (omit = latest)' } } } },
@@ -580,6 +591,7 @@ const TOOLS = [
     { name: 'list_commands', description: 'Show commands applied in a tick range (both roles).', inputSchema: { type: 'object', properties: { from: { type: 'number', description: 'Start tick (inclusive)' }, to: { type: 'number', description: 'End tick (inclusive)' } } } },
     { name: 'find_divergence', description: 'Scan a tick range and return the first tick where host and peer hashes diverge, plus the diff at that tick.', inputSchema: { type: 'object', properties: { from: { type: 'number', description: 'Start tick (inclusive, omit = beginning of history)' }, to: { type: 'number', description: 'End tick (inclusive, omit = latest)' } } } },
     { name: 'get_history_range', description: 'Get the min and max tick stored in the debug server.', inputSchema: { type: 'object', properties: {} } },
+    { name: 'get_console', description: "Recent console output from each game box (host/peer) — what the game printed, including its sim WORKER (tagged origin worker|client). This is the cheap way to read a game's logs/errors; the browser console (preview_console_logs) only sees the top page, not the box iframes/workers.", inputSchema: { type: 'object', properties: { role: { type: 'string', description: "Only this box: 'host' or 'peer' (omit = both)" }, last: { type: 'number', description: 'Lines per box (default 80)' } } } },
     { name: 'pause', description: 'Pause the game simulation on both host and peer.', inputSchema: { type: 'object', properties: {} } },
     { name: 'resume', description: 'Resume the game simulation on both host and peer.', inputSchema: { type: 'object', properties: {} } },
     // ── e2e/debug driving (host referee) ──
@@ -587,7 +599,17 @@ const TOOLS = [
     { name: 'stop_units', description: 'Issue a STOP command to the host sim for the given unit ids.', inputSchema: { type: 'object', properties: { uids: { type: 'array', items: { type: 'number' }, description: 'Unit ids to stop' } }, required: ['uids'] } },
     { name: 'spawn_unit', description: 'Spawn a unit on the host sim at tile (tx,ty) for a team. typeId is the interned unit-type id (default 0).', inputSchema: { type: 'object', properties: { team: { type: 'number', description: 'Team (0 or 1)' }, tx: { type: 'number', description: 'Tile X' }, ty: { type: 'number', description: 'Tile Y' }, typeId: { type: 'number', description: 'Interned unit-type id (default 0)' } }, required: ['team', 'tx', 'ty'] } },
     { name: 'step', description: 'Advance the host sim exactly N ticks (load a scenario or pause first; the harness loads paused, then steps).', inputSchema: { type: 'object', properties: { n: { type: 'number', description: 'Number of ticks to advance (default 1)' } } } },
-    { name: 'load_scenario', description: 'Rebuild the host sim from a tiny scenario (fresh map + explicit unit placements), left paused. scenario = { seed?, mapInfo:{gids,mapW,mapH,terrainArr}, spawns:[{team,tx,ty,typeId?}] }. Mainly used by the e2e harness; clears all prior state.', inputSchema: { type: 'object', properties: { scenario: { type: 'object', description: 'The scenario object (see description)' } }, required: ['scenario'] } },
+    { name: 'load_scenario', description: 'Rebuild the host sim from a tiny scenario (fresh map + explicit unit placements), left paused. scenario = { seed?, mapInfo:{gids,mapW,mapH,terrainArr}, spawns:[{team,tx,ty,typeId?}], buildings?:[{team,tx,ty,typeId}] }. Buildings spawn FINISHED (ready to produce). Mainly used by the e2e harness; clears all prior state.', inputSchema: { type: 'object', properties: { scenario: { type: 'object', description: 'The scenario object (see description)' } }, required: ['scenario'] } },
+    { name: 'build', description: 'Issue a BUILD command: place a building of typeId at footprint top-left tile (tx,ty) for a team. Starts as a construction site (use load_scenario buildings for a finished one).', inputSchema: { type: 'object', properties: { typeId: { type: 'number', description: 'Interned building type id' }, tx: { type: 'number', description: 'Footprint top-left tile X' }, ty: { type: 'number', description: 'Footprint top-left tile Y' }, team: { type: 'number', description: 'Team (default 0)' } }, required: ['typeId', 'tx', 'ty'] } },
+    { name: 'produce', description: 'Enqueue a unit at a production building (PRODUCE). buildingUid = the building\'s stable UnitId; productTypeId = interned unit-type id to train (must be in the building\'s trains list). Read it back with get_unit (prod.queue / prod.ticksLeft).', inputSchema: { type: 'object', properties: { buildingUid: { type: 'number', description: 'Building stable UnitId' }, productTypeId: { type: 'number', description: 'Interned unit-type id to train' }, team: { type: 'number', description: 'Team (default 0)' } }, required: ['buildingUid', 'productTypeId'] } },
+    { name: 'set_rally', description: 'Set a building\'s rally point (SET_RALLY) to tile (tx,ty); freshly trained units walk there.', inputSchema: { type: 'object', properties: { buildingUid: { type: 'number', description: 'Building stable UnitId' }, tx: { type: 'number', description: 'Rally tile X' }, ty: { type: 'number', description: 'Rally tile Y' }, team: { type: 'number', description: 'Team (default 0)' } }, required: ['buildingUid', 'tx', 'ty'] } },
+    { name: 'cancel_produce', description: 'Cancel a building\'s queued production item at index (CANCEL_PRODUCE; 0 = the one in progress).', inputSchema: { type: 'object', properties: { buildingUid: { type: 'number', description: 'Building stable UnitId' }, index: { type: 'number', description: 'Queue index (default 0)' }, team: { type: 'number', description: 'Team (default 0)' } }, required: ['buildingUid'] } },
+    // ── Pathing incidents (flag → replay → analyze → regression test) ──
+    { name: 'flag_incident', description: 'Flag the current moment on the host as a pathing incident — captures a snapshot ring (lead-up) + the recent command log for retroactive analysis. Same as pressing ` in-game.', inputSchema: { type: 'object', properties: { label: { type: 'string', description: 'Optional note about what looked wrong' } } } },
+    { name: 'list_incidents', description: 'List captured pathing incidents: id, tick window, label, command count, unit count, age. Use get_incident / replay_incident with an id.', inputSchema: { type: 'object', properties: {} } },
+    { name: 'get_incident', description: 'An incident\'s detail by id: the command log over its window plus a compact per-unit list (uid/type/tile/footprint) from its base snapshot. The full snapshot stays server-side for replay_incident.', inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Incident id (from list_incidents)' } }, required: ['id'] } },
+    { name: 'replay_incident', description: 'Restore a captured incident onto the host (rebuilt on its map, left PAUSED at the lead-up tick) so you can step through it and inspect with get_map / trace_unit / summarize_move. Replaces the live game. Deterministic — reproduces the incident exactly.', inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Incident id' } }, required: ['id'] } },
+    { name: 'save_incident_test', description: 'Promote a captured incident to a permanent regression fixture at test/incidents/<id>.json (map + snapshot + commands + focus unit/goal). The runner test/pathing.incidents.test.ts replays it under CI and asserts the focus unit reaches its goal. REVIEW the generated `expect` — a legitimately-unreachable give-up is not a bug.', inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Incident id' } }, required: ['id'] } },
 ];
 
 function callTool(request) {
@@ -607,7 +629,7 @@ function callTool(request) {
             }
             case 'get_map': {
                 const raw = Q('state', args.tick != null ? { tick: args.tick } : {});
-                return { content: [{ type: 'text', text: args.fine ? renderWalkMap(raw.host, args.team, args.ascii) : renderMap(raw.host, args.team, args.ascii) }] };
+                return { content: [{ type: 'text', text: args.fine ? renderWalkMap(raw.host, args.team) : renderMap(raw.host, args.team) }] };
             }
             case 'get_unit': {
                 const raw = Q('unit', { uid: args.uid, ...(args.tick != null ? { tick: args.tick } : {}) });
@@ -627,6 +649,7 @@ function callTool(request) {
             case 'list_commands':  return ok(Q('commands', args));
             case 'find_divergence':return ok(Q('divergence', args));
             case 'get_history_range': return ok(Q('history_range'));
+            case 'get_console':       return ok(Q('console', args));
             case 'pause':  ctrl('pause');  return ok({ ok: true });
             case 'resume': ctrl('resume'); return ok({ ok: true });
             case 'move_units':    toHost({ type: 'ctrl', cmd: 'command', command: { type: 1, unitIds: args.uids ?? [], txFP: tcFP(args.tx), tyFP: tcFP(args.ty) } }); return ok({ ok: true });
@@ -634,6 +657,26 @@ function callTool(request) {
             case 'spawn_unit':    toHost({ type: 'ctrl', cmd: 'command', command: { type: 2, xFP: tcFP(args.tx), yFP: tcFP(args.ty), team: args.team ?? 0, typeId: args.typeId ?? 0 } }); return ok({ ok: true });
             case 'step':          toHost({ type: 'ctrl', cmd: 'step', n: args.n ?? 1 }); return ok({ ok: true });
             case 'load_scenario': toHost({ type: 'ctrl', cmd: 'load-scenario', scenario: args.scenario }); return ok({ ok: true });
+            case 'build':         toHost({ type: 'ctrl', cmd: 'command', command: { type: 4, typeId: args.typeId, tileX: args.tx, tileY: args.ty, team: args.team ?? 0 } }); return ok({ ok: true });
+            case 'produce':       toHost({ type: 'ctrl', cmd: 'command', command: { type: 6, buildingUid: args.buildingUid, productTypeId: args.productTypeId, team: args.team ?? 0 } }); return ok({ ok: true });
+            case 'set_rally':     toHost({ type: 'ctrl', cmd: 'command', command: { type: 7, buildingUid: args.buildingUid, txFP: tcFP(args.tx), tyFP: tcFP(args.ty), team: args.team ?? 0 } }); return ok({ ok: true });
+            case 'cancel_produce':toHost({ type: 'ctrl', cmd: 'command', command: { type: 8, buildingUid: args.buildingUid, index: args.index ?? 0, team: args.team ?? 0 } }); return ok({ ok: true });
+            case 'flag_incident': toHost({ type: 'ctrl', cmd: 'flag', label: args.label ?? '' }); return ok({ ok: true });
+            case 'list_incidents': return ok(Q('incidents'));
+            case 'get_incident': {
+                const r = Q('incident', { incidentId: args.id });
+                return r.error ? err(r.error) : ok(r);
+            }
+            case 'replay_incident': {
+                const inc = incidents.find(i => i.id === args.id);
+                if (!inc) return err(`no incident: ${args.id}`);
+                toHost({ type: 'ctrl', cmd: 'restore', snapshot: inc.snapshot, map: inc.map });
+                return ok({ ok: true, restoredToTick: inc.baseTick, flagTick: inc.flagTick, note: 'host paused at the base tick; step + get_map/trace_unit/summarize_move to analyze, then re-apply the commands below to reproduce', commands: inc.commands });
+            }
+            case 'save_incident_test': {
+                const r = saveIncidentTest(args.id);
+                return r.error ? err(r.error) : ok(r);
+            }
             default: return err(`unknown tool: ${name}`);
         }
     } catch (e) {
@@ -746,6 +789,27 @@ wss.on('connection', (ws) => {
             return;
         }
 
+        if (msg.type === 'diag-error' && role === 'host') { console.error(`[host diag-error]\n${msg.msg}`); return; }
+
+        // Relayed console line from a game box (origin: worker | client) — keep a per-role ring for get_console.
+        if (msg.type === 'console' && (role === 'host' || role === 'peer')) {
+            const buf = consoleHistory[role];
+            buf.push({ t: Date.now(), origin: msg.origin, level: msg.level, msg: msg.msg });
+            if (buf.length > CONSOLE_MAX) buf.shift();
+            if (msg.level === 'error') console.error(`[${role} ${msg.origin}] ${msg.msg}`);   // surface errors in stdout too
+            return;
+        }
+
+        // Flagged pathing incident from the host: store with the command log over its window.
+        if (msg.type === 'incident' && role === 'host') {
+            const id = `inc_${++incidentSeq}`;
+            const commands = cmdHistory.filter(c => c.role === 'host' && c.tick >= msg.baseTick && c.tick <= msg.flagTick);
+            incidents.push({ id, flagTick: msg.flagTick, baseTick: msg.baseTick, flagHash: msg.flagHash, label: msg.label || '', snapshot: msg.snapshot, map: msg.map, commands, createdAt: Date.now() });
+            if (incidents.length > INCIDENTS_MAX) incidents.shift();
+            console.log(`[debug] incident ${id} captured (ticks ${msg.baseTick}‥${msg.flagTick}, ${commands.length} cmds, ${msg.snapshot?.units?.length ?? 0} units)`);
+            return;
+        }
+
         // Host page's metrics bridge: one connection (role "metrics") relays both boxes'
         // perf samples, each tagged with its game-role ("host"/"peer").  Ignore a lingering
         // older bridge after a refresh — only the most-recent one feeds the buffer.
@@ -763,6 +827,14 @@ wss.on('connection', (ws) => {
         }
 
         if (msg.type === 'ctrl' && role === 'inspector') {
+            // Intercept replay-incident: resolve the stored snapshot/map and drive the host's restore.
+            if (msg.cmd === 'replay-incident') {
+                const inc = incidents.find(i => i.id === msg.id);
+                if (inc) broadcast('host', JSON.stringify({ type: 'ctrl', cmd: 'restore', snapshot: inc.snapshot, map: inc.map }));
+                console.log(`[debug] replay-incident ${msg.id} ${inc ? '→ host' : '(not found)'}`);
+                return;
+            }
+            if (msg.cmd === 'save-incident-test') { saveIncidentTest(msg.id); return; }
             broadcastGames(JSON.stringify(msg));
             console.log(`[debug] ctrl:${msg.cmd} ← inspector`);
             return;
