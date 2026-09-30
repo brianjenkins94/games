@@ -5,10 +5,16 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "test": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=95 \"test/**/*.test.ts\""
+    "dev": "node scripts/dev.ts",
+    "build": "node scripts/build.ts",
+    "test": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-exclude=\"src/browser/**\" --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=95 \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@brianjenkins94/hub": "https://brianjenkins94.github.io/editor/packages/hub@latest.tgz"
+  },
+  "devDependencies": {
+    "@brianjenkins94/util": "https://brianjenkins94.github.io/lib/util@latest.tgz",
+    "vite": "^8.0.0"
   },
   "engines": {
     "node": ">=24.0.0"

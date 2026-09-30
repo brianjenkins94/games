@@ -1,4 +1,4 @@
-import type { StateUpdate } from "../../src/net/index.ts";
+import type { RefereeTick, StateUpdate } from "../../src/net/index.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createHub, createRpcClient } from "@brianjenkins94/hub";
@@ -291,9 +291,11 @@ test("a corrupted view is caught by the hash check and repaired by a resync", as
 	// Corrupt one unit in the client's view (a bug, or a bad delta): the next update's hash won't match.
 	const [unit] = client.view().values();
 
+	assert.equal(client.inSync(), true);
 	unit.x += 1;
 	match.run(1);
 	assert.equal(client.stats.desyncs, 1, "detected on the very next update");
+	assert.equal(client.inSync(), false);
 	assert.equal(client.stats.resyncRequests, 1);
 	match.run(2);
 	assert.ok(isConverged(match, client), "and repaired by the keyframe it asked for");
@@ -339,4 +341,36 @@ test("a client can't command before it joins, and ticking before then does nothi
 	assert.equal(client.stats.batchesSent, 0);
 	assert.equal(client.team(), undefined);
 	assert.equal(client.viewTick(), -1);
+	assert.equal(client.inSync(), false);
+});
+
+test("the referee's per-tick summary carries every seated team's view hash, for a host to check clients against", async () => {
+	const match = await startMatch({ "clients": 3, "config": { "teams": 3 } });
+	const ticks: RefereeTick[] = [];
+
+	match.refereeHub.subscribe(subjects(MATCH).refereeTick, (data) => { ticks.push(data as RefereeTick); });
+	match.run(5);
+	assert.equal(ticks.length, 5);
+
+	const latest = ticks.at(-1);
+
+	assert.equal(latest.tick, match.referee.world.tick);
+	assert.deepEqual(latest.seats.map((seat) => seat.peer).sort(), match.hubs.map((hub) => hub.id).sort());
+
+	for (const client of match.clients) {
+		assert.equal(latest.viewHashes[client.team()], client.viewHash(), `team ${client.team()}`);
+	}
+});
+
+test("a client may report diagnostics on its own subject only", async () => {
+	const match = await startMatch({ "clients": 2 });
+	const names = subjects(MATCH);
+	const heard: string[] = [];
+
+	match.refereeHub.subscribe(names.diag("*"), (_data, envelope) => { heard.push(envelope.subject); });
+	match.network.settle();
+	match.hubs[0].publish(names.diag(match.hubs[0].id), { "peer": match.hubs[0].id });
+	match.hubs[0].publish(names.diag(match.hubs[1].id), { "peer": match.hubs[1].id });
+	match.network.settle();
+	assert.deepEqual(heard, [names.diag(match.hubs[0].id)]);
 });

@@ -45,6 +45,8 @@ export interface Client {
 	"view": () => Map<number, Unit>;
 	"viewTick": () => number;
 	"viewHash": () => number;
+	/** Whether the last update applied matched the referee's hash (false until the first one). */
+	"inSync": () => boolean;
 	/** This team's units as predicted locally (ahead of the view). */
 	"predicted": () => World | undefined;
 	/** Queue a command: applied to the prediction now, sent on the next `tick()`. */
@@ -71,6 +73,7 @@ export function createClient({ hub, match }: ClientOptions): Client {
 	let unacked: CommandBatch[] = [];
 	let nextSeq = 1;
 	let wantResync = false;
+	let inSync = false;
 
 	function hashView(): number {
 		return hashUnits([...view.values()].sort((left, right) => left.id - right.id));
@@ -135,7 +138,9 @@ export function createClient({ hub, match }: ClientOptions): Client {
 
 		viewTick = update.tick;
 
-		if (hashView() !== update.viewHash) {
+		inSync = hashView() === update.viewHash;
+
+		if (!inSync) {
 			stats.desyncs += 1;
 			wantResync = true;
 		}
@@ -162,6 +167,7 @@ export function createClient({ hub, match }: ClientOptions): Client {
 		"view": () => view,
 		"viewTick": () => viewTick,
 		"viewHash": hashView,
+		"inSync": () => inSync,
 		"predicted": () => predicted,
 		"command": (command) => {
 			if (seat === undefined) {

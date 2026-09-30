@@ -9,7 +9,7 @@
  */
 import type { Hub } from "@brianjenkins94/hub";
 import type { World, WorldConfig } from "../sim/index.ts";
-import type { CommandBatch, JoinReply, JoinRequest, ResyncRequest, StateUpdate } from "./protocol.ts";
+import type { CommandBatch, JoinReply, JoinRequest, RefereeTick, ResyncRequest, StateUpdate } from "./protocol.ts";
 import { serve } from "@brianjenkins94/hub";
 import { applyCommand, createWorld, encodeUnit, hashUnits, stepWorld, visibleUnits } from "../sim/index.ts";
 import { lobbyPermissions, seatPermissions, subjects } from "./protocol.ts";
@@ -63,7 +63,7 @@ export interface Referee {
 	/** Apply the commands that arrived, step the world, and send every seated team its view. */
 	"tick": () => void;
 	/** Seated teams, for diagnostics. */
-	"seats": () => { "team": number; "lastSeq": number }[];
+	"seats": () => { "team": number; "peer": string; "lastSeq": number }[];
 	"close": () => void;
 }
 
@@ -165,7 +165,8 @@ export function createReferee({ hub, match, config, setup, keyframeEvery = 10 }:
 		stats.batchesApplied += 1;
 	});
 
-	function send(seat: Seat): void {
+	/** Send `seat` its view; returns that view's hash. */
+	function send(seat: Seat): number {
 		const visible = visibleUnits(world, seat.team);
 		const encoded = new Map(visible.map((unit) => [unit.id, encodeUnit(unit)]));
 		const keyframe = seat.needKeyframe || seat.lastTick === null || world.tick - seat.lastKeyframe >= keyframeEvery;
@@ -189,6 +190,12 @@ export function createReferee({ hub, match, config, setup, keyframeEvery = 10 }:
 		seat.lastTick = world.tick;
 		seat.lastUnits = encoded;
 		hub.publish(names.state(seat.team), update);
+
+		return update.viewHash;
+	}
+
+	function seatList(): RefereeTick["seats"] {
+		return [...seats.values()].map((seat) => ({ "team": seat.team, "peer": seat.peer, "lastSeq": seat.lastSeq }));
 	}
 
 	return {
@@ -210,11 +217,17 @@ export function createReferee({ hub, match, config, setup, keyframeEvery = 10 }:
 			stepWorld(world);
 			stats.ticks += 1;
 
+			const viewHashes: Record<number, number> = {};
+
 			for (const seat of seats.values()) {
-				send(seat);
+				viewHashes[seat.team] = send(seat);
+			}
+
+			if (hub.interested(names.refereeTick)) {
+				hub.publish(names.refereeTick, { "tick": world.tick, "viewHashes": viewHashes, "seats": seatList(), "stats": { ...stats } } satisfies RefereeTick);
 			}
 		},
-		"seats": () => [...seats.values()].map((seat) => ({ "team": seat.team, "lastSeq": seat.lastSeq })),
+		"seats": seatList,
 		"close": () => {
 			stopServing();
 			unsubscribe();
