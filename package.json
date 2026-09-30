@@ -14,7 +14,7 @@
     "@brianjenkins94/util": "https://brianjenkins94.github.io/lib/util@latest.tgz",
     "@tsconfig/node-lts": "latest",
     "@types/node": "latest",
-    "typescript": "latest"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=24.0.0",
