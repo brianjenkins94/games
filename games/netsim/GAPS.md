@@ -38,9 +38,6 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   terminal starts a preview only through its own `vite` command (which ignores its arguments). In the editor, run
   `vite` in `games/netsim`. A dev script both can run (plain `vite`) would make `npm run dev` and the Run picker
   work in both places.
-- **netsim's instance iframes are nested frames, which the editor's preview half-supports** (M3b): its injected tap
-  posts their logs to `parent` (netsim's page) instead of the editor's shell, so they're lost — and land in netsim's
-  own `message` listeners — and HMR reaches only the top frame.
 - **netsim's hubs can't join the editor's hub tree** (M3c): no link accepts a preview frame, so its logs,
   architecture and `netsim_*` tools don't show up in the editor; its own debug-mcp socket instead trips the editor's
   capability prompt (`net.ws:localhost:7378`).
@@ -80,6 +77,15 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **The editor's preview half-supported nested frames, and HMR re-ran modules it couldn't swap** (M3b). The injected
+  tap posted a nested frame's logs (and capability requests) to `parent` — netsim's page, and its `message`
+  listeners — instead of the editor; HMR reached only the top frame; and on any JS change the HMR client re-imported
+  the module into the window whether or not it had loaded it or could swap it (a plain `.ts` module ran twice —
+  editing netsim's `page.ts` would have started a second match). Now the tap posts to the editor window hosting the
+  preview (tagging a nested frame's records with its path), the shell attributes any frame inside a preview to it,
+  HMR goes to every frame, and each frame's client acts only on modules it loaded: a React module is refreshed in
+  place, anything else reloads that frame. editor `456fd9a`.
 
 - **The editor's previews couldn't run netsim's imports**: a URL/tarball dependency (`@brianjenkins94/hub`,
   `observability`, `util`) became a broken esm.sh URL, and a module worker can't use the page's import map at all.
