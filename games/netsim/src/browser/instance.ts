@@ -22,7 +22,9 @@ let latest: InstanceView | undefined;
 const { log } = observe(hub);
 
 ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); });
-hub.link(portTransport(worker));
+// This page made the worker, and names it on its link — the same id the page assigned at the referee — so what this
+// page reports links to `client-0`, not to the placeholder the worker's hub starts as.
+hub.link(portTransport(worker), { "peer": id });
 
 let linkedUp = false;
 
