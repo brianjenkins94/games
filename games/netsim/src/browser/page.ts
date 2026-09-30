@@ -23,7 +23,10 @@ const status = document.querySelector<HTMLTableSectionElement>("#status tbody")!
 const summary = document.querySelector<HTMLElement>("#summary")!;
 /** The referee's view hashes for recent ticks, to check a client's report at whatever tick it's on. */
 const history = new Map<number, RefereeTick>();
-const diags = new Map<string, ClientDiag>();
+/** Each client's latest report, and when it arrived. */
+const diags = new Map<string, ClientDiag & { "receivedAt": number }>();
+/** A client reports every tick, paused or not (see client.worker.ts); this long without one, it's stalled. */
+const STALLED_MS = 1000;
 let last: RefereeTick | undefined;
 
 const tools = netsimTools(hub, () => currentStatus());
@@ -64,11 +67,16 @@ hub.subscribe(names.refereeTick, (data) => {
 hub.subscribe(names.diag("*"), (data) => {
 	const diag = data as ClientDiag;
 
-	diags.set(diag.peer, diag);
+	diags.set(diag.peer, { ...diag, "receivedAt": Date.now() });
 });
 
-/** A client is in sync when its view hash matches the referee's for its team at the tick it's on. */
-function checkClient(diag: ClientDiag): "in sync" | "behind" | "OUT OF SYNC" | "joining" {
+/** A client is in sync when its view hash matches the referee's for its team at the tick it's on — and it's still
+ *  reporting: a client that stopped (its worker died, its instance hung) is stalled, whatever it last said. */
+function checkClient(diag: ClientDiag & { "receivedAt": number }): "in sync" | "behind" | "OUT OF SYNC" | "joining" | "stalled" {
+	if (Date.now() - diag.receivedAt > STALLED_MS) {
+		return "stalled";
+	}
+
 	if (diag.team === undefined || diag.viewTick < 0) {
 		return "joining";
 	}

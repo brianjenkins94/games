@@ -59,7 +59,8 @@ the client (the page, for an iframe) tells it its id.
 With debugging on (localhost, or `?debug`), the page serves its own MCP tools, which a running debug-mcp registers as
 real tools while the tab is connected (`src/browser/tools.ts`):
 
-- `netsim_status` — the referee's tick, pause state and stats; every client's sync state.
+- `netsim_status` — the referee's tick, pause state and stats; every client's sync state (in sync, behind, OUT OF
+  SYNC, joining, or stalled — no report for over a second).
 - `netsim_state` — the authoritative world, and per client what it sees and predicts.
 - `netsim_divergence` — each client's view against what the referee says its team can see, unit by unit. Exact at
   the same tick, so pause first.

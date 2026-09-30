@@ -29,8 +29,6 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ### netsim itself
 
-- **The status table can't tell a dead client from a live one.** A client that stops reporting keeps the state of
-  its last report ("in sync") — only the lag column gives it away. Needs a liveness check (stale diagnostics).
 
 ### observability / debug-mcp (`editor/packages/observability`, `editor/packages/debug-mcp`)
 
@@ -39,9 +37,6 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   (`ownWorker` in telemetry.ts); it belongs in observability, next to `tapConsoleAndErrors`.
 - **`page_eval`'s direct `eval` makes every consumer's build warn** (Rolldown's `[EVAL]`, three times per build).
   An indirect eval (`(0, eval)(expression)`) evaluates in global scope, which is what page_eval means anyway.
-- **Records logged before the debug-mcp link is up never reach it.** The page's first line ("match starting") is
-  logged ~50ms before its socket connects, and nothing replays it — so debug-mcp misses exactly the startup records.
-  The page's collector has them; `linkDebugMcp` could replay them on connect. A `todo` browser test covers it.
 - **debug-mcp's tarball has no types for its entry points** (`.` → `index.js`, `./mcp` → `mcp.js`; the `.d.ts` files
   ship under `src/` unmapped), so a consumer's imports are `any` — like hub's.
 
@@ -93,6 +88,15 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **Records logged before the debug-mcp link was up never reached it** — the page's startup, mostly ("match starting"
+  is logged ~50ms before the socket opens). observability's `linkDebugMcp` now holds the root's records
+  (`logBacklog`) until debug-mcp's interest arrives and sends them as one backlog on `$sys.backlog.log`, which
+  debug-mcp files with the rest; a record is either sent live or held, never both. Re-arms on a reconnect. editor
+  `32c7002`; netsim's browser test checks the startup record reaches debug-mcp exactly once.
+- **The status table couldn't tell a dead client from a live one** — a client that stopped reporting kept its last
+  state ("in sync"). Clients report every tick, paused or not, so one silent for over a second now shows as
+  **stalled** (in the table and `netsim_status`); a paused match stays "in sync".
 
 - **A reloaded instance was lost for the rest of the match**, and a client reclaiming its seat couldn't play: its
   command batches restarted at 1, and the referee (which takes batches strictly in sequence) dropped them forever.

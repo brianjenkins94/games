@@ -135,8 +135,7 @@ test("debug-mcp's own tools see the match: its tab, every context's logs, the hu
 	assert.equal(tabs.length, 1);
 	assert.match(tabs[0].url, /\/games\/netsim\//u);
 
-	// (Not the page's own "match starting": it's logged before the debug-mcp link is up — see the todo below.)
-	for (const source of ["referee", "client-0", "client-1"]) {
+	for (const source of ["page", "referee", "client-0", "client-1"]) {
 		const records = await eventually(`logs from ${source}`, async () => {
 			const found = await call<unknown[]>("query_logs", { "source": source });
 
@@ -155,8 +154,13 @@ test("debug-mcp's own tools see the match: its tab, every context's logs, the hu
 	assert.ok(architecture.channels.some((channel) => [channel.a, channel.b].sort().join("|") === "client-0|referee"), JSON.stringify(architecture.channels));
 });
 
-test("what a page logged before debug-mcp connected reaches debug-mcp too", { "todo": "GAPS.md: records from before the debug-mcp link is up are never sent" }, async () => {
-	const records = await call<unknown[]>("query_logs", { "source": "page", "textIncludes": "match starting" });
+test("what the page logged before its debug-mcp link was up reaches debug-mcp too — once", async () => {
+	// "match starting" is logged ~50ms before the socket opens: it arrives in the page's backlog.
+	const records = await eventually("the startup record", async () => {
+		const found = await call<unknown[]>("query_logs", { "source": "page", "textIncludes": "match starting" });
+
+		return found.length > 0 ? found : undefined;
+	});
 
 	assert.equal(records.length, 1);
 });

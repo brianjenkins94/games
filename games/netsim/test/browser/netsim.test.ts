@@ -142,9 +142,13 @@ test("pause and step are exact: N steps are N ticks, and every client follows ea
 	assert.equal(after.tick, paused.tick + 7, "nothing ticked but the steps");
 	assert.ok(after.clients.every((client) => client.identical), JSON.stringify(after));
 
-	// Paused means paused: a while later, still the same tick.
-	await page.waitForTimeout(300);
-	assert.equal((await tool<{ "tick": number }>(page, "netsim_status")).tick, after.tick);
+	// Paused means paused: a while later, still the same tick — and the clients, still reporting, aren't "stalled".
+	await page.waitForTimeout(1500);
+
+	const idle = await tool<{ "tick": number; "clients": { "state": string }[] }>(page, "netsim_status");
+
+	assert.equal(idle.tick, after.tick);
+	assert.deepEqual(idle.clients.map((client) => client.state), ["in sync", "in sync"]);
 
 	await tool(page, "netsim_control", { "action": "resume" });
 	await until(page, "ticking again", (from: number) => {
@@ -152,6 +156,26 @@ test("pause and step are exact: N steps are N ticks, and every client follows ea
 
 		return tick !== undefined && tick > from + 5;
 	}, { "arg": after.tick });
+	await page.close();
+});
+
+test("a client that stops reporting shows as stalled, not as whatever it last said", async () => {
+	const page = await session.open({ "clients": 2 });
+	const workers = page.workers().filter((worker) => worker.url().includes("client.worker"));
+	const names = await Promise.all(workers.map(async (worker) => worker.evaluate(() => (globalThis as unknown as { "name": string }).name)));
+	const dying = workers[names.indexOf("client-1")];
+
+	// Its worker dies (as if it crashed): no more reports, though its last one said "in sync".
+	await dying.evaluate(() => { globalThis.close(); });
+
+	const stalled = await until(page, "client-1 stalled", () => {
+		const { clients } = (globalThis as unknown as { "__netsim": { "status": () => { "clients": { "peer": string; "state": string }[] } } }).__netsim.status();
+
+		return clients.find((client) => client.peer === "client-1")?.state === "stalled" ? clients : undefined;
+	});
+
+	assert.deepEqual(stalled.map((client) => [client.peer, client.state]), [["client-0", "in sync"], ["client-1", "stalled"]]);
+	assert.equal(await page.locator("#status tr[data-state=\"stalled\"] td").first().textContent(), "client-1", "and the table shows it");
 	await page.close();
 });
 
