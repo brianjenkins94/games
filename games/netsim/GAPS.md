@@ -50,7 +50,7 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **debug-mcp could expose only its own tools** (`page_eval`, `page_query`, …), so a game's state, divergence and
   pause/step had to be reached by evaluating expressions. Now a page serves its own MCP tools
   (observability's `servePageTools(hub, { tools })`), and debug-mcp registers them live (`tools/list_changed`) and
-  forwards calls to the tab. editor (M2c, uncommitted); netsim serves `netsim_status`, `netsim_state`,
+  forwards calls to the tab. editor `53ea8f6`; netsim serves `netsim_status`, `netsim_state`,
   `netsim_divergence`, `netsim_control`, `netsim_command`.
 
 - **hub had no access control and no sender identity** — any linked hub could subscribe to any subject (another
