@@ -9,6 +9,7 @@ import { createHub, portTransport } from "@brianjenkins94/hub";
 import { subjects } from "../net/index.ts";
 import { tiles } from "../sim/index.ts";
 import { MATCH, readSettings } from "./bootstrap.ts";
+import { observeRoot } from "./telemetry.ts";
 
 const settings = readSettings(location.search);
 const names = subjects(MATCH);
@@ -22,6 +23,9 @@ const history = new Map<number, RefereeTick>();
 const diags = new Map<string, ClientDiag>();
 let last: RefereeTick | undefined;
 
+const telemetry = observeRoot(hub);
+
+telemetry.log.info("match starting", { ...settings });
 hub.link(portTransport(referee));
 referee.postMessage({
 	"type": "netsim-init",
@@ -97,6 +101,9 @@ setInterval(render, 250);
 /** For scripts and debugging: the latest status, as data. */
 (globalThis as unknown as { "__netsim": unknown }).__netsim = {
 	"hub": hub,
+	"logs": (source?: string) => telemetry.records.filter((record) => source === undefined || record.context?.["source"] === source),
+	"architecture": () => telemetry.store.snapshot(),
+	"tab": telemetry.tab,
 	"status": () => ({
 		"tick": last?.tick,
 		"clients": [...diags.values()].map((diag) => ({ "peer": diag.peer, "team": diag.team, "viewTick": diag.viewTick, "state": checkClient(diag), "stats": diag.stats }))

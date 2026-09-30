@@ -32,19 +32,35 @@ export function subjects(match: string) {
 const rpcCall = (name: string) => `$rpc.call.${name}`;
 const rpcReply = (peer: string) => `$rpc.reply.${peer}`;
 
-/** What a not-yet-seated client (hub id `peer`) may do: ask to join, hear its own replies, report its own diagnostics. */
+/**
+ * The observability plane (@brianjenkins94/observability) for a peer and whatever hangs off it: publish its logs
+ * (`$sys.log.<source>`) and architecture reports (`$sys.arch.<hub id>`) under its own id — `peer`, or `peer.<suffix>`
+ * for a context behind it, like its instance page — and answer the viewers' `$sys.arch.sync`. So a client can't log
+ * or report as anyone else.
+ */
+export function observabilityPermissions(peer: string): Required<LinkPermissions> {
+	return {
+		"publish": [`$sys.log.${peer}`, `$sys.log.${peer}.>`, `$sys.arch.${peer}`, `$sys.arch.${peer}.>`],
+		"subscribe": ["$sys.arch.sync"]
+	};
+}
+
+/** What a not-yet-seated client (hub id `peer`) may do: ask to join, hear its own replies, report its own diagnostics
+ *  and observability. */
 export function lobbyPermissions(match: string, peer: string): LinkPermissions {
 	const names = subjects(match);
+	const observability = observabilityPermissions(peer);
 
-	return { "publish": [rpcCall(names.join), names.diag(peer)], "subscribe": [rpcReply(peer)] };
+	return { "publish": [rpcCall(names.join), names.diag(peer), ...observability.publish], "subscribe": [rpcReply(peer), ...observability.subscribe] };
 }
 
 /** What a client seated on `team` may do: join (a reconnect), send commands, report its own diagnostics, and receive
  *  its own team's view. */
 export function seatPermissions(match: string, peer: string, team: number): LinkPermissions {
 	const names = subjects(match);
+	const observability = observabilityPermissions(peer);
 
-	return { "publish": [rpcCall(names.join), names.commands, names.diag(peer)], "subscribe": [rpcReply(peer), names.state(team)] };
+	return { "publish": [rpcCall(names.join), names.commands, names.diag(peer), ...observability.publish], "subscribe": [rpcReply(peer), names.state(team), ...observability.subscribe] };
 }
 
 export interface JoinRequest {

@@ -37,6 +37,8 @@ export interface RefereeStats {
 	"commandsRejected": number;
 	"keyframes": number;
 	"deltas": number;
+	/** Updates not sent because nobody was subscribed to that team's state yet. */
+	"held": number;
 	"resyncs": number;
 }
 
@@ -86,7 +88,7 @@ export function createReferee({ hub, match, config, setup, keyframeEvery = 10 }:
 	const seats = new Map<string, Seat>();
 	const seatOf = (peer: string | undefined): Seat | undefined => [...seats.values()].find((seat) => seat.peer === peer);
 	const pending: { "seat": Seat; "seq": number; "commands": unknown[] }[] = [];
-	const stats: RefereeStats = { "ticks": 0, "batchesApplied": 0, "batchesOutOfOrder": 0, "unknownSender": 0, "malformed": 0, "commandsApplied": 0, "commandsRejected": 0, "keyframes": 0, "deltas": 0, "resyncs": 0 };
+	const stats: RefereeStats = { "ticks": 0, "batchesApplied": 0, "batchesOutOfOrder": 0, "unknownSender": 0, "malformed": 0, "commandsApplied": 0, "commandsRejected": 0, "keyframes": 0, "deltas": 0, "held": 0, "resyncs": 0 };
 
 	setup?.(world);
 
@@ -165,9 +167,18 @@ export function createReferee({ hub, match, config, setup, keyframeEvery = 10 }:
 		stats.batchesApplied += 1;
 	});
 
-	/** Send `seat` its view; returns that view's hash. */
+	/** Send `seat` its view; returns that view's hash (computed even when nothing's sent, for the host's summary). */
 	function send(seat: Seat): number {
 		const visible = visibleUnits(world, seat.team);
+
+		// Nobody subscribed to this team's state yet — a client just seated, its subscription still on the way. Hold
+		// its keyframe (the seat's baseline stays put) rather than send it into nothing and make the client resync.
+		if (!hub.interested(names.state(seat.team))) {
+			stats.held += 1;
+
+			return hashUnits(visible);
+		}
+
 		const encoded = new Map(visible.map((unit) => [unit.id, encodeUnit(unit)]));
 		const keyframe = seat.needKeyframe || seat.lastTick === null || world.tick - seat.lastKeyframe >= keyframeEvery;
 		const update: StateUpdate = {

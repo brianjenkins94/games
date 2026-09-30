@@ -374,3 +374,41 @@ test("a client may report diagnostics on its own subject only", async () => {
 	match.network.settle();
 	assert.deepEqual(heard, [names.diag(match.hubs[0].id)]);
 });
+
+test("a client's observability rides its link under its own id only", async () => {
+	const match = await startMatch({ "clients": 2 });
+	const [first] = match.hubs;
+	const heard: string[] = [];
+	let synced = 0;
+
+	match.refereeHub.subscribe("$sys.log.>", (_data, envelope) => { heard.push(envelope.subject); });
+	match.refereeHub.subscribe("$sys.arch.>", (_data, envelope) => { heard.push(envelope.subject); });
+	first.subscribe("$sys.arch.sync", (_data, envelope) => {
+		synced += envelope.from === "referee" ? 1 : 0;
+	});
+	match.network.settle();
+
+	for (const subject of [`$sys.log.${first.id}`, `$sys.log.${first.id}.ui`, `$sys.arch.${first.id}`, `$sys.arch.${first.id}.ui`, "$sys.log.referee", `$sys.log.${match.hubs[1].id}`, "$sys.arch.sync"]) {
+		first.publish(subject, {});
+	}
+
+	match.refereeHub.publish("$sys.arch.sync");
+	match.network.settle();
+	// (The referee's own sync request is heard locally too; set it aside.)
+	assert.deepEqual(heard.filter((subject) => subject !== "$sys.arch.sync"), [`$sys.log.${first.id}`, `$sys.log.${first.id}.ui`, `$sys.arch.${first.id}`, `$sys.arch.${first.id}.ui`], "its own and its instance page's, never another's");
+	assert.equal(synced, 1, "and it hears the viewers' sync requests");
+});
+
+test("a client's first keyframe waits for its subscription, so joining never costs a resync", async () => {
+	const match = await startMatch({ "clients": 1 });
+	const late = match.addClient();
+
+	// Join and tick at once, without letting the new client's state subscription settle first.
+	await pump(match.network, late.join());
+	match.run(3);
+	assert.equal(late.stats.gaps, 0);
+	assert.equal(late.stats.resyncRequests, 0);
+	assert.equal(late.stats.keyframes, 1);
+	assert.ok(isConverged(match, late));
+	assert.ok(match.referee.stats.held > 0, "its first update was held until it was listening");
+});

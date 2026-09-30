@@ -1,0 +1,41 @@
+/**
+ * Observability for every netsim context, on @brianjenkins94/observability: each context logs through a logger whose
+ * records ride its hub on `$sys.log.<source>`, reports its place in the topology (links, peers, traffic) on
+ * `$sys.arch.<hub id>`, and publishes its uncaught errors. Both planes flow up the hub tree to the page, which
+ * collects them — and, on localhost or with `?debug`, forwards everything to a running debug-mcp, where an agent can
+ * query logs, the architecture and the live page.
+ */
+import type { Hub } from "@brianjenkins94/hub";
+import type { LogRecord } from "@brianjenkins94/util/logger";
+import { ArchitectureStore, collectArchReports, createArchReporter, installHubCollector, linkDebugMcp, relayLoggerToHub, requestArchSync, servePageTools, tapConsoleAndErrors } from "@brianjenkins94/observability";
+
+/** Wire a (non-root) context: its logger, its architecture reporter, and its uncaught errors. `source` is the log
+ *  source — the hub id, so a client's logs fall under the subjects its link permits. */
+export function observe(hub: Hub, source = hub.id) {
+	const log = relayLoggerToHub(hub, source);
+
+	tapConsoleAndErrors(hub, source);
+
+	return { "log": log, "architecture": createArchReporter(hub) };
+}
+
+/** Wire the root (the page): collect every context's records and architecture reports, and link debug-mcp. */
+export function observeRoot(hub: Hub, { keep = 1000 } = {}) {
+	const context = observe(hub);
+	const records: LogRecord[] = [];
+	const architecture = new ArchitectureStore();
+
+	installHubCollector(hub, (record) => {
+		records.push(record);
+
+		if (records.length > keep) {
+			records.shift();
+		}
+	});
+	collectArchReports(hub, (report) => { architecture.apply(report); });
+	// Ask everyone for their full state once the reporters have had a moment to link in.
+	setTimeout(() => { requestArchSync(hub); }, 500);
+	linkDebugMcp(hub);
+
+	return { ...context, "records": records, "store": architecture, "tab": servePageTools(hub) };
+}

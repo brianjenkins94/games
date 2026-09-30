@@ -9,6 +9,7 @@ import { createHub, portTransport } from "@brianjenkins94/hub";
 import { createClient, subjects } from "../net/index.ts";
 import { approxDistance, createRng, encodeUnit, nextInt, tiles } from "../sim/index.ts";
 import { instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
+import { observe } from "./telemetry.ts";
 
 function start(id: string, port: MessagePort, bots: boolean): void {
 	const hub: Hub = createHub({ "id": id });
@@ -17,6 +18,9 @@ function start(id: string, port: MessagePort, bots: boolean): void {
 	const client: Client = createClient({ "hub": hub, "match": MATCH });
 	const rng = createRng([...id].reduce((sum, char) => sum + char.charCodeAt(0), 7));
 	let selected: number | undefined;
+
+	const { log } = observe(hub);
+	const reported = { "gaps": 0, "desyncs": 0, "snaps": 0 };
 
 	hub.link(portTransport(globalThis));
 	hub.link(portTransport(port));
@@ -45,7 +49,8 @@ function start(id: string, port: MessagePort, bots: boolean): void {
 		}
 	});
 
-	void client.join({ "timeoutMs": 10_000 }).then(() => {
+	void client.join({ "timeoutMs": 10_000 }).then((seat) => {
+		log.info("joined", { "team": seat.team });
 		setInterval(() => {
 			const config = client.config();
 
@@ -60,6 +65,15 @@ function start(id: string, port: MessagePort, bots: boolean): void {
 			}
 
 			client.tick();
+
+			// Faults the protocol recovered from: worth a line each time they happen.
+			for (const key of ["gaps", "desyncs", "snaps"] as const) {
+				if (client.stats[key] > reported[key]) {
+					log.warn(key, { "total": client.stats[key], "viewTick": client.viewTick() });
+					reported[key] = client.stats[key];
+				}
+			}
+
 			hub.publish(names.diag(id), { "peer": id, "team": client.team(), "viewTick": client.viewTick(), "viewHash": client.viewHash(), "stats": { ...client.stats } });
 			hub.publish(local.view, {
 				"id": id,
@@ -73,6 +87,8 @@ function start(id: string, port: MessagePort, bots: boolean): void {
 				"stats": { ...client.stats }
 			} satisfies InstanceView);
 		}, TICK_MS);
+	}, (error: unknown) => {
+		log.error("join failed", { "error": error instanceof Error ? error.message : String(error) });
 	});
 }
 

@@ -10,7 +10,8 @@
     "test": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-exclude=\"src/browser/**\" --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=95 \"test/**/*.test.ts\""
   },
   "dependencies": {
-    "@brianjenkins94/hub": "https://brianjenkins94.github.io/editor/packages/hub@latest.tgz"
+    "@brianjenkins94/hub": "https://brianjenkins94.github.io/editor/packages/hub@latest.tgz",
+    "@brianjenkins94/observability": "https://brianjenkins94.github.io/editor/packages/observability@latest.tgz"
   },
   "devDependencies": {
     "@brianjenkins94/util": "https://brianjenkins94.github.io/lib/util@latest.tgz",
