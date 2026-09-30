@@ -3,7 +3,7 @@
  * sends, draws what the worker reports, and turns clicks into input (left: select your nearest unit, right: move it).
  */
 import type { InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
-import { createHub, portTransport } from "@brianjenkins94/hub";
+import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { decodeUnit, FP } from "../sim/index.ts";
 import { instanceSubjects, seatKey } from "./bootstrap.ts";
 import { observe, ownWorker } from "./telemetry.ts";
@@ -22,11 +22,21 @@ let latest: InstanceView | undefined;
 ownWorker(worker, observe(hub).log, id);
 hub.link(portTransport(worker));
 
+let linkedUp = false;
+
 globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefined>) => {
 	if (event.source === parent && event.data?.type === "netsim-port") {
-		const message: PortMessage = { "type": "netsim-port", "id": id, "port": event.data.port, "bots": params.get("bots") !== "0", ...storedToken() };
+		const { port, channel, remote, debugHost } = event.data;
+		const message: PortMessage = { "type": "netsim-port", "id": id, "bots": params.get("bots") !== "0", ...storedToken(), ...port === undefined ? { "channel": channel } : { "port": port }, ...remote === true ? { "remote": true, "debugHost": debugHost } : {} };
 
-		worker.postMessage(message, [event.data.port]);
+		// A remote client's page is its tab's root (in the harness, the page isn't linked — the instance's records reach
+		// it through the referee): link up to it, so this tab observes its own player.
+		if (remote === true && !linkedUp) {
+			linkedUp = true;
+			hub.link(windowTransport(parent, location.origin));
+		}
+
+		worker.postMessage(message, port === undefined ? [] : [port]);
 	}
 });
 

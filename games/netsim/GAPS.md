@@ -45,6 +45,17 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   captured nor capability-gated.
 - **Loading a repo needs a GitHub token**, even a public one (the loader is shown only once a PAT is connected).
 
+- **In the editor, a second player has no window to play in.** The editor ties one preview window to one port, and
+  "open another player" opens a browser tab outside the editor. Running `vite` again doesn't help: it starts a second
+  server on the next port, and its pages meet the first's only because the editor serves every port from one origin
+  (on a desktop, two ports are two origins, and they wouldn't). The fix is the editor's: several preview windows per
+  server, and a same-server `window.open` / `target="_blank"` from a preview opening another preview window.
+- **In the editor, every port shares one origin** (ports are paths under `/__virtual__/`), so origin-scoped state —
+  storage, Web Locks, BroadcastChannel — is shared across ports there and not on a desktop. netsim must not rely on
+  it: players are tabs (windows) on one server.
+- **A player can't follow its match to a new host.** When the host's tab goes, its players are told and stop; the
+  match's state went with the host (host-authoritative). Reloading hosts or joins afresh.
+
 ### editor CI (`editor/components/monaco-vscode-api`, `editor/packages/vscode`)
 
 - **The editor's lint only passes when the monaco-vscode-api demo is installed** (the component's `install.sh` sets it

@@ -11,6 +11,8 @@ talking to each other, fully observable and tested — before war2 itself moves 
   keyframes, prediction, command validation, fault injection.
 - **M2** — the browser: a page, N instance iframes and sim workers, observability, game-specific debug-mcp tools.
 - **M3** — the same project run inside the editor.
+- **M4** — players in separate tabs (and separate editor preview windows) playing one match; WebRTC across machines
+  next.
 
 ## The sim (`src/sim`)
 
@@ -76,6 +78,31 @@ The client tools reach a client over its `netsim.<match>.debug.<peer>.*` subject
 the page starts the referee with a `debugHost` — and then only the page may call them (`debugPermissions`): no client
 can call another's, see those calls, or answer anyone but the page.
 
+## Players in separate tabs (`play.html`)
+
+`index.html` is the harness: one tab, one referee, N instance iframes. `play.html?match=<id>` is a match between
+tabs: the first tab at a match hosts it (the referee, and its own player, `player-0`); every tab of the same origin
+that opens that match after it joins as the next player (`player-1`, `player-2`, …). The page's "open another player"
+link opens one: another tab on the same server, as on any desktop. (In the editor, that link is meant to open another
+preview window — see GAPS.md.)
+
+The lobby (`src/browser/lobby.ts`) is scoped to the origin — one server — not to a URL, so tabs meet whatever page
+or path they were loaded from:
+
+- **Who hosts** is a Web Lock per match: the first tab to take it hosts; the browser releases it when that tab goes,
+  which is also how its players learn the host left.
+- **Who's who** is a Web Lock per player id, held for the tab's life: a reloaded tab takes its old id back if it's
+  free (and its seat, with the seat token it kept).
+- **Introductions** ride a BroadcastChannel per match: a player's instance names a fresh private channel and
+  announces it; the host acknowledges and links its referee to it. The game then runs over that channel, worker to
+  worker.
+
+Each tab is its own hub tree, observed on its own (its own tab in debug-mcp). A player's client worker belongs to
+both trees and joins neither to the other: both of its links are non-transit, the referee doesn't take a remote
+client's observability (`PeerOptions.observed`), and the client confines what the host may send it to the game
+(`hostPermissions`). The host's tools cover the whole match — every player's client included, when debugging is on
+at both ends.
+
 ## Test
 
 ```bash
@@ -87,7 +114,7 @@ Two suites, both on `node:test` with type stripping (no build step):
 - `test:node` — the sim and the network, in one process over the virtual network, with coverage thresholds (95%
   lines and functions, 90% branches) enforced.
 - `test:browser` — the real runtime in headless Chromium: the page, the referee worker, the instance iframes and
-  their client workers, observability, input and the page's MCP tools. It builds netsim and serves the build under
+  their client workers, observability, input and the page's MCP tools; and (`play.test.ts`) a match across tabs. It builds netsim and serves the build under
   the base Pages uses; `NETSIM_URL=http://localhost:5180/` runs it against a dev server instead. It needs a
   Chromium: Playwright's own, the system Chrome, or `CHROME_PATH`. `debug-mcp.test.ts` runs a real debug-mcp
   in-process and relays the page's link to it, so the page tools are tested the way an agent uses them: registered

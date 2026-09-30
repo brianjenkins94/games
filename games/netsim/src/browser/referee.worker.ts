@@ -4,7 +4,7 @@ import type { AttachMessage, InitMessage, RefereeControl, RefereeInspection } fr
 import { createHub, portTransport, serve } from "@brianjenkins94/hub";
 import { createReferee, lobbyPermissions } from "../net/index.ts";
 import { encodeUnit, nextInt, spawnUnit, tiles, visibleUnits } from "../sim/index.ts";
-import { MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
+import { channelTransport, MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
 import { observe } from "./telemetry.ts";
 
 const hub = createHub({ "id": "referee" });
@@ -22,6 +22,9 @@ hub.tap((event) => {
 let debugHost: string | undefined;
 /** Each client's current link, by peer id: a reloaded instance attaches again, replacing its dead one. */
 const links = new Map<string, () => void>();
+/** Players in other tabs: their links carry only the game (their own tabs observe them). */
+const remote = new Set<string>();
+const observed = (peer: string): boolean => !remote.has(peer);
 let paused = false;
 let current: Referee | undefined;
 
@@ -76,6 +79,7 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 			"match": MATCH,
 			"config": message.config,
 			"debugHost": debugHost,
+			"observed": observed,
 			"setup": (world) => {
 				for (let team = 0; team < world.config.teams; team += 1) {
 					for (let index = 0; index < message.perTeam; index += 1) {
@@ -106,13 +110,24 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 		}, TICK_MS);
 	} else if (message?.type === "netsim-attach") {
 		const replaced = links.get(message.peer);
+		const isRemote = message.channel !== undefined;
 
 		replaced?.();
-		links.set(message.peer, hub.link(portTransport(message.port), { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer, debugHost) }));
 
-		if (replaced !== undefined) {
-			log.info("client relinked", { "peer": message.peer });
+		if (isRemote) {
+			remote.add(message.peer);
+		} else {
+			remote.delete(message.peer);
 		}
-		log.info("client linked", { "peer": message.peer });
+
+		// A player in another tab links over a BroadcastChannel (closed with its link); ours over a MessageChannel.
+		const channel = message.channel === undefined ? undefined : channelTransport(message.channel);
+		const unlink = hub.link(channel ?? portTransport(message.port!), { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer, { "debugHost": debugHost, "observed": observed(message.peer) }) });
+
+		links.set(message.peer, () => {
+			unlink();
+			channel?.close();
+		});
+		log.info(replaced === undefined ? "client linked" : "client relinked", { "peer": message.peer, "remote": isRemote });
 	}
 });

@@ -19,6 +19,8 @@ export interface MatchOptions {
 	"keyframeEvery"?: number;
 	/** A debug host's hub id: clients' links then let it debug them (debugPermissions). */
 	"debugHost"?: string;
+	/** Which clients' links carry their observability (RefereeOptions.observed). Default: all. */
+	"observed"?: (peer: string) => boolean;
 }
 
 export interface Match {
@@ -58,7 +60,7 @@ export async function pump<T>(network: Network, promise: Promise<T>): Promise<T>
 	return promise;
 }
 
-export async function startMatch({ "clients": count = 2, config = {}, faults = {}, seed = 1, perTeam = 3, keyframeEvery = 10, debugHost }: MatchOptions = {}): Promise<Match> {
+export async function startMatch({ "clients": count = 2, config = {}, faults = {}, seed = 1, perTeam = 3, keyframeEvery = 10, debugHost, observed = () => true }: MatchOptions = {}): Promise<Match> {
 	const network = createNetwork({ "seed": seed });
 	const refereeHub = createHub({ "id": "referee" });
 	const teams = config.teams ?? Math.max(count, 2);
@@ -68,6 +70,7 @@ export async function startMatch({ "clients": count = 2, config = {}, faults = {
 		"config": { "width": 24, "height": 24, "teams": teams, "seed": seed, "speed": 125, "sight": tiles(5), ...config },
 		"keyframeEvery": keyframeEvery,
 		"debugHost": debugHost,
+		"observed": observed,
 		"setup": (world) => {
 			for (let team = 0; team < world.config.teams; team += 1) {
 				for (let index = 0; index < perTeam; index += 1) {
@@ -101,7 +104,7 @@ export async function startMatch({ "clients": count = 2, config = {}, faults = {
 				onTick?.();
 			}
 		},
-		"linkHub": (hub, linkFaults = {}, peer = hub.id) => network.link(refereeHub, hub, linkFaults, { "left": { "peer": peer, "permissions": lobbyPermissions(MATCH, peer, debugHost) } }),
+		"linkHub": (hub, linkFaults = {}, peer = hub.id) => network.link(refereeHub, hub, linkFaults, { "left": { "peer": peer, "permissions": lobbyPermissions(MATCH, peer, { "debugHost": debugHost, "observed": observed(peer) }) } }),
 		"addClient": (linkFaults = {}, id = `client-${match.hubs.length}`) => {
 			const hub = createHub({ "id": id });
 

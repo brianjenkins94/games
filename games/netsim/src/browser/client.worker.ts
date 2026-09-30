@@ -1,17 +1,20 @@
 /**
  * One client, in its instance's worker: links to its instance page (for drawing and input) and, over the channel the
  * page brokered, to the referee. Its hub id is the id the page gave it — the id the referee's hub knows it by.
+ *
+ * A remote client (its referee in the host's tab) belongs to two trees — its own tab's and the host's — and joins
+ * neither to the other: both links are non-transit, and it confines the host's link to the game (hostPermissions).
  */
 import type { Hub } from "@brianjenkins94/hub";
 import type { Client } from "../net/index.ts";
 import type { ClientInspection, InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
 import { createHub, portTransport, serve } from "@brianjenkins94/hub";
-import { createClient, subjects } from "../net/index.ts";
+import { createClient, hostPermissions, subjects } from "../net/index.ts";
 import { approxDistance, createRng, encodeUnit, nextInt, tiles, validateCommand } from "../sim/index.ts";
-import { instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
+import { channelTransport, instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
 import { observe } from "./telemetry.ts";
 
-function start(id: string, port: MessagePort, bots: boolean, token: string | undefined): void {
+function start({ id, port, channel, bots = true, token, remote = false, debugHost }: PortMessage): void {
 	const hub: Hub = createHub({ "id": id });
 	const names = subjects(MATCH);
 	const local = instanceSubjects(id);
@@ -22,8 +25,8 @@ function start(id: string, port: MessagePort, bots: boolean, token: string | und
 	const { log } = observe(hub);
 	const reported = { "gaps": 0, "desyncs": 0, "snaps": 0 };
 
-	hub.link(portTransport(globalThis));
-	hub.link(portTransport(port));
+	hub.link(portTransport(globalThis), remote ? { "transit": false } : {});
+	hub.link(channel === undefined ? portTransport(port!) : channelTransport(channel), remote ? { "transit": false, "permissions": hostPermissions(MATCH, id, { "debugHost": debugHost }) } : {});
 
 	// Debugging (reachable only from the debug host — the referee's hub permits nothing else to call these).
 	serve(hub, names.debug(id, "inspect"), (): ClientInspection => ({
@@ -124,6 +127,6 @@ function start(id: string, port: MessagePort, bots: boolean, token: string | und
 
 globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefined>) => {
 	if (event.data?.type === "netsim-port") {
-		start(event.data.id, event.data.port, event.data.bots !== false, event.data.token);
+		start(event.data);
 	}
 });

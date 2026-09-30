@@ -1,5 +1,5 @@
 /**
- * The browser runtime's wiring, shared by the page, the instance iframes and the workers.
+ * The browser runtime's wiring, shared by the pages, the instance iframes and the workers.
  *
  * The hub tree (it must stay a tree — hub has no loop protection beyond that):
  *
@@ -8,10 +8,41 @@
  *                          └─ …
  *
  * The page brokers a MessageChannel per client straight from the referee worker to that client's worker, so the
- * referee's hub holds every client link: it assigns each client its id (LinkOptions.peer) and permissions. The page
- * and the instance iframes aren't hub-linked — the page only hands the iframes their ports.
+ * referee's hub holds every client link: it assigns each client its id (LinkOptions.peer) and permissions. In the
+ * harness (index.html) the page and the instance iframes aren't hub-linked — the page only hands the iframes their
+ * ports.
+ *
+ * Players in separate tabs (play.html): the host's tab is the tree above with one instance; each other player's tab is
+ * its own tree — its page, its instance, its client worker — and the client worker also links to the host's referee,
+ * over a BroadcastChannel the lobby named (lobby.ts; channelTransport). Both of the client worker's links are
+ * non-transit, so the two trees meet only at the client: neither sees the other's traffic, and the host's link carries only the game (the referee
+ * doesn't observe a remote client — PeerOptions.observed; the client confines the host — hostPermissions).
+ *
+ *   host tab:    page ─ referee worker ─┬─ player-0 worker ─ player-0 instance
+ *                                       └┄ (remote)
+ *   player tab:  page ─ player-1 instance ─ player-1 worker ┄┘
  */
 import type { WorldConfig } from "../sim/index.ts";
+
+/** A hub transport over the BroadcastChannel named `name` — from anywhere: a page or a worker. `close` also closes the
+ *  channel. How players in other tabs link (lobby.ts names the channel). BroadcastChannel reaches every same-origin
+ *  context that opens the same name, so it's private only in that its name is unguessable — same-origin pages are
+ *  trusted. */
+export function channelTransport(name: string): { "send": (message: unknown) => void; "listen": (onMessage: (message: unknown) => void) => () => void; "close": () => void } {
+	const channel = new BroadcastChannel(name);
+
+	return {
+		"send": (message) => { channel.postMessage(message); },
+		"listen": (onMessage) => {
+			const handler = (event: MessageEvent): void => { onMessage(event.data); };
+
+			channel.addEventListener("message", handler);
+
+			return () => { channel.removeEventListener("message", handler); };
+		},
+		"close": () => { channel.close(); }
+	};
+}
 
 export const MATCH = "local";
 export const TICK_MS = 50;
@@ -62,7 +93,11 @@ export interface ClientInspection {
 export interface AttachMessage {
 	"type": "netsim-attach";
 	"peer": string;
-	"port": MessagePort;
+	/** A client of this page's: its end of a MessageChannel. */
+	"port"?: MessagePort;
+	/** A player in another tab: the BroadcastChannel its client links over (channelTransport). Its link carries only
+	 *  the game — no observability; its own tab observes it. */
+	"channel"?: string;
 }
 
 /** page → instance iframe → its client worker: the channel to the referee, and the id it will be known by. Sent on
@@ -70,10 +105,19 @@ export interface AttachMessage {
 export interface PortMessage {
 	"type": "netsim-port";
 	"id": string;
-	"port": MessagePort;
+	/** The channel to the referee: a MessageChannel's end (the referee is in this tab)… */
+	"port"?: MessagePort;
+	/** …or a BroadcastChannel's name (it's in the host's tab: this is a remote client — see `remote`). */
+	"channel"?: string;
 	"bots"?: boolean;
 	/** The seat token from this instance's earlier join in this match, if any: rejoin that seat. */
 	"token"?: string;
+	/** The referee is in another tab (the host's): link to it non-transit and confined (hostPermissions), and to this
+	 *  instance non-transit too, so the two tabs' trees don't join; and link the instance up to its page. Set with
+	 *  `channel`. */
+	"remote"?: boolean;
+	/** For a remote client: the host page's hub id, when this player has debugging on — the host may then debug it. */
+	"debugHost"?: string;
 }
 
 /** Instance-local subjects (client worker ⇄ its instance page). */
@@ -122,15 +166,15 @@ export interface Settings {
 	"bots": boolean;
 }
 
-/** Match settings from the page URL (`?clients=3&teams=3&seed=1&perTeam=3&bots=0`). */
-export function readSettings(search: string): Settings {
+/** Match settings from the page URL (`?clients=3&teams=3&seed=1&perTeam=3&bots=0`); `defaults` for what it omits. */
+export function readSettings(search: string, defaults: { "clients"?: number; "teams"?: number } = {}): Settings {
 	const params = new URLSearchParams(search);
 	const number = (name: string, fallback: number): number => {
 		const value = Number(params.get(name));
 
 		return Number.isInteger(value) && value > 0 ? value : fallback;
 	};
-	const clients = number("clients", 3);
+	const clients = number("clients", defaults.clients ?? 3);
 
-	return { "clients": clients, "teams": Math.max(number("teams", clients), clients), "seed": number("seed", 1), "perTeam": number("perTeam", 3), "bots": params.get("bots") !== "0" };
+	return { "clients": clients, "teams": Math.max(number("teams", defaults.teams ?? clients), clients), "seed": number("seed", 1), "perTeam": number("perTeam", 3), "bots": params.get("bots") !== "0" };
 }
