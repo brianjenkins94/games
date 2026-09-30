@@ -165,11 +165,56 @@ test("what the page logged before its debug-mcp link was up reaches debug-mcp to
 	assert.equal(records.length, 1);
 });
 
-test("once the match's tab is gone, its tools stay listed but answer that nothing serves them", async () => {
-	await page.close();
-	await eventually("the tab gone", async () => ((await call<unknown[]>("list_tabs")).length === 0 ? true : undefined));
+test("two matches in two tabs, one debug-mcp: each tab's logs, architecture and tools stay its own", async () => {
+	const second = await session.open({ "clients": 2, "bots": 0 });
+	const tabOf = async (which: Page): Promise<string> => which.evaluate(() => (globalThis as unknown as { "__netsim": { "tab": string } }).__netsim.tab);
+	const [first, other] = [await tabOf(page), await tabOf(second)];
 
-	// GAPS.md: util/mcp can't remove a tool, so it stays listed.
+	await eventually("both tabs connected", async () => ((await call<unknown[]>("list_tabs")).length === 2 ? true : undefined));
+
+	// Both tabs have a `referee`: each tab's records are its own, and say so.
+	for (const tab of [first, other]) {
+		const records = await eventually(`${tab}'s referee logs`, async () => {
+			const found = await call<{ "tab"?: string }[]>("query_logs", { "source": "referee", "tab": tab });
+
+			return found.length > 0 ? found : undefined;
+		});
+
+		assert.ok(records.every((record) => record.tab === tab), JSON.stringify(records.slice(0, 3)));
+	}
+
+	// The architecture isn't merged: without a tab it asks which; with one, that tab's hub tree.
+	await assert.rejects(call("get_architecture"), /several editor tabs/u);
+
+	for (const tab of [first, other]) {
+		const snapshot = await eventually(`${tab}'s architecture`, async () => {
+			const found = await call<{ "nodes": { "id": string }[] }>("get_architecture", { "tab": tab }).catch(() => undefined);
+
+			return found?.nodes.some((node) => node.id === "referee") === true ? found : undefined;
+		});
+
+		assert.equal(snapshot.nodes.filter((node) => node.id === "referee").length, 1);
+	}
+
+	// The page tools act on the tab they're told to: pausing one match leaves the other running.
+	await assert.rejects(call("netsim_status"), /several editor tabs/u);
+	await call("netsim_control", { "action": "pause", "tab": first });
+	assert.equal((await call<{ "paused": boolean }>("netsim_status", { "tab": first })).paused, true);
+	assert.equal((await call<{ "paused": boolean }>("netsim_status", { "tab": other })).paused, false);
+	await call("netsim_control", { "action": "resume", "tab": first });
+
+	// One tab going leaves the tools (the other still serves them).
+	await second.close();
+	await eventually("one tab left", async () => ((await call<unknown[]>("list_tabs")).length === 1 ? true : undefined));
 	assert.ok((await client.listTools()).tools.some((tool) => tool.name === "netsim_status"));
-	await assert.rejects(call("netsim_status"), /no editor tab is connected/u);
+});
+
+test("once the last tab serving them is gone, the match's tools are removed", async () => {
+	await page.close();
+	await eventually("netsim's tools removed", async () => {
+		const { tools } = await client.listTools();
+
+		return NETSIM_TOOLS.every((name) => !tools.some((tool) => tool.name === name)) ? true : undefined;
+	});
+	assert.ok(listChanged > 1, "and the client was told");
 });

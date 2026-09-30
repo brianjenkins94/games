@@ -7,17 +7,6 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ### hub (`editor/packages/hub`)
 
-- **No in-memory transport or fault injection.** hub's own tests have a `pipe()`, but nothing is exported, and
-  nothing injects drops, duplicates or reordering. netsim wrote its own (`src/net/network.ts`). Candidate to move
-  into hub.
-- **A transport can't read a frame's subject.** Frames are wrapped under a private key (`"\0hub"`) with no accessor,
-  so a transport that treats game traffic differently (drops it, prioritizes it) has to recognize envelopes by shape
-  — which is how netsim first mistook control frames for game traffic.
-- **A one-shot publish right after linking can be lost.** A hub only forwards to links it knows are interested, and
-  a worker's hub learns its page's interest only after the `hello` round trip (frames the page posted before the
-  worker linked are dropped). A worker that joins and publishes once (netsim's seat token) raced it and lost ~1 in
-  20. netsim sends such things as state with every update instead; a "publish when interested" (or an initial
-  interest snapshot delivered before `link` returns) would make events safe.
 - **Control frames assume reliable delivery.** A lost `sub`/`unsub` isn't repaired until a reconnect (`hello`
   re-advertises). Fine over a MessagePort or a reliable channel; a problem over an unreliable WebRTC data channel.
 - **The published tarball is untyped.** Its declarations are at `src/index.d.ts` and `package.json` has no `types`,
@@ -26,9 +15,6 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   reach it: the RPC client listens on `$rpc.reply.<its own id>`, and the edge only permits `$rpc.reply.<assigned>`.
   Documented; whoever creates a client must tell it its id. Could be lifted by addressing replies to the
   authenticated `from`.
-
-### netsim itself
-
 
 ### observability / debug-mcp (`editor/packages/observability`, `editor/packages/debug-mcp`)
 
@@ -39,30 +25,17 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   An indirect eval (`(0, eval)(expression)`) evaluates in global scope, which is what page_eval means anyway.
 - **debug-mcp's tarball has no types for its entry points** (`.` → `index.js`, `./mcp` → `mcp.js`; the `.d.ts` files
   ship under `src/` unmapped), so a consumer's imports are `any` — like hub's.
-
-- **Tabs with the same hub ids are merged.** debug-mcp's logs and architecture key contexts by hub id alone, so two
-  netsim tabs (each with a `referee`, `client-0`, …) interleave into one. Affects the editor too (every tab has a
-  `root`). Needs tab-scoped identity in the collected streams.
 - **Permissions for observing an untrusted peer are netsim's.** `observabilityPermissions(peer)` (publish its own
   `$sys.log.<id>` / `$sys.arch.<id>`, receive `$sys.arch.sync`) is generic; it belongs in observability.
 - **The collector tags a record by the source it claims.** `LogRecord.context.source` is data the sender writes;
   permissions enforce the *subject* (`$sys.log.<id>`), so the tag could disagree with it. Tag by subject instead.
-- **A page tool that goes away stays registered.** debug-mcp registers page tools live with util/mcp's `updateTool`,
-  but util/mcp has no removal, so a tool whose tab closed stays listed and answers that no connected tab serves it.
-  Needs a `removeTool` in util/mcp (the SDK's `RegisteredTool.remove()` exists).
-- **debug-mcp reads the SDK's private tool map** (`_registeredTools`) to keep a page from taking over one of its own
-  tools' names; util/mcp exposes no listing. Needs a listing (or a "has") in util/mcp.
 - **Page tools need a debug-mcp restart to appear** the first time debug-mcp is upgraded to a version that has them —
   only an operational note, but worth knowing: an older running debug-mcp ignores them silently.
 
 ### editor CI (`editor/components/monaco-vscode-api`, `editor/packages/vscode`)
 
-- **The component's install races upstream's releases, and hides the failure.** `install.sh` clones the demo at
-  monaco-vscode-api's newest *git tag*, then `npm install`s it — but upstream pushes the tag minutes before it
-  publishes to npm, so in that window the install fails (`ETARGET … @codingame/monaco-vscode-api@37.3.0`), and the
-  script still exits 0. It broke editor CI on 2026-09-30 (a re-run after the npm publish passed). Resolve the version
-  from npm (`npm view … version`), not git, and fail on a failed install.
-- **The editor's lint only passes when that demo is installed.** `packages/vscode`'s extensions import `"vscode"`,
+- **The editor's lint only passes when the monaco-vscode-api demo is installed** (the component's `install.sh` sets it
+  up; it can come up empty when upstream tags a release before publishing it to npm, as on 2026-09-30). `packages/vscode`'s extensions import `"vscode"`,
   and in the root-tsconfig program the only thing that satisfies it is the demo's
   `node_modules/@codingame/monaco-vscode-api/vscode-dts/vscode.d.ts` (an ambient `declare module "vscode"`). Without
   it, TypeScript resolves `"vscode"` as a self-reference to the editor's own package (named `vscode`, exporting
@@ -85,9 +58,34 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **A local `util-publish` run leaves `.d.ts` files in the source tree** — of the package it builds and of any
   sibling whose sources it imports (debug-mcp → `observability/src/*.d.ts`). Harmless in CI's throwaway checkout;
   locally they're untracked litter to clean up by hand.
+- **A fresh `pnpm install --ignore-workspace` of an editor package links nothing at the top level** (pnpm 12 writes a
+  `.package-map.json` instead), so plain `node` can't resolve its dependencies. The packages are installed with npm
+  locally (flat); a reused pnpm store also serves a stale copy of a mutable `@latest.tgz`.
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **`link()` didn't say which link it made, and only some debug-mcp tools were per tab.** hub's link handle now
+  carries its `id` (editor `5205b87`), and debug-mcp's `query_spans`, `get_tree_state` and `wait_for` take `tab` and
+  name each row's tab like `query_logs` — spans keyed per tab, so two tabs' same-id spans stay apart (editor
+  `8ae0b6a`).
+
+- **hub had no in-memory transport or fault injection, and a transport couldn't read a frame** — hub's tests had a
+  private `pipe()`; netsim wrote its own and recognized frames by shape. Now hub exports `pipe()` (MessagePort-like,
+  or `lossy` like a window) with a `schedule` hook deciding how each message travels — all fault injection needs —
+  and `frameOf(message)`. netsim's virtual network is built on them. editor `8ba9ce4`.
+- **A one-off message published right after linking could be lost** — a hub forwards only what it knows the far side
+  wants, and it answered a peer's `hello` before re-sending its interest, so even having the peer's hello didn't mean
+  knowing its interest. Now a hub re-sends its interest first; `link()` returns `ready` (the peer's interest is
+  known); and `hub.publishWhenInterested` waits for a listener. (netsim keeps its seat token as state in every view
+  anyway — for state that's the simpler, self-healing choice.) editor `8ba9ce4`.
+- **debug-mcp merged tabs whose hubs share ids** (two netsim tabs' `referee`s, every editor tab's `root`). Now it files
+  records and architecture by the link they arrived on (one per tab): `query_logs` names each record's tab and takes
+  `tab`; `get_architecture` is per tab and asks which when several are connected. editor `97d3b18`; netsim's browser
+  test runs two matches in two tabs against one debug-mcp.
+- **A page's tools stayed listed after the page went, and debug-mcp read the SDK's private tool map** — util/mcp had
+  no removal or listing. Now it has `removeTool` and `toolNames` (lib `cf70518`), and debug-mcp removes the page tools
+  no connected tab serves (editor `b5a0f47`).
 
 - **Records logged before the debug-mcp link was up never reached it** — the page's startup, mostly ("match starting"
   is logged ~50ms before the socket opens). observability's `linkDebugMcp` now holds the root's records

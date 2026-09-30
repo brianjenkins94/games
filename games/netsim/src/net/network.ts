@@ -7,8 +7,8 @@
  * traffic (`netsim.*.commands`, `netsim.*.state.*`). Hub control frames and RPC stay reliable, as they would on a
  * reliable signalling channel beside an unreliable data channel.
  */
-import type { Hub, LinkOptions, Transport } from "@brianjenkins94/hub";
-import { matches } from "@brianjenkins94/hub";
+import type { Hub, LinkOptions } from "@brianjenkins94/hub";
+import { frameOf, matches, pipe } from "@brianjenkins94/hub";
 import { createRng, nextU32 } from "../sim/index.ts";
 
 export interface Faults {
@@ -44,25 +44,6 @@ export interface Network {
 
 const GAME_TRAFFIC = ["netsim.*.commands", "netsim.*.state.*"];
 
-/** The subject of a hub data frame, or undefined for a control frame. A hub wraps each frame under a private key
- *  (not exported), so find the envelope by shape: the wrapped object with a string `subject` — and no `hub` field,
- *  which marks a control frame (whose sub/unsub also name a subject). */
-function subjectOf(frame: unknown): string | undefined {
-	if (typeof frame !== "object" || frame === null) {
-		return undefined;
-	}
-
-	for (const inner of Object.values(frame)) {
-		const { hub, subject } = (inner ?? {}) as { "hub"?: unknown; "subject"?: unknown };
-
-		if (typeof subject === "string" && hub === undefined) {
-			return subject;
-		}
-	}
-
-	return undefined;
-}
-
 export function createNetwork({ seed = 1, faulty = (subject: string) => GAME_TRAFFIC.some((pattern) => matches(pattern, subject)) } = {}): Network {
 	const rng = createRng(seed);
 	const chance = (probability: number): boolean => probability > 0 && nextU32(rng) / 0x100000000 < probability;
@@ -71,44 +52,39 @@ export function createNetwork({ seed = 1, faulty = (subject: string) => GAME_TRA
 	let now = 0;
 	let order = 0;
 
-	function schedule(at: number, deliver: () => void): void {
+	function enqueue(at: number, deliver: () => void): void {
 		order += 1;
 		queue.push({ "at": at, "order": order, "deliver": deliver });
 	}
 
-	function endpoint(faults: Faults, peer: () => ((message: unknown) => void) | undefined, self: { "listener"?: (message: unknown) => void }): Transport {
+	/** How each frame on a link travels (hub's pipe asks): on the simulated clock, with this link's faults applied to
+	 *  faultable data frames. Control frames (which carry a `hub` field) and RPC stay reliable. */
+	function travel(faults: Faults) {
 		const latency = faults.latencyMs ?? 10;
 
-		return {
-			"send": (message) => {
-				stats.sent += 1;
+		return (deliver: () => void, message: unknown): void => {
+			stats.sent += 1;
 
-				const subject = subjectOf(message);
-				const lossy = subject !== undefined && faulty(subject);
-				const deliver = (): void => {
-					stats.delivered += 1;
-					peer()?.(message);
-				};
+			const frame = frameOf(message);
+			const lossy = frame !== undefined && !("hub" in frame) && faulty(frame.subject);
+			const counted = (): void => {
+				stats.delivered += 1;
+				deliver();
+			};
 
-				if (lossy && chance(faults.drop ?? 0)) {
-					stats.dropped += 1;
+			if (lossy && chance(faults.drop ?? 0)) {
+				stats.dropped += 1;
 
-					return;
-				}
+				return;
+			}
 
-				const jitter = lossy && (faults.jitterMs ?? 0) > 0 ? nextU32(rng) % ((faults.jitterMs ?? 0) + 1) : 0;
+			const jitter = lossy && (faults.jitterMs ?? 0) > 0 ? nextU32(rng) % ((faults.jitterMs ?? 0) + 1) : 0;
 
-				schedule(now + latency + jitter, deliver);
+			enqueue(now + latency + jitter, counted);
 
-				if (lossy && chance(faults.duplicate ?? 0)) {
-					stats.duplicated += 1;
-					schedule(now + latency + jitter + 1, deliver);
-				}
-			},
-			"listen": (onMessage) => {
-				self.listener = onMessage;
-
-				return () => { self.listener = undefined; };
+			if (lossy && chance(faults.duplicate ?? 0)) {
+				stats.duplicated += 1;
+				enqueue(now + latency + jitter + 1, counted);
 			}
 		};
 	}
@@ -142,10 +118,9 @@ export function createNetwork({ seed = 1, faulty = (subject: string) => GAME_TRA
 
 	return {
 		"link": (left, right, faults = {}, options = {}) => {
-			const leftEnd: { "listener"?: (message: unknown) => void } = {};
-			const rightEnd: { "listener"?: (message: unknown) => void } = {};
-			const unlinkLeft = left.link(endpoint(faults, () => rightEnd.listener, leftEnd), options.left);
-			const unlinkRight = right.link(endpoint(faults, () => leftEnd.listener, rightEnd), options.right);
+			const [leftEnd, rightEnd] = pipe({ "schedule": travel(faults) });
+			const unlinkLeft = left.link(leftEnd, options.left);
+			const unlinkRight = right.link(rightEnd, options.right);
 
 			return () => {
 				unlinkLeft();

@@ -33,8 +33,9 @@ talking to each other, fully observable and tested — before war2 itself moves 
 - **Client** (`client.ts`): applies a delta only on top of the update it was built against (anything missing, late or
   duplicated triggers a keyframe request), checks every view against the referee's hash, predicts its own units, and
   resends command batches until they're acknowledged.
-- **Virtual network** (`network.ts`): in-memory hub links on a simulated clock with seeded drops, duplicates and
-  jitter on game traffic, so a whole match runs in one process, deterministically.
+- **Virtual network** (`network.ts`): in-memory hub links (hub's `pipe`) on a simulated clock with seeded drops,
+  duplicates and jitter on game traffic (told apart with hub's `frameOf`), so a whole match runs in one process,
+  deterministically.
 
 ### Who can see and say what
 
