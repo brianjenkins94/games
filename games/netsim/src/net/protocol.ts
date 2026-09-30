@@ -93,6 +93,9 @@ export interface JoinReply {
 	 *  by its hub id. */
 	"token": string;
 	"config": WorldConfig;
+	/** The seat's next command batch number. A client reclaiming a seat (a reloaded page, a fresh client) carries on
+	 *  from here: the referee takes batches strictly in sequence, so starting again at 1 would be ignored forever. */
+	"nextSeq": number;
 }
 
 export interface CommandBatch {

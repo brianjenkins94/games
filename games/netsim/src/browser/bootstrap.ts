@@ -65,12 +65,15 @@ export interface AttachMessage {
 	"port": MessagePort;
 }
 
-/** page → instance iframe → its client worker: the channel to the referee, and the id it will be known by. */
+/** page → instance iframe → its client worker: the channel to the referee, and the id it will be known by. Sent on
+ *  every load of the iframe, so a reloaded instance gets a fresh channel (and the referee drops the old one). */
 export interface PortMessage {
 	"type": "netsim-port";
 	"id": string;
 	"port": MessagePort;
 	"bots"?: boolean;
+	/** The seat token from this instance's earlier join in this match, if any: rejoin that seat. */
+	"token"?: string;
 }
 
 /** Instance-local subjects (client worker ⇄ its instance page). */
@@ -81,6 +84,11 @@ export function instanceSubjects(id: string) {
 		/** page → worker: a click, in world coordinates (InstanceInput). */
 		"input": `netsim.${MATCH}.input.${id}`
 	};
+}
+
+/** Where an instance keeps its seat token across a reload: per match (a new page is a new match), per client. */
+export function seatKey(match: string, id: string): string {
+	return `netsim.${match}.${id}.token`;
 }
 
 export interface InstanceView {
@@ -95,6 +103,9 @@ export interface InstanceView {
 	"predicted": number[][];
 	"selected": number | undefined;
 	"stats": Record<string, number>;
+	/** The seat token, for the instance to keep across a reload. State, sent with every view — not a one-off event: a
+	 *  publish right after the worker links can be lost (its page's interest arrives after the hello round trip). */
+	"token": string | undefined;
 }
 
 export interface InstanceInput {

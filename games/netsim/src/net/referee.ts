@@ -106,7 +106,7 @@ export function createReferee({ hub, match, config, setup, keyframeEvery = 10, d
 		seat.needKeyframe = true;
 		hub.permit(peer, seatPermissions(match, peer, seat.team, debugHost));
 
-		return { "team": seat.team, "token": seat.token, "config": world.config };
+		return { "team": seat.team, "token": seat.token, "config": world.config, "nextSeq": seat.lastSeq + 1 };
 	}
 
 	const stopServing = serve(hub, names.join, (args, { from }): JoinReply => {

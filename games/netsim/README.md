@@ -46,6 +46,11 @@ own replies); once seated, `seatPermissions` (send commands, receive its own tea
 every team's view, and the hub forwards each client only its own — even if it subscribes to all of them — so fog of
 war holds against a hostile client, and no one can snoop another's RPC replies (which carry its seat token).
 
+A client that loses its link (a reloaded instance) rejoins with the seat token its first join returned: it gets its
+seat back, a keyframe, and the seat's next command number (`nextSeq`), so its commands carry on in sequence. In the
+browser the instance keeps the token in `sessionStorage`, per match, and the page brokers a fresh channel on every
+load of an instance.
+
 One consequence: a client's hub id must be the id its link assigns, or its RPC replies can't reach it. Whoever creates
 the client (the page, for an iframe) tells it its id.
 

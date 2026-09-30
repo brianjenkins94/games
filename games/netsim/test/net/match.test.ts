@@ -458,3 +458,44 @@ test("without a debug host, nobody can reach a client's debug RPCs — the page 
 	match.network.settle();
 	await assert.rejects(pump(match.network, createRpcClient(host).request(names.debug(first.id, "inspect"), undefined, { "timeoutMs": 300, "waitForResponderMs": 100 })), /timed out|no responder/u);
 });
+
+test("a client that rejoins its seat picks up the seat's command sequence, so its commands still land", async () => {
+	const match = await startMatch({ "clients": 1 });
+	const [leaving] = match.clients;
+	const { token } = match.replies[0];
+	const own = (client: typeof leaving) => [...client.view().values()].filter((unit) => unit.team === client.team());
+
+	// The first client plays a few moves (batches 1…3), then goes away.
+	match.run(2);
+
+	for (const [index, unit] of own(leaving).entries()) {
+		leaving.command({ "type": "move", "units": [unit.id], "x": tiles(index + 1), "y": tiles(1) });
+		match.run(2);
+	}
+
+	assert.equal(match.referee.seats()[0].lastSeq, 3);
+	match.unlinks[0]();
+	leaving.close();
+	match.clients.splice(0, 1);
+
+	// A fresh client (a reloaded page) rejoins with the token and plays: its batches must follow on from the seat's.
+	const hub = createHub({ "id": "client-0" });
+
+	match.linkHub(hub);
+
+	const returning = createClient({ "hub": hub, "match": MATCH });
+
+	await pump(match.network, returning.join({ "token": token }));
+	match.clients.push(returning);
+	match.run(3);
+
+	const [unit] = own(returning);
+	const applied = match.referee.stats.commandsApplied;
+
+	returning.command({ "type": "move", "units": [unit.id], "x": tiles(20), "y": tiles(20) });
+	match.run(3);
+	assert.equal(match.referee.stats.commandsApplied, applied + 1, "the returning client's command was applied");
+	assert.equal(match.referee.world.units.get(unit.id).tx, tiles(20));
+	assert.equal(match.referee.stats.batchesOutOfOrder, 0);
+	assert.ok(isConverged(match, returning));
+});

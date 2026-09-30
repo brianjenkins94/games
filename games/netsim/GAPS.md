@@ -13,6 +13,11 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **A transport can't read a frame's subject.** Frames are wrapped under a private key (`"\0hub"`) with no accessor,
   so a transport that treats game traffic differently (drops it, prioritizes it) has to recognize envelopes by shape
   — which is how netsim first mistook control frames for game traffic.
+- **A one-shot publish right after linking can be lost.** A hub only forwards to links it knows are interested, and
+  a worker's hub learns its page's interest only after the `hello` round trip (frames the page posted before the
+  worker linked are dropped). A worker that joins and publishes once (netsim's seat token) raced it and lost ~1 in
+  20. netsim sends such things as state with every update instead; a "publish when interested" (or an initial
+  interest snapshot delivered before `link` returns) would make events safe.
 - **Control frames assume reliable delivery.** A lost `sub`/`unsub` isn't repaired until a reconnect (`hello`
   re-advertises). Fine over a MessagePort or a reliable channel; a problem over an unreliable WebRTC data channel.
 - **The published tarball is untyped.** Its declarations are at `src/index.d.ts` and `package.json` has no `types`,
@@ -24,9 +29,6 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ### netsim itself
 
-- **A reloaded instance is lost for the rest of the match.** The page brokers an instance's channel to the referee
-  only on its first load, the instance doesn't keep its seat token, and the referee would have to replace the old
-  link for the same peer id. war2 players will refresh. A `todo` browser test covers it (M2d).
 - **The status table can't tell a dead client from a live one.** A client that stops reporting keeps the state of
   its last report ("in sync") — only the lag column gives it away. Needs a liveness check (stale diagnostics).
 
@@ -91,6 +93,13 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **A reloaded instance was lost for the rest of the match**, and a client reclaiming its seat couldn't play: its
+  command batches restarted at 1, and the referee (which takes batches strictly in sequence) dropped them forever.
+  Now the join reply carries the seat's `nextSeq`; the page re-brokers an instance's channel on every load; the
+  referee worker replaces a peer's dead link; and the instance keeps its seat token in `sessionStorage` (per match),
+  so its new worker rejoins. Covered in node (a fresh client's commands land after rejoining) and in the browser (a
+  reloaded instance rejoins its seat, catches up exactly, and plays on).
 
 - **debug-mcp couldn't be installed from its tarball** — hub as `file:../hub`, util as a URL dependency (pnpm's
   `ERR_PNPM_EXOTIC_SUBDEP` for any consumer), and a `bin` pointing at an unshipped `src/bin.ts`. Now hub and util are

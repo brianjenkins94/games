@@ -156,6 +156,9 @@ export function createClient({ hub, match }: ClientOptions): Client {
 			const request: JoinRequest = token === undefined ? {} : { "token": token };
 
 			seat = await rpc.request(names.join, request, { "timeoutMs": timeoutMs, "waitForResponderMs": timeoutMs }) as JoinReply;
+			// Carry on the seat's sequence. (A client re-joining on a new link is already there: its own unacked
+			// batches are the ones the seat hasn't taken in yet, and it resends them in order.)
+			nextSeq = Math.max(nextSeq, seat.nextSeq);
 			view = new Map();
 			viewTick = -1;
 			predicted = createWorld(seat.config);

@@ -20,6 +20,8 @@ hub.tap((event) => {
 });
 
 let debugHost: string | undefined;
+/** Each client's current link, by peer id: a reloaded instance attaches again, replacing its dead one. */
+const links = new Map<string, () => void>();
 let paused = false;
 let current: Referee | undefined;
 
@@ -103,7 +105,14 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 			}
 		}, TICK_MS);
 	} else if (message?.type === "netsim-attach") {
-		hub.link(portTransport(message.port), { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer, debugHost) });
+		const replaced = links.get(message.peer);
+
+		replaced?.();
+		links.set(message.peer, hub.link(portTransport(message.port), { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer, debugHost) }));
+
+		if (replaced !== undefined) {
+			log.info("client relinked", { "peer": message.peer });
+		}
 		log.info("client linked", { "peer": message.peer });
 	}
 });

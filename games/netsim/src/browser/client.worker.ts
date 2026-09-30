@@ -11,7 +11,7 @@ import { approxDistance, createRng, encodeUnit, nextInt, tiles, validateCommand 
 import { instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
 import { observe } from "./telemetry.ts";
 
-function start(id: string, port: MessagePort, bots: boolean): void {
+function start(id: string, port: MessagePort, bots: boolean, token: string | undefined): void {
 	const hub: Hub = createHub({ "id": id });
 	const names = subjects(MATCH);
 	const local = instanceSubjects(id);
@@ -78,8 +78,8 @@ function start(id: string, port: MessagePort, bots: boolean): void {
 		}
 	});
 
-	void client.join({ "timeoutMs": 10_000 }).then((seat) => {
-		log.info("joined", { "team": seat.team });
+	void client.join({ "timeoutMs": 10_000, ...token === undefined ? {} : { "token": token } }).then((seat) => {
+		log.info(token === seat.token ? "rejoined" : "joined", { "team": seat.team });
 		setInterval(() => {
 			const config = client.config();
 
@@ -113,7 +113,8 @@ function start(id: string, port: MessagePort, bots: boolean): void {
 				"units": [...client.view().values()].map(encodeUnit),
 				"predicted": [...client.predicted().units.values()].map(encodeUnit),
 				"selected": selected,
-				"stats": { ...client.stats }
+				"stats": { ...client.stats },
+				"token": seat.token
 			} satisfies InstanceView);
 		}, TICK_MS);
 	}, (error: unknown) => {
@@ -123,6 +124,6 @@ function start(id: string, port: MessagePort, bots: boolean): void {
 
 globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefined>) => {
 	if (event.data?.type === "netsim-port") {
-		start(event.data.id, event.data.port, event.data.bots !== false);
+		start(event.data.id, event.data.port, event.data.bots !== false, event.data.token);
 	}
 });

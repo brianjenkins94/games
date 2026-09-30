@@ -5,11 +5,12 @@
 import type { InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
 import { createHub, portTransport } from "@brianjenkins94/hub";
 import { decodeUnit, FP } from "../sim/index.ts";
-import { instanceSubjects } from "./bootstrap.ts";
+import { instanceSubjects, seatKey } from "./bootstrap.ts";
 import { observe, ownWorker } from "./telemetry.ts";
 
 const params = new URLSearchParams(location.search);
 const id = params.get("id") ?? "client";
+const tokenKey = seatKey(params.get("match") ?? "", id);
 const local = instanceSubjects(id);
 const hub = createHub({ "id": id + ".ui" });
 const worker = new Worker(new URL("client.worker.ts", import.meta.url), { "type": "module", "name": id });
@@ -23,13 +24,33 @@ hub.link(portTransport(worker));
 
 globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefined>) => {
 	if (event.source === parent && event.data?.type === "netsim-port") {
-		const message: PortMessage = { "type": "netsim-port", "id": id, "port": event.data.port, "bots": params.get("bots") !== "0" };
+		const message: PortMessage = { "type": "netsim-port", "id": id, "port": event.data.port, "bots": params.get("bots") !== "0", ...storedToken() };
 
 		worker.postMessage(message, [event.data.port]);
 	}
 });
 
-hub.subscribe(local.view, (data) => { latest = data as InstanceView; });
+
+// Keep the seat token across a reload of this instance (sessionStorage: this tab only; may be unavailable).
+function storedToken(): { "token"?: string } {
+	try {
+		const token = sessionStorage.getItem(tokenKey);
+
+		return token === null ? {} : { "token": token };
+	} catch {
+		return {};
+	}
+}
+
+hub.subscribe(local.view, (data) => {
+	latest = data as InstanceView;
+
+	if (latest.token !== undefined && latest.token !== storedToken().token) {
+		try {
+			sessionStorage.setItem(tokenKey, latest.token);
+		} catch { /* no storage: a reload takes a new seat, if one's free */ }
+	}
+});
 
 function toWorld(event: MouseEvent): { "x": number; "y": number } | undefined {
 	if (latest?.config === undefined) {

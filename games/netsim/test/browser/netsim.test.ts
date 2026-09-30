@@ -236,16 +236,48 @@ test("netsim_command acts as a client, and the client's own check refuses anothe
 	await page.close();
 });
 
-test("a player who reloads their instance mid-match rejoins their seat and catches up", { "todo": "GAPS.md: a reloaded instance is never re-brokered, and can't reclaim its seat" }, async () => {
-	const page = await session.open({ "clients": 2 });
+test("a player who reloads their instance mid-match rejoins their seat, catches up, and plays on", async () => {
+	const page = await session.open({ "clients": 2, "bots": 0 });
+	const before = await tool<{ "seats": { "team": number; "peer": string }[] }>(page, "netsim_status");
+	const team = before.seats.find((seat) => seat.peer === "client-1")!.team;
+	const mine = (await tool<State>(page, "netsim_state")).units.find((candidate) => candidate.team === team)!;
 
+	// It has played before the reload (so its seat's command sequence isn't at the start).
+	assert.equal((await tool<{ "received": boolean }>(page, "netsim_command", { "client": "client-1", "type": "move", "units": [mine.id], "x": 2, "y": 2 })).received, true);
 	await page.evaluate(() => { document.querySelector<HTMLIFrameElement>("iframe[title=\"client-1\"]")!.contentWindow!.location.reload(); });
-	await page.waitForTimeout(1500);
+	await until(page, "client-1 rejoined", () => (globalThis as unknown as { "__netsim": { "logs": () => { "message"?: string; "context"?: { "source"?: string } }[] } }).__netsim.logs().some((record) => record.context?.source === "client-1" && record.message === "rejoined"));
 
-	const { tick, clients } = await status(page);
-	const reloaded = clients.find((client) => client.peer === "client-1")!;
+	// Caught up with authority: pause, and its view is exactly what the referee says its team sees.
+	await tool(page, "netsim_control", { "action": "pause" });
 
-	assert.equal(reloaded.state, "in sync");
-	assert.ok(tick! - reloaded.viewTick < 5, `client-1 stuck at ${reloaded.viewTick}, the referee at ${tick}`);
+	const divergence = await until(page, "client-1 at the paused tick", async () => {
+		const netsim = (globalThis as unknown as { "__netsim": { "tool": (name: string, args: unknown) => Promise<Divergence> } }).__netsim;
+		const answer = await netsim.tool("netsim_divergence", { "client": "client-1" });
+
+		return answer.clients[0].comparable ? answer : undefined;
+	});
+
+	assert.equal(divergence.clients[0].identical, true, JSON.stringify(divergence));
+
+	const after = await tool<{ "seats": { "team": number; "peer": string }[]; "stats": Record<string, number> }>(page, "netsim_status");
+
+	assert.equal(after.seats.length, 2, "no new seat was taken");
+	assert.equal(after.seats.find((seat) => seat.peer === "client-1")!.team, team, "the same seat");
+
+	// And it plays on: its commands follow on from the seat's sequence, so the referee takes them.
+	const state = await tool<State>(page, "netsim_state");
+	const unit = state.units.find((candidate) => candidate.team === team)!;
+	const played = await tool<{ "ok": boolean; "received": boolean }>(page, "netsim_command", { "client": "client-1", "type": "move", "units": [unit.id], "x": 5, "y": 6 });
+
+	assert.deepEqual([played.ok, played.received], [true, true]);
+	await tool(page, "netsim_control", { "action": "step", "ticks": 2 });
+
+	const moved = (await tool<State>(page, "netsim_state")).units.find((candidate) => candidate.id === unit.id)!;
+
+	assert.deepEqual([moved.tx, moved.ty], [5 * FP, 6 * FP]);
+
+	const logs = await page.evaluate(() => (globalThis as unknown as { "__netsim": { "logs": () => { "message"?: string; "context"?: { "source"?: string } }[] } }).__netsim.logs().map((record) => `${record.context?.source} ${record.message}`));
+
+	assert.ok(logs.includes("referee client relinked"), "the referee replaced the dead link");
 	await page.close();
 });

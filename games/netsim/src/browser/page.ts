@@ -13,6 +13,8 @@ import { observeRoot, ownWorker } from "./telemetry.ts";
 import { netsimTools } from "./tools.ts";
 
 const settings = readSettings(location.search);
+/** This page's match: an instance reloaded within it rejoins its seat; a reloaded page starts a new one. */
+const matchId = crypto.randomUUID().slice(0, 8);
 const names = subjects(MATCH);
 const hub = createHub({ "id": "page" });
 const referee = new Worker(new URL("referee.worker.ts", import.meta.url), { "type": "module", "name": "referee" });
@@ -42,14 +44,15 @@ for (let index = 0; index < settings.clients; index += 1) {
 	const id = `client-${index}`;
 	const frame = document.createElement("iframe");
 
-	frame.src = `instance.html?id=${id}&bots=${settings.bots ? 1 : 0}`;
+	frame.src = `instance.html?id=${id}&match=${matchId}&bots=${settings.bots ? 1 : 0}`;
 	frame.title = id;
+	// On every load — a reloaded instance needs a new channel (its worker, and the old channel's end, died with it).
 	frame.addEventListener("load", () => {
 		const channel = new MessageChannel();
 
 		referee.postMessage({ "type": "netsim-attach", "peer": id, "port": channel.port1 } satisfies AttachMessage, [channel.port1]);
 		frame.contentWindow!.postMessage({ "type": "netsim-port", "id": id, "port": channel.port2 } satisfies PortMessage, location.origin, [channel.port2]);
-	}, { "once": true });
+	});
 	grid.append(frame);
 }
 
