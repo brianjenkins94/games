@@ -7,7 +7,7 @@
  * `NETSIM_URL=http://localhost:5180/`).
  *
  * The page links a debug-mcp on ws://localhost:7378 when one is running; a developer's own is kept out, so a test
- * never depends on (or pollutes) it.
+ * never depends on (or pollutes) it. `debugMcpPort` relays that socket to the test's own debug-mcp instead.
  */
 import type { AddressInfo } from "node:net";
 import type { Browser, BrowserContext, Page } from "playwright";
@@ -101,12 +101,41 @@ export interface Session {
 	"close": () => Promise<void>;
 }
 
-export async function startSession(): Promise<Session> {
+/** Relay the page's debug-mcp socket (:7378) to a debug-mcp on `port`. */
+async function bridgeDebugMcp(context: BrowserContext, port: number): Promise<void> {
+	await context.routeWebSocket(/:7378/u, (route) => {
+		const upstream = new WebSocket(`ws://localhost:${port}`);
+		// Text frames: the hub speaks JSON.
+		const queued: string[] = [];
+
+		upstream.addEventListener("open", () => {
+			for (const message of queued.splice(0)) {
+				upstream.send(message);
+			}
+		});
+		upstream.addEventListener("message", (event) => { route.send(event.data as string); });
+		upstream.addEventListener("close", () => { void route.close(); });
+		route.onMessage((message) => {
+			if (upstream.readyState === WebSocket.OPEN) {
+				upstream.send(String(message));
+			} else {
+				queued.push(String(message));
+			}
+		});
+		route.onClose(() => { upstream.close(); });
+	});
+}
+
+export async function startSession({ debugMcpPort }: { "debugMcpPort"?: number } = {}): Promise<Session> {
 	const served = process.env["NETSIM_URL"] === undefined ? await serveBuild() : { "url": process.env["NETSIM_URL"], "stop": async () => {} };
 	const browser = await launch();
 	const context = await browser.newContext({ "viewport": { "width": 1200, "height": 900 } });
 
-	await context.routeWebSocket(/:7378/u, (route) => { route.close(); });
+	if (debugMcpPort === undefined) {
+		await context.routeWebSocket(/:7378/u, (route) => { void route.close(); });
+	} else {
+		await bridgeDebugMcp(context, debugMcpPort);
+	}
 
 	return {
 		"url": served.url,

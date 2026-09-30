@@ -80,4 +80,6 @@ Two suites, both on `node:test` with type stripping (no build step):
 - `test:browser` — the real runtime in headless Chromium: the page, the referee worker, the instance iframes and
   their client workers, observability, input and the page's MCP tools. It builds netsim and serves the build under
   the base Pages uses; `NETSIM_URL=http://localhost:5180/` runs it against a dev server instead. It needs a
-  Chromium: Playwright's own, the system Chrome, or `CHROME_PATH`.
+  Chromium: Playwright's own, the system Chrome, or `CHROME_PATH`. `debug-mcp.test.ts` runs a real debug-mcp
+  in-process and relays the page's link to it, so the page tools are tested the way an agent uses them: registered
+  live, called over MCP.

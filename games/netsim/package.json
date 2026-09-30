@@ -16,7 +16,9 @@
     "@brianjenkins94/observability": "https://brianjenkins94.github.io/editor/packages/observability@latest.tgz"
   },
   "devDependencies": {
+    "@brianjenkins94/debug-mcp": "https://brianjenkins94.github.io/editor/packages/debug-mcp@latest.tgz",
     "@brianjenkins94/util": "https://brianjenkins94.github.io/lib/util@latest.tgz",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "playwright": "^1.63.0",
     "vite": "^8.0.0"
   },
