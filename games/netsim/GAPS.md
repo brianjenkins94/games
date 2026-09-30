@@ -26,9 +26,10 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   capability gate), where nothing in the editor listens. Untried with war2 itself; the editor serves only HTTP
   servers (`/__virtual__/<port>/`).
 - **netsim itself across editor windows is checked only by hand.** `play.test.ts` plays across tabs of a plain
-  browser; the editor's architecture fixture now plays a tiny lobby like netsim's (editor `b4206eb`) (a Web Lock picks the host, a
-  BroadcastChannel carries hello/welcome) across two preview windows on one server — the primitives netsim's lobby
-  rests on — but nothing runs netsim's own lobby in editor windows automatically (editor CI has no netsim to load).
+  browser; the editor's architecture fixture now plays a tiny lobby like netsim's (editor `b4206eb`) (a Web Lock picks
+  the host, a BroadcastChannel carries hello/welcome) across two preview windows on one server — the primitives
+  netsim's lobby rests on — but nothing runs netsim's own lobby in editor windows automatically (editor CI has no
+  netsim to load).
 - **In the editor's terminal, an interrupted command's own `cd` doesn't stick**: after `cd games/netsim && vite` and
   Ctrl-C you're still where you started (a desktop shell would have you in `games/netsim`). An interrupted run never
   reaches the terminal's `$PWD` probe, the only way a `cd` reaches it.
@@ -64,13 +65,15 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   had a listener, and its links. editor `cfef034` — in apps once observability is published.
 - **An untrusted peer's hub id had to equal the id its edge assigns**, or its RPC replies couldn't reach it — the edge's
   `hello` now tells the peer the id it assigned (`you`; `Hub.knownAs()`), taken only from a link the peer didn't assign
-  (a child can't rename its parent), and the RPC client replies and listens under it. editor `90dfd6a`.
+  (a child can't rename its parent), and the RPC client replies and listens under it. editor `90dfd6a`; netsim's client
+  workers no longer get their id at all — they take it from the referee's hello (observability's reporter can name
+  itself by it: `createArchReporter(hub, { self })`).
 - **An app in a preview shared its editor tab's log stream in debug-mcp** — a preview app's tab now names its scope (its
   window, the id the shell assigned its page), and `query_logs` / `query_spans` for that tab return only that window's
   records. editor `181d005`. Both reach apps once hub and observability are published.
 - **Observability fixes netsim turned up** (editor `512b5fa`): an unhandled worker error was reported twice — `ownWorker`
-  now lives in observability; `observabilityPermissions(peer)` moved in too (netsim switches to both once observability
-  is published); `page_eval`'s `eval` alias made every consumer's build warn — it evaluates through `globalThis.eval`;
+  now lives in observability; `observabilityPermissions(peer)` moved in too (netsim uses both); `page_eval`'s `eval`
+  alias made every consumer's build warn — it evaluates through `globalThis.eval`;
   the collectors tagged a record by the source it claimed — they tag by its subject, which permissions enforce.
 - **A running debug-mcp didn't say it was outdated** — pages now announce an observability protocol number, and
   `list_tabs` marks a page newer than the debug-mcp `outdated` (restart it). editor `512b5fa`.
@@ -87,8 +90,7 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's dev server couldn't be owned by a test, and `util-dev` was fixed to 5173** — `serve()` resolves with
   `{ url, port, close }` (port 0: any free port); `util-dev --port` / `$PORT`. lib `7f3bf4a`.
 - **No shared test launcher** — `util/playwright/chromium.ts`'s `launchChromium()` (CHROME_PATH → Playwright's →
-  system Chrome → newest cached), no scraping machinery or Vite. lib `4433024` (netsim's harness can switch once util
-  is released).
+  system Chrome → newest cached), no scraping machinery or Vite. lib `4433024` (netsim's harness uses it).
 - **netsim's `npm run dev` couldn't run in the editor** — it was `node scripts/dev.ts` (util's `serve`), and the editor's
   terminal starts a preview only through its own `vite`. Now it's plain `vite --port 5180` — the same dev server on a
   desktop (netsim's browser tests pass against it) and, in the editor, its `vite` (which ignores the port).

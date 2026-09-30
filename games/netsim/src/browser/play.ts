@@ -54,7 +54,7 @@ if (lobby.role === "host") {
 	const frame = createInstanceFrame(grid, { "id": lobby.peer, "matchId": match, "bots": bots }, (loaded) => {
 		void lobby.connect().then((channel) => {
 			// The host may debug this player's client only if this player has debugging on too (and the host does).
-			const message: PortMessage = { "type": "netsim-port", "id": lobby.peer, "channel": channel, "remote": true, ...telemetry.tab === undefined ? {} : { "debugHost": "page" } };
+			const message: PortMessage = { "type": "netsim-port", "channel": channel, "remote": true, ...telemetry.tab === undefined ? {} : { "debugHost": "page" } };
 
 			loaded.contentWindow!.postMessage(message, location.origin);
 		});

@@ -1,6 +1,7 @@
 /**
  * One client, in its instance's worker: links to its instance page (for drawing and input) and, over the channel the
- * page brokered, to the referee. Its hub id is the id the page gave it — the id the referee's hub knows it by.
+ * page brokered, to the referee. Nobody tells it who it is: the referee's hub assigns its id (LinkOptions.peer) and
+ * says so in its hello (hub's knownAs) — the id it's stamped with, permitted as, and names its subjects and logs by.
  *
  * A remote client (its referee in the host's tab) belongs to two trees — its own tab's and the host's — and joins
  * neither to the other: both links are non-transit, and it confines the host's link to the game (hostPermissions).
@@ -14,19 +15,36 @@ import { approxDistance, createRng, encodeUnit, nextInt, tiles, validateCommand 
 import { channelTransport, instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
 import { observe } from "./telemetry.ts";
 
-function start({ id, port, channel, bots = true, token, remote = false, debugHost }: PortMessage): void {
-	const hub: Hub = createHub({ "id": id });
+async function start({ port, channel, bots = true, token, remote = false, debugHost }: PortMessage): Promise<void> {
+	// Its own name is a placeholder; who it is comes from the referee.
+	const hub: Hub = createHub({ "id": "client" });
+
+	hub.link(portTransport(globalThis), remote ? { "transit": false } : {});
+
+	// A remote client (the referee is the host's) confines the host's link — to nothing until it knows its id, then to
+	// the game (hostPermissions). The hello that carries the id is a control frame, which permissions don't stop.
+	const toReferee = hub.link(channel === undefined ? portTransport(port!) : channelTransport(channel), remote ? { "transit": false, "permissions": { "publish": [], "subscribe": [] } } : {});
+
+	await toReferee.ready;
+
+	const id = hub.knownAs()[0];
+
+	if (id === undefined) {
+		throw new Error("the referee didn't say who this client is");
+	}
+
+	if (remote) {
+		hub.permit("referee", hostPermissions(MATCH, id, { "debugHost": debugHost }));
+	}
+
 	const names = subjects(MATCH);
 	const local = instanceSubjects(id);
 	const client: Client = createClient({ "hub": hub, "match": MATCH });
 	const rng = createRng([...id].reduce((sum, char) => sum + char.charCodeAt(0), 7));
 	let selected: number | undefined;
 
-	const { log } = observe(hub);
+	const { log } = observe(hub, id);
 	const reported = { "gaps": 0, "desyncs": 0, "snaps": 0 };
-
-	hub.link(portTransport(globalThis), remote ? { "transit": false } : {});
-	hub.link(channel === undefined ? portTransport(port!) : channelTransport(channel), remote ? { "transit": false, "permissions": hostPermissions(MATCH, id, { "debugHost": debugHost }) } : {});
 
 	// Debugging (reachable only from the debug host — the referee's hub permits nothing else to call these).
 	serve(hub, names.debug(id, "inspect"), (): ClientInspection => ({
@@ -127,6 +145,6 @@ function start({ id, port, channel, bots = true, token, remote = false, debugHos
 
 globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefined>) => {
 	if (event.data?.type === "netsim-port") {
-		start(event.data);
+		void start(event.data);
 	}
 });

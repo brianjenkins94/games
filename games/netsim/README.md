@@ -54,8 +54,9 @@ seat back, a keyframe, and the seat's next command number (`nextSeq`), so its co
 browser the instance keeps the token in `sessionStorage`, per match, and the page brokers a fresh channel on every
 load of an instance.
 
-The hub that assigns a client its id tells it so (hub's `hello`), and the client's RPC replies come back under that id —
-the only one its link lets through. (netsim still hands each client its id itself, which it was once required to.)
+Nobody tells a client worker its id: the hub that assigns it (the referee's) says so in its `hello`, and the client
+names its subjects, logs and reports by it — and its RPC replies come back under it, the only reply subject its link
+lets through. (The page still names its own instance frames — it's the page that assigns the ids at the referee.)
 
 ### Debugging a live match
 

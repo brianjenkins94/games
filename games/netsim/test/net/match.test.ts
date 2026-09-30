@@ -1,4 +1,4 @@
-import type { RefereeTick, StateUpdate } from "../../src/net/index.ts";
+import type { JoinReply, RefereeTick, StateUpdate } from "../../src/net/index.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createHub, createRpcClient, serve } from "@brianjenkins94/hub";
@@ -202,12 +202,16 @@ test("a client can't speak for another: whatever id it claims, it's the one its 
 	match.network.settle();
 	match.run(2);
 
-	// Its join is seen as rogue's (so rogue gets a seat), but the reply goes to the victim's reply subject, which
-	// rogue's link may not receive: the impostor never learns the reply.
+	// Its join is seen as rogue's: the reply it gets is rogue's own new seat (its link told it it's rogue, and only
+	// rogue's replies reach it) — never the victim's seat or token.
 	const rpc = createRpcClient(impostor);
+	const reply = await pump(match.network, rpc.request(names.join, {}, { "timeoutMs": 300 })) as JoinReply;
 
-	await assert.rejects(pump(match.network, rpc.request(names.join, {}, { "timeoutMs": 300 })), /timed out/u);
+	assert.deepEqual(impostor.knownAs(), ["rogue"]);
+	assert.notEqual(reply.team, victim.team());
+	assert.notEqual(reply.token, match.replies[0]!.token);
 	assert.equal(match.referee.seats().length, 3);
+	assert.equal(match.referee.seats().find((seat) => seat.team === reply.team)?.peer, "rogue");
 
 	// Now seated as rogue, it orders the victim's unit: taken as rogue's command, and refused.
 	const [victimUnit] = [...victim.view().values()].filter((unit) => unit.team === victim.team());

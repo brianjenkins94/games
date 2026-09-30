@@ -19,7 +19,9 @@ const context = canvas.getContext("2d")!;
 const TEAM_COLORS = ["#4f8cff", "#ff5f56", "#3ecf6e", "#f5b83d", "#b76cff", "#39c6d6"];
 let latest: InstanceView | undefined;
 
-ownWorker(worker, observe(hub).log, id);
+const { log } = observe(hub);
+
+ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); });
 hub.link(portTransport(worker));
 
 let linkedUp = false;
@@ -27,7 +29,7 @@ let linkedUp = false;
 globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefined>) => {
 	if (event.source === parent && event.data?.type === "netsim-port") {
 		const { port, channel, remote, debugHost } = event.data;
-		const message: PortMessage = { "type": "netsim-port", "id": id, "bots": params.get("bots") !== "0", ...storedToken(), ...port === undefined ? { "channel": channel } : { "port": port }, ...remote === true ? { "remote": true, "debugHost": debugHost } : {} };
+		const message: PortMessage = { "type": "netsim-port", "bots": params.get("bots") !== "0", ...storedToken(), ...port === undefined ? { "channel": channel } : { "port": port }, ...remote === true ? { "remote": true, "debugHost": debugHost } : {} };
 
 		// A remote client's page is its tab's root (in the harness, the page isn't linked — the instance's records reach
 		// it through the referee): link up to it, so this tab observes its own player.

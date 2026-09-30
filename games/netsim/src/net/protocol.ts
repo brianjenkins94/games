@@ -14,6 +14,7 @@
  * team's state, nothing else) — so fog of war holds even against a client that subscribes to everything.
  */
 import type { LinkPermissions } from "@brianjenkins94/hub";
+import { observabilityPermissions } from "@brianjenkins94/observability";
 import type { WorldConfig } from "../sim/index.ts";
 
 export function subjects(match: string) {
@@ -33,19 +34,6 @@ export function subjects(match: string) {
 // hub's RPC subjects: a call to `name` is published on `$rpc.call.<name>`, its reply on `$rpc.reply.<caller id>`.
 const rpcCall = (name: string) => `$rpc.call.${name}`;
 const rpcReply = (peer: string) => `$rpc.reply.${peer}`;
-
-/**
- * The observability plane (@brianjenkins94/observability) for a peer and whatever hangs off it: publish its logs
- * (`$sys.log.<source>`) and architecture reports (`$sys.arch.<hub id>`) under its own id — `peer`, or `peer.<suffix>`
- * for a context behind it, like its instance page — and answer the viewers' `$sys.arch.sync`. So a client can't log
- * or report as anyone else.
- */
-export function observabilityPermissions(peer: string): Required<LinkPermissions> {
-	return {
-		"publish": [`$sys.log.${peer}`, `$sys.log.${peer}.>`, `$sys.arch.${peer}`, `$sys.arch.${peer}.>`],
-		"subscribe": ["$sys.arch.sync"]
-	};
-}
 
 /**
  * Letting the debug host (hub id `host` — the page) debug a client: the client may receive calls to its own

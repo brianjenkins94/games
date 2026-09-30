@@ -50,7 +50,7 @@ export function startHost({ settings, matchId, grid, status, summary }: HostOpti
 	const tools = netsimTools(hub, () => currentStatus());
 	const telemetry = observeRoot(hub, { "tools": tools });
 
-	ownWorker(referee, telemetry.log, "referee");
+	ownWorker(referee, () => { telemetry.log.error("worker failed to load", { "worker": "referee" }); });
 	telemetry.log.info("match starting", { ...settings, "match": matchId, "debug": telemetry.tab !== undefined });
 	hub.link(portTransport(referee));
 	referee.postMessage({
@@ -144,7 +144,7 @@ export function startHost({ settings, matchId, grid, status, summary }: HostOpti
 			const channel = new MessageChannel();
 
 			referee.postMessage({ "type": "netsim-attach", "peer": id, "port": channel.port1 } satisfies AttachMessage, [channel.port1]);
-			frame.contentWindow!.postMessage({ "type": "netsim-port", "id": id, "port": channel.port2 } satisfies PortMessage, location.origin, [channel.port2]);
+			frame.contentWindow!.postMessage({ "type": "netsim-port", "port": channel.port2 } satisfies PortMessage, location.origin, [channel.port2]);
 		}),
 		/** A player in another tab, known as `peer`: the BroadcastChannel its client links over (the lobby named it). */
 		"attachRemote": (peer: string, channel: string): void => {

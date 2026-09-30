@@ -8,7 +8,8 @@
  *                          └─ …
  *
  * The page brokers a MessageChannel per client straight from the referee worker to that client's worker, so the
- * referee's hub holds every client link: it assigns each client its id (LinkOptions.peer) and permissions. In the
+ * referee's hub holds every client link: it assigns each client its id (LinkOptions.peer; its hello tells the client)
+ * and permissions. In the
  * harness (index.html) the page and the instance iframes aren't hub-linked — the page only hands the iframes their
  * ports.
  *
@@ -100,11 +101,11 @@ export interface AttachMessage {
 	"channel"?: string;
 }
 
-/** page → instance iframe → its client worker: the channel to the referee, and the id it will be known by. Sent on
- *  every load of the iframe, so a reloaded instance gets a fresh channel (and the referee drops the old one). */
+/** page → instance iframe → its client worker: the channel to the referee (who the client is, the referee tells it —
+ *  hub's knownAs). Sent on every load of the iframe, so a reloaded instance gets a fresh channel (and the referee drops
+ *  the old one). */
 export interface PortMessage {
 	"type": "netsim-port";
-	"id": string;
 	/** The channel to the referee: a MessageChannel's end (the referee is in this tab)… */
 	"port"?: MessagePort;
 	/** …or a BroadcastChannel's name (it's in the host's tab: this is a remote client — see `remote`). */

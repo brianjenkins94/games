@@ -12,11 +12,10 @@
 import type { AddressInfo } from "node:net";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { createServer } from "node:http";
-import { homedir } from "node:os";
 import * as path from "node:path";
 import * as fs from "@brianjenkins94/util/fs";
+import { launchChromium } from "@brianjenkins94/util/playwright/chromium";
 import { buildApp } from "@brianjenkins94/util/vite/build";
-import { chromium } from "playwright";
 
 const APP_ROOT = path.resolve(import.meta.dirname, "../..");
 const BASE = "/games/netsim/";
@@ -53,42 +52,6 @@ async function serveBuild(): Promise<{ "url": string; "stop": () => Promise<void
 			await fs.rm(root, { "recursive": true, "force": true });
 		}
 	};
-}
-
-/** The newest Chromium in Playwright's browser cache — one an older Playwright downloaded still runs. */
-async function cachedChromium(): Promise<string | undefined> {
-	const cache = path.join(homedir(), process.platform === "darwin" ? "Library/Caches/ms-playwright" : ".cache/ms-playwright");
-	const builds = fs.existsSync(cache) ? (await fs.readdir(cache)).filter((name) => /^chromium(?:_headless_shell)?-\d+$/u.test(name)).sort((left, right) => Number(right.split("-")[1]) - Number(left.split("-")[1])) : [];
-	const executables = [
-		"chrome-headless-shell-mac-arm64/chrome-headless-shell",
-		"chrome-headless-shell-linux64/chrome-headless-shell",
-		"chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
-		"chrome-linux64/chrome"
-	];
-
-	return builds.flatMap((build) => executables.map((executable) => path.join(cache, build, executable))).find((candidate) => fs.existsSync(candidate));
-}
-
-/** CHROME_PATH, else Playwright's own Chromium, else the system Chrome (preinstalled on GitHub's runners), else the
- *  newest one in Playwright's cache. */
-async function launch(): Promise<Browser> {
-	if (process.env["CHROME_PATH"] !== undefined) {
-		return chromium.launch({ "executablePath": process.env["CHROME_PATH"] });
-	}
-
-	const cached = await cachedChromium();
-	const attempts = [{}, { "channel": "chrome" }, ...cached === undefined ? [] : [{ "executablePath": cached }]];
-	const errors: unknown[] = [];
-
-	for (const options of attempts) {
-		try {
-			return await chromium.launch(options);
-		} catch (error) {
-			errors.push(error);
-		}
-	}
-
-	throw new AggregateError(errors, "no Chromium to launch: install one (npx playwright install chromium) or set CHROME_PATH");
 }
 
 export interface Session {
@@ -128,7 +91,8 @@ async function bridgeDebugMcp(context: BrowserContext, port: number): Promise<vo
 
 export async function startSession({ debugMcpPort }: { "debugMcpPort"?: number } = {}): Promise<Session> {
 	const served = process.env["NETSIM_URL"] === undefined ? await serveBuild() : { "url": process.env["NETSIM_URL"], "stop": async () => {} };
-	const browser = await launch();
+	// CHROME_PATH, else Playwright's own, else the system Chrome (GitHub's runners), else the newest cached one.
+	const browser = await launchChromium();
 	const context = await browser.newContext({ "viewport": { "width": 1200, "height": 900 } });
 
 	if (debugMcpPort === undefined) {

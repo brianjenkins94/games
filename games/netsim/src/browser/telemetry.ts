@@ -11,29 +11,17 @@ import type { PageTool } from "@brianjenkins94/observability";
 import type { LogRecord } from "@brianjenkins94/util/logger";
 import { ArchitectureStore, collectArchReports, createArchReporter, installHubCollector, linkDebugMcp, linkPreviewHost, relayLoggerToHub, requestArchSync, servePageTools, tapConsoleAndErrors } from "@brianjenkins94/observability";
 
-/** Wire a (non-root) context: its logger, its architecture reporter, and its uncaught errors. `source` is the log
- *  source — the hub id, so a client's logs fall under the subjects its link permits. */
+export { ownWorker } from "@brianjenkins94/observability";
+
+/** Wire a (non-root) context: its logger, its architecture reporter, and its uncaught errors, all named `source` —
+ *  the id its link knows it by (a client's seat id, from the referee's hello), the only one that link lets it log and
+ *  report as. */
 export function observe(hub: Hub, source = hub.id) {
 	const log = relayLoggerToHub(hub, source);
 
 	tapConsoleAndErrors(hub, source);
 
-	return { "log": log, "architecture": createArchReporter(hub) };
-}
-
-/**
- * Own a worker's errors once: a worker reports its own uncaught errors over its hub (observe), but an unhandled one
- * is then re-raised in the page that owns it too — so the owner would report it again, as its own. Mark those
- * handled. A worker that failed to load can't report anything; that arrives as a plain Event, and is logged here.
- */
-export function ownWorker(worker: Worker, log: ReturnType<typeof observe>["log"], name: string): void {
-	worker.addEventListener("error", (event) => {
-		if (event instanceof ErrorEvent) {
-			event.preventDefault();
-		} else {
-			log.error("worker failed to load", { "worker": name });
-		}
-	});
+	return { "log": log, "architecture": createArchReporter(hub, { "self": source }) };
 }
 
 /** Wire the root (the page): collect every context's records and architecture reports, and link debug-mcp (serving

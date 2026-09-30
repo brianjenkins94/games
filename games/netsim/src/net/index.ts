@@ -5,7 +5,7 @@ export { diffUnits, isEmpty } from "./divergence.ts";
 export type { Faults, Network, NetworkStats } from "./network.ts";
 export { createNetwork } from "./network.ts";
 export type { ClientDiag, CommandBatch, JoinReply, JoinRequest, RefereeTick, ResyncRequest, StateUpdate } from "./protocol.ts";
-export { debugPermissions, hostPermissions, lobbyPermissions, observabilityPermissions, seatPermissions, subjects } from "./protocol.ts";
+export { debugPermissions, hostPermissions, lobbyPermissions, seatPermissions, subjects } from "./protocol.ts";
 export type { PeerOptions } from "./protocol.ts";
 export type { Referee, RefereeOptions, RefereeStats } from "./referee.ts";
 export { createReferee } from "./referee.ts";
