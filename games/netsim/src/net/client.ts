@@ -179,7 +179,7 @@ export function createClient({ hub, match }: ClientOptions): Client {
 			stepWorld(predicted);
 
 			if (queued.length > 0) {
-				unacked.push({ "token": seat.token, "seq": nextSeq, "commands": queued });
+				unacked.push({ "seq": nextSeq, "commands": queued });
 				nextSeq += 1;
 				queued = [];
 			}
@@ -190,7 +190,7 @@ export function createClient({ hub, match }: ClientOptions): Client {
 			}
 
 			if (wantResync) {
-				hub.publish(names.commands, { "token": seat.token, "resync": true } satisfies ResyncRequest);
+				hub.publish(names.commands, { "resync": true } satisfies ResyncRequest);
 				stats.resyncRequests += 1;
 				wantResync = false;
 			}

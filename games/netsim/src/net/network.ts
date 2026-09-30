@@ -7,7 +7,7 @@
  * traffic (`netsim.*.commands`, `netsim.*.state.*`). Hub control frames and RPC stay reliable, as they would on a
  * reliable signalling channel beside an unreliable data channel.
  */
-import type { Hub, Transport } from "@brianjenkins94/hub";
+import type { Hub, LinkOptions, Transport } from "@brianjenkins94/hub";
 import { matches } from "@brianjenkins94/hub";
 import { createRng, nextU32 } from "../sim/index.ts";
 
@@ -30,8 +30,9 @@ export interface NetworkStats {
 }
 
 export interface Network {
-	/** Link two hubs over a fresh pair of in-memory transports. Returns an unlink for both ends. */
-	"link": (left: Hub, right: Hub, faults?: Faults) => () => void;
+	/** Link two hubs over a fresh pair of in-memory transports, with each end's hub link options (e.g. the id and
+	 *  permissions `left` assigns `right`). Returns an unlink for both ends. */
+	"link": (left: Hub, right: Hub, faults?: Faults, options?: { "left"?: LinkOptions; "right"?: LinkOptions }) => () => void;
 	/** Advance the clock by `ms`, delivering every frame due by then (in time order; frames sent during delivery
 	 *  that fall due within the window are delivered too). */
 	"advance": (ms: number) => void;
@@ -140,11 +141,11 @@ export function createNetwork({ seed = 1, faulty = (subject: string) => GAME_TRA
 	}
 
 	return {
-		"link": (left, right, faults = {}) => {
+		"link": (left, right, faults = {}, options = {}) => {
 			const leftEnd: { "listener"?: (message: unknown) => void } = {};
 			const rightEnd: { "listener"?: (message: unknown) => void } = {};
-			const unlinkLeft = left.link(endpoint(faults, () => rightEnd.listener, leftEnd));
-			const unlinkRight = right.link(endpoint(faults, () => leftEnd.listener, rightEnd));
+			const unlinkLeft = left.link(endpoint(faults, () => rightEnd.listener, leftEnd), options.left);
+			const unlinkRight = right.link(endpoint(faults, () => leftEnd.listener, rightEnd), options.right);
 
 			return () => {
 				unlinkLeft();

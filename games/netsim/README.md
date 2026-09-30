@@ -25,6 +25,30 @@ talking to each other, fully observable and tested — before war2 itself moves 
 - **Replayable.** `advance(world, log)` is the one definition of play: restoring a snapshot and replaying the same
   log reproduces continuous play exactly.
 
+## The network (`src/net`)
+
+- **Referee** (`referee.ts`): the one authoritative world. Seats clients over hub RPC, takes numbered command batches
+  strictly in order, and each tick sends every team only what it can see — keyframes or deltas, each with a hash of
+  the team's whole visible set.
+- **Client** (`client.ts`): applies a delta only on top of the update it was built against (anything missing, late or
+  duplicated triggers a keyframe request), checks every view against the referee's hash, predicts its own units, and
+  resends command batches until they're acknowledged.
+- **Virtual network** (`network.ts`): in-memory hub links on a simulated clock with seeded drops, duplicates and
+  jitter on game traffic, so a whole match runs in one process, deterministically.
+
+### Who can see and say what
+
+A client is its hub id. The hub it links to assigns that id (`LinkOptions.peer`) and stamps it as `from` on
+everything the client sends, so a client can't speak for another — the referee attributes commands by `from`.
+
+That hub also confines the client with link permissions: until it's seated, `lobbyPermissions` (ask to join, hear its
+own replies); once seated, `seatPermissions` (send commands, receive its own team's state). The referee publishes
+every team's view, and the hub forwards each client only its own — even if it subscribes to all of them — so fog of
+war holds against a hostile client, and no one can snoop another's RPC replies (which carry its seat token).
+
+One consequence: a client's hub id must be the id its link assigns, or its RPC replies can't reach it. Whoever creates
+the client (the page, for an iframe) tells it its id.
+
 ## Test
 
 ```bash

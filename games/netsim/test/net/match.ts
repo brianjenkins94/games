@@ -3,7 +3,7 @@ import type { Hub } from "@brianjenkins94/hub";
 import type { Client, Faults, JoinReply, Network, Referee } from "../../src/net/index.ts";
 import type { WorldConfig } from "../../src/sim/index.ts";
 import { createHub } from "@brianjenkins94/hub";
-import { createClient, createNetwork, createReferee } from "../../src/net/index.ts";
+import { createClient, createNetwork, createReferee, lobbyPermissions } from "../../src/net/index.ts";
 import { createRng, hashUnits, nextInt, spawnUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
 
 export const TICK_MS = 50;
@@ -32,8 +32,11 @@ export interface Match {
 	/** One round: the referee ticks, its updates travel, clients tick and send, their batches travel. */
 	"tick": () => void;
 	"run": (ticks: number, onTick?: () => void) => void;
-	/** Add (and link) another client, not yet joined. */
-	"addClient": (faults?: Faults) => Client;
+	/** Add (and link) another client, not yet joined — linked the way a secure host links it: the referee's hub assigns
+	 *  its id and starts it with lobby permissions. */
+	"addClient": (faults?: Faults, id?: string) => Client;
+	/** Link a hub to the referee's the same way (id assigned, lobby permissions), without making a client of it. */
+	"linkHub": (hub: Hub, faults?: Faults, peer?: string) => () => void;
 }
 
 /** Advance the network and let promise callbacks run, until `promise` settles. */
@@ -95,10 +98,11 @@ export async function startMatch({ "clients": count = 2, config = {}, faults = {
 				onTick?.();
 			}
 		},
-		"addClient": (linkFaults = {}) => {
-			const hub = createHub({ "id": `client-${match.hubs.length}` });
+		"linkHub": (hub, linkFaults = {}, peer = hub.id) => network.link(refereeHub, hub, linkFaults, { "left": { "peer": peer, "permissions": lobbyPermissions(MATCH, peer) } }),
+		"addClient": (linkFaults = {}, id = `client-${match.hubs.length}`) => {
+			const hub = createHub({ "id": id });
 
-			match.unlinks.push(network.link(refereeHub, hub, linkFaults));
+			match.unlinks.push(match.linkHub(hub, linkFaults));
 			match.hubs.push(hub);
 			match.faults.push(linkFaults);
 

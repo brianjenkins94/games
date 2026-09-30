@@ -7,7 +7,13 @@
  *   commands arrive exactly once, in order, over a lossy link.
  * - `state.<team>`: referee → that team only. Keyframes (the whole visible set) or deltas against the previous
  *   update, each with a hash of the full visible set so the client can prove its view matches.
+ *
+ * Who a message is from is the hub envelope's `from`, which the hub a client links to stamps with the id it assigned
+ * that client (LinkOptions.peer) — so a client can't speak for another. That same hub confines what the client may
+ * send and receive with link permissions: `lobbyPermissions` until it's seated, then `seatPermissions` (its own
+ * team's state, nothing else) — so fog of war holds even against a client that subscribes to everything.
  */
+import type { LinkPermissions } from "@brianjenkins94/hub";
 import type { WorldConfig } from "../sim/index.ts";
 
 export function subjects(match: string) {
@@ -18,6 +24,22 @@ export function subjects(match: string) {
 	};
 }
 
+// hub's RPC subjects: a call to `name` is published on `$rpc.call.<name>`, its reply on `$rpc.reply.<caller id>`.
+const rpcCall = (name: string) => `$rpc.call.${name}`;
+const rpcReply = (peer: string) => `$rpc.reply.${peer}`;
+
+/** What a not-yet-seated client (hub id `peer`) may do: ask to join, and hear its own replies. */
+export function lobbyPermissions(match: string, peer: string): LinkPermissions {
+	return { "publish": [rpcCall(subjects(match).join)], "subscribe": [rpcReply(peer)] };
+}
+
+/** What a client seated on `team` may do: join (a reconnect), send commands, and receive its own team's view. */
+export function seatPermissions(match: string, peer: string, team: number): LinkPermissions {
+	const names = subjects(match);
+
+	return { "publish": [rpcCall(names.join), names.commands], "subscribe": [rpcReply(peer), names.state(team)] };
+}
+
 export interface JoinRequest {
 	/** A token from an earlier join: reclaim that seat (a reconnect) rather than take a new one. */
 	"token"?: string;
@@ -25,13 +47,13 @@ export interface JoinRequest {
 
 export interface JoinReply {
 	"team": number;
-	/** Identifies this client on the `commands` subject (a batch names its sender by token, never by team). */
+	/** Reclaims this seat from another link after a reconnect (see JoinRequest). Everything else identifies the client
+	 *  by its hub id. */
 	"token": string;
 	"config": WorldConfig;
 }
 
 export interface CommandBatch {
-	"token": string;
 	/** 1, 2, 3, … per client. The referee applies batch n only after n − 1. */
 	"seq": number;
 	"commands": unknown[];
@@ -39,7 +61,6 @@ export interface CommandBatch {
 
 /** Sent on `commands` when a client's view has a gap or disagrees with the referee's hash. */
 export interface ResyncRequest {
-	"token": string;
 	"resync": true;
 }
 

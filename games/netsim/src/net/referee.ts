@@ -1,14 +1,18 @@
 /**
  * The referee: the one authoritative world. It seats clients (`join`), takes their command batches strictly in order,
- * and each tick sends every team what that team can see — nothing else ever leaves it, which is what enforces fog of
- * war. Driven by `tick()` (a timer in a real match, the test loop in a headless one).
+ * and each tick sends every team what that team can see. Driven by `tick()` (a timer in a real match, the test loop in
+ * a headless one).
+ *
+ * A client is its hub id — the envelope's `from`, which the hub it links to stamps (LinkOptions.peer). Where the
+ * referee's own hub holds that link, seating a client also opens the link's permissions to exactly that seat
+ * (`seatPermissions`): the referee publishes every team's view, and the hub lets each client receive only its own.
  */
 import type { Hub } from "@brianjenkins94/hub";
 import type { World, WorldConfig } from "../sim/index.ts";
 import type { CommandBatch, JoinReply, JoinRequest, ResyncRequest, StateUpdate } from "./protocol.ts";
 import { serve } from "@brianjenkins94/hub";
 import { applyCommand, createWorld, encodeUnit, hashUnits, stepWorld, visibleUnits } from "../sim/index.ts";
-import { subjects } from "./protocol.ts";
+import { lobbyPermissions, seatPermissions, subjects } from "./protocol.ts";
 
 export interface RefereeOptions {
 	"hub": Hub;
@@ -25,8 +29,10 @@ export interface RefereeStats {
 	"batchesApplied": number;
 	/** Batches that weren't next in their client's sequence (duplicates, reordered, resends of applied ones). */
 	"batchesOutOfOrder": number;
-	/** Batches or resync requests from an unknown token. */
+	/** Batches or resync requests from a hub that holds no seat. */
 	"unknownSender": number;
+	/** Messages on `commands` that were neither a batch nor a resync request. */
+	"malformed": number;
 	"commandsApplied": number;
 	"commandsRejected": number;
 	"keyframes": number;
@@ -36,6 +42,8 @@ export interface RefereeStats {
 
 interface Seat {
 	"team": number;
+	/** The hub id of the client holding the seat. */
+	"peer": string;
 	"token": string;
 	/** The last batch taken in (queued for the next tick) — the sequence check. */
 	"lastSeq": number;
@@ -62,33 +70,52 @@ export interface Referee {
 function isBatch(value: unknown): value is CommandBatch {
 	const batch = value as CommandBatch | null;
 
-	return typeof batch === "object" && batch !== null && typeof batch.token === "string" && Number.isSafeInteger(batch.seq) && Array.isArray(batch.commands);
+	return typeof batch === "object" && batch !== null && Number.isSafeInteger(batch.seq) && Array.isArray(batch.commands);
 }
 
 function isResync(value: unknown): value is ResyncRequest {
 	const request = value as ResyncRequest | null;
 
-	return typeof request === "object" && request !== null && typeof request.token === "string" && request.resync === true;
+	return typeof request === "object" && request !== null && request.resync === true;
 }
 
 export function createReferee({ hub, match, config, setup, keyframeEvery = 10 }: RefereeOptions): Referee {
 	const world = createWorld(config);
 	const names = subjects(match);
+	/** By token. */
 	const seats = new Map<string, Seat>();
+	const seatOf = (peer: string | undefined): Seat | undefined => [...seats.values()].find((seat) => seat.peer === peer);
 	const pending: { "seat": Seat; "seq": number; "commands": unknown[] }[] = [];
-	const stats: RefereeStats = { "ticks": 0, "batchesApplied": 0, "batchesOutOfOrder": 0, "unknownSender": 0, "commandsApplied": 0, "commandsRejected": 0, "keyframes": 0, "deltas": 0, "resyncs": 0 };
+	const stats: RefereeStats = { "ticks": 0, "batchesApplied": 0, "batchesOutOfOrder": 0, "unknownSender": 0, "malformed": 0, "commandsApplied": 0, "commandsRejected": 0, "keyframes": 0, "deltas": 0, "resyncs": 0 };
 
 	setup?.(world);
 
-	const stopServing = serve(hub, names.join, (args): JoinReply => {
+	/** Give `peer` the seat, and open its link (when our hub holds it) to exactly that seat. */
+	function seatPeer(seat: Seat, peer: string): JoinReply {
+		if (seat.peer !== peer) {
+			// Moving the seat to a new link: the old one (if it's still there) goes back to the lobby.
+			hub.permit(seat.peer, lobbyPermissions(match, seat.peer));
+			seat.peer = peer;
+		}
+
+		// Whatever the client had is gone (or never was): its next update is a keyframe.
+		seat.needKeyframe = true;
+		hub.permit(peer, seatPermissions(match, peer, seat.team));
+
+		return { "team": seat.team, "token": seat.token, "config": world.config };
+	}
+
+	const stopServing = serve(hub, names.join, (args, { from }): JoinReply => {
+		if (from === undefined) {
+			throw new Error("join: the caller has no hub id");
+		}
+
 		const request = (args ?? {}) as JoinRequest;
-		const existing = typeof request.token === "string" ? seats.get(request.token) : undefined;
+		// A reconnect presents its token (it may be on a new link); a repeat join from the same hub keeps its seat.
+		const existing = (typeof request.token === "string" ? seats.get(request.token) : undefined) ?? seatOf(from);
 
 		if (existing !== undefined) {
-			// A reconnect: same seat, and its next update is a keyframe (whatever it had is gone).
-			existing.needKeyframe = true;
-
-			return { "team": existing.team, "token": existing.token, "config": world.config };
+			return seatPeer(existing, from);
 		}
 
 		const taken = new Set([...seats.values()].map((seat) => seat.team));
@@ -98,40 +125,44 @@ export function createReferee({ hub, match, config, setup, keyframeEvery = 10 }:
 			throw new Error(`match ${match} is full`);
 		}
 
-		const seat: Seat = { "team": team, "token": crypto.randomUUID(), "lastSeq": 0, "appliedSeq": 0, "lastTick": null, "lastUnits": new Map(), "lastKeyframe": 0, "needKeyframe": true };
+		const seat: Seat = { "team": team, "peer": from, "token": crypto.randomUUID(), "lastSeq": 0, "appliedSeq": 0, "lastTick": null, "lastUnits": new Map(), "lastKeyframe": 0, "needKeyframe": true };
 
 		seats.set(seat.token, seat);
 
-		return { "team": team, "token": seat.token, "config": world.config };
+		return seatPeer(seat, from);
 	});
 
-	const unsubscribe = hub.subscribe(names.commands, (data) => {
-		if (isResync(data) || isBatch(data)) {
-			const seat = seats.get(data.token);
+	const unsubscribe = hub.subscribe(names.commands, (data, envelope) => {
+		const seat = seatOf(envelope.from);
 
-			if (seat === undefined) {
-				stats.unknownSender += 1;
+		if (seat === undefined) {
+			stats.unknownSender += 1;
 
-				return;
-			}
-
-			if (isResync(data)) {
-				seat.needKeyframe = true;
-				stats.resyncs += 1;
-
-				return;
-			}
-
-			if (data.seq !== seat.lastSeq + 1) {
-				stats.batchesOutOfOrder += 1;
-
-				return;
-			}
-
-			seat.lastSeq = data.seq;
-			pending.push({ "seat": seat, "seq": data.seq, "commands": data.commands });
-			stats.batchesApplied += 1;
+			return;
 		}
+
+		if (isResync(data)) {
+			seat.needKeyframe = true;
+			stats.resyncs += 1;
+
+			return;
+		}
+
+		if (!isBatch(data)) {
+			stats.malformed += 1;
+
+			return;
+		}
+
+		if (data.seq !== seat.lastSeq + 1) {
+			stats.batchesOutOfOrder += 1;
+
+			return;
+		}
+
+		seat.lastSeq = data.seq;
+		pending.push({ "seat": seat, "seq": data.seq, "commands": data.commands });
+		stats.batchesApplied += 1;
 	});
 
 	function send(seat: Seat): void {

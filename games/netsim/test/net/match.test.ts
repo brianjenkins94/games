@@ -1,7 +1,7 @@
 import type { StateUpdate } from "../../src/net/index.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createHub } from "@brianjenkins94/hub";
+import { createHub, createRpcClient } from "@brianjenkins94/hub";
 import { createClient, subjects } from "../../src/net/index.ts";
 import { decodeUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
 import { isConverged, MATCH, pump, randomOrders, startMatch } from "./match.ts";
@@ -151,33 +151,107 @@ test("prediction: a command shows on the client at once, and agrees with authori
 	assert.equal(client.stats.snaps, 0, "on a clean link the prediction never needed correcting");
 });
 
-test("forged and malformed traffic changes nothing", async () => {
-	const match = await startMatch({ "clients": 2 });
-	const [mine, theirs] = match.clients;
-	const rogue = createHub({ "id": "rogue" });
-	const names = subjects(MATCH);
+test("a client only ever receives its own team's view, even subscribing to every team's", async () => {
+	const match = await startMatch({ "clients": 3, "config": { "teams": 3 } });
+	const [, snoop] = match.clients;
+	const subjectsSeen = new Set<string>();
+	const denied = new Set<string>();
 
-	match.network.link(match.refereeHub, rogue);
+	match.hubs[1].subscribe("netsim.m.state.*", (_data, envelope) => { subjectsSeen.add(envelope.subject); });
+	match.refereeHub.tap((event) => {
+		if (event.type === "deny" && event.direction === "subscribe" && event.link.peerId === match.hubs[1].id) {
+			denied.add(event.envelope.subject);
+		}
+	});
+	match.network.settle();
+	match.run(20);
+	assert.deepEqual([...subjectsSeen], [subjects(MATCH).state(snoop.team())]);
+	assert.deepEqual([...denied].sort(), [0, 1, 2].filter((team) => team !== snoop.team()).map((team) => subjects(MATCH).state(team)));
+	assert.ok(isConverged(match, snoop), "and its own view is unaffected");
+});
+
+test("a hub that hasn't joined can neither send commands nor read any state", async () => {
+	const match = await startMatch({ "clients": 2 });
+	const lurker = createHub({ "id": "lurker" });
+	const heard: unknown[] = [];
+	const denied: string[] = [];
+
+	match.linkHub(lurker);
+	lurker.subscribe("netsim.m.state.>", (data) => { heard.push(data); });
+	match.refereeHub.tap((event) => {
+		if (event.type === "deny" && event.direction === "publish") {
+			denied.push(event.envelope.subject);
+		}
+	});
+	match.network.settle();
+	lurker.publish(subjects(MATCH).commands, { "seq": 1, "commands": [] });
+	match.run(5);
+	assert.deepEqual(heard, []);
+	assert.deepEqual(denied, [subjects(MATCH).commands]);
+	assert.equal(match.referee.stats.unknownSender, 0, "it never even reached the referee");
+});
+
+test("a client can't speak for another: whatever id it claims, it's the one its link was given", async () => {
+	const match = await startMatch({ "clients": 2, "config": { "teams": 3 } });
+	const [victim] = match.clients;
+	const names = subjects(MATCH);
+	// A hub that names itself after the victim, linked (and so identified) as "rogue".
+	const impostor = createHub({ "id": "client-0" });
+
+	match.linkHub(impostor, {}, "rogue");
 	match.network.settle();
 	match.run(2);
 
-	const [victim] = [...theirs.view().values()].filter((unit) => unit.team === theirs.team());
+	// Its join is seen as rogue's (so rogue gets a seat), but the reply goes to the victim's reply subject, which
+	// rogue's link may not receive: the impostor never learns the reply.
+	const rpc = createRpcClient(impostor);
 
-	// A batch with a made-up token, garbage payloads, and a real client ordering an enemy's unit.
-	rogue.publish(names.commands, { "token": "forged", "seq": 1, "commands": [{ "type": "stop", "units": [victim.id] }] });
-	rogue.publish(names.commands, { "token": "forged", "resync": true });
+	await assert.rejects(pump(match.network, rpc.request(names.join, {}, { "timeoutMs": 300 })), /timed out/u);
+	assert.equal(match.referee.seats().length, 3);
 
-	for (const garbage of [null, "x", 42, { "token": 1 }, { "token": "t", "seq": "1", "commands": [] }]) {
-		rogue.publish(names.commands, garbage);
+	// Now seated as rogue, it orders the victim's unit: taken as rogue's command, and refused.
+	const [victimUnit] = [...victim.view().values()].filter((unit) => unit.team === victim.team());
+	const before = match.referee.world.units.get(victimUnit.id).tx;
+
+	impostor.publish(names.commands, { "seq": 1, "commands": [{ "type": "stop", "units": [victimUnit.id] }] });
+	match.run(3);
+	assert.equal(match.referee.stats.commandsRejected, 1);
+	assert.equal(match.referee.world.units.get(victimUnit.id).tx, before);
+	assert.equal(match.referee.seats().find((seat) => seat.team === victim.team())?.lastSeq, 0, "nothing was taken as the victim's");
+	assert.ok(isConverged(match, victim));
+});
+
+test("a hub can't snoop another client's join reply (and so its token)", async () => {
+	const match = await startMatch({ "clients": 1 });
+	const snoop = createHub({ "id": "snoop" });
+	const snooped: unknown[] = [];
+
+	match.linkHub(snoop);
+	snoop.subscribe("$rpc.reply.>", (data) => { snooped.push(data); });
+	match.network.settle();
+
+	const late = match.addClient();
+
+	await pump(match.network, late.join());
+	assert.deepEqual(snooped, []);
+});
+
+test("garbage from a seated client is counted and ignored", async () => {
+	const match = await startMatch({ "clients": 2 });
+	const names = subjects(MATCH);
+
+	match.run(2);
+
+	const before = match.referee.world.tick;
+
+	for (const garbage of [null, "x", 42, { "seq": "1", "commands": [] }, { "seq": 1 }]) {
+		match.hubs[0].publish(names.commands, garbage);
 	}
 
-	mine.command({ "type": "move", "units": [victim.id], "x": 0, "y": 0 });
-	match.run(3);
-
-	assert.equal(match.referee.stats.unknownSender, 2);
-	assert.equal(match.referee.stats.commandsRejected, 1);
-	assert.equal(match.referee.world.units.get(victim.id).tx, victim.tx, "the enemy unit's orders are untouched");
-	assert.ok(isConverged(match, theirs), "and its team's view is still right");
+	match.run(2);
+	assert.equal(match.referee.stats.malformed, 5);
+	assert.equal(match.referee.stats.batchesApplied, 0);
+	assert.equal(match.referee.world.tick, before + 2, "and the referee kept ticking");
 });
 
 test("a client that drops off and rejoins with its token gets its seat back, and catches up", async () => {
@@ -194,7 +268,7 @@ test("a client that drops off and rejoins with its token gets its seat back, and
 
 	const hub = createHub({ "id": "client-returning" });
 
-	match.network.link(match.refereeHub, hub);
+	match.linkHub(hub);
 
 	const returning = createClient({ "hub": hub, "match": MATCH });
 	const reply = await pump(match.network, returning.join({ "token": token }));
