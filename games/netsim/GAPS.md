@@ -32,6 +32,22 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **Page tools need a debug-mcp restart to appear** the first time debug-mcp is upgraded to a version that has them —
   only an operational note, but worth knowing: an older running debug-mcp ignores them silently.
 
+### the editor, running netsim (M3)
+
+- **netsim's `npm run dev` can't run in the editor.** It's `node scripts/dev.ts` (util's `serve`); the editor's
+  terminal starts a preview only through its own `vite` command (which ignores its arguments). In the editor, run
+  `vite` in `games/netsim`. A dev script both can run (plain `vite`) would make `npm run dev` and the Run picker
+  work in both places.
+- **netsim's instance iframes are nested frames, which the editor's preview half-supports** (M3b): its injected tap
+  posts their logs to `parent` (netsim's page) instead of the editor's shell, so they're lost — and land in netsim's
+  own `message` listeners — and HMR reaches only the top frame.
+- **netsim's hubs can't join the editor's hub tree** (M3c): no link accepts a preview frame, so its logs,
+  architecture and `netsim_*` tools don't show up in the editor; its own debug-mcp socket instead trips the editor's
+  capability prompt (`net.ws:localhost:7378`).
+- **The editor's tap isn't injected into workers**: a previewed app's worker console output and sockets are neither
+  captured nor capability-gated.
+- **Loading a repo needs a GitHub token**, even a public one (the loader is shown only once a PAT is connected).
+
 ### editor CI (`editor/components/monaco-vscode-api`, `editor/packages/vscode`)
 
 - **The editor's lint only passes when the monaco-vscode-api demo is installed** (the component's `install.sh` sets it
@@ -64,6 +80,14 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **The editor's previews couldn't run netsim's imports**: a URL/tarball dependency (`@brianjenkins94/hub`,
+  `observability`, `util`) became a broken esm.sh URL, and a module worker can't use the page's import map at all.
+  Now almostnode's dev server fetches a tarball dependency once, unpacks it in memory and serves it from
+  `/@pkg/<name>/…` (by its `exports`), and rewrites every served module's bare imports to URLs — so they resolve in
+  workers too. netsim runs in the editor's preview (3 clients, exactly in sync with the referee); the editor's
+  architecture suite covers the shape (a tarball dep, a module worker, a nested iframe, a MessageChannel). editor
+  `771f95f`.
 
 - **`link()` didn't say which link it made, and only some debug-mcp tools were per tab.** hub's link handle now
   carries its `id` (editor `5205b87`), and debug-mcp's `query_spans`, `get_tree_state` and `wait_for` take `tab` and
