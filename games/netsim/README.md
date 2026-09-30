@@ -68,7 +68,9 @@ real tools while the tab is connected (`src/browser/tools.ts`):
 - `netsim_control` — pause, resume, or step the referee N ticks.
 - `netsim_command` — issue a command as a client, exactly as its player would.
 
-They're also callable from the page itself: `await __netsim.tool("netsim_divergence")`.
+They're also callable from the page itself: `await __netsim.tool("netsim_divergence")`. Run in the editor's preview
+(`vite` in `games/netsim`), netsim joins the editor's hub tree instead of linking a debug-mcp itself: its logs and
+architecture show in the editor, and the editor's debug-mcp serves these tools.
 
 The client tools reach a client over its `netsim.<match>.debug.<peer>.*` subjects, which its link permits only when
 the page starts the referee with a `debugHost` — and then only the page may call them (`debugPermissions`): no client

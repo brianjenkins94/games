@@ -38,9 +38,13 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   terminal starts a preview only through its own `vite` command (which ignores its arguments). In the editor, run
   `vite` in `games/netsim`. A dev script both can run (plain `vite`) would make `npm run dev` and the Run picker
   work in both places.
-- **netsim's hubs can't join the editor's hub tree** (M3c): no link accepts a preview frame, so its logs,
-  architecture and `netsim_*` tools don't show up in the editor; its own debug-mcp socket instead trips the editor's
-  capability prompt (`net.ws:localhost:7378`).
+- **The editor's architecture view flags netsim's hubs as undeclared.** They reach it now (through the preview
+  link), but the editor's model declares only the editor's own contexts, so the app's `page`, `referee`, `client-*`
+  show as "needs review". Contexts beyond a `preview:*` link are the app's: the view should show them as such, not
+  check them against the editor's model.
+- **An app in a preview shares its editor tab's log stream in debug-mcp**: its records are filed under the editor
+  tab (they ride its socket), so `query_logs` for the app's tab returns the editor's records too — filter by
+  `source`.
 - **The editor's tap isn't injected into workers**: a previewed app's worker console output and sockets are neither
   captured nor capability-gated.
 - **Loading a repo needs a GitHub token**, even a public one (the loader is shown only once a PAT is connected).
@@ -77,6 +81,18 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **netsim's hubs couldn't join the editor's hub tree** (M3c) — no link accepted a preview frame, so its logs,
+  architecture and `netsim_*` tools stayed out of the editor, and its own debug-mcp socket tripped the editor's
+  capability prompt. Now the shell links each preview's page (non-transit, confined to observability, tab discovery
+  and page tools), netsim's page links up with observability's `linkPreviewHost` (falling back to `linkDebugMcp`
+  standalone), and debug-mcp treats the app as a tab of its own riding the editor tab's socket: its tools work
+  without naming a tab. Seen live: netsim running in the editor, its hubs in the editor's architecture view, and an
+  agent pausing it and diffing every client against authority over debug-mcp → the editor's tree → the preview.
+  editor `26be08f`, `2c2abbc`.
+- **A games CI flake: netsim's tools sometimes never registered in debug-mcp.** The page announced its tools before
+  its debug-mcp socket was up, and a slow start missed debug-mcp's one re-read. observability now re-announces them
+  once any collector link is ready. editor `26be08f`.
 
 - **The editor's preview half-supported nested frames, and HMR re-ran modules it couldn't swap** (M3b). The injected
   tap posted a nested frame's logs (and capability requests) to `parent` — netsim's page, and its `message`
