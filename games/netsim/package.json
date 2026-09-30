@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/dev.ts",
+    "dev": "vite --port 5180",
     "build": "node scripts/build.ts",
     "test": "node --run test:node && node --run test:browser",
     "test:node": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-exclude=\"src/browser/**\" --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=95 \"test/*.test.ts\" \"test/net/*.test.ts\"",

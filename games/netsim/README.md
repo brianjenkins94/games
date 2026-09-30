@@ -54,8 +54,8 @@ seat back, a keyframe, and the seat's next command number (`nextSeq`), so its co
 browser the instance keeps the token in `sessionStorage`, per match, and the page brokers a fresh channel on every
 load of an instance.
 
-One consequence: a client's hub id must be the id its link assigns, or its RPC replies can't reach it. Whoever creates
-the client (the page, for an iframe) tells it its id.
+The hub that assigns a client its id tells it so (hub's `hello`), and the client's RPC replies come back under that id —
+the only one its link lets through. (netsim still hands each client its id itself, which it was once required to.)
 
 ### Debugging a live match
 

@@ -9,40 +9,8 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 - **Control frames assume reliable delivery.** A lost `sub`/`unsub` isn't repaired until a reconnect (`hello`
   re-advertises). Fine over a MessagePort or a reliable channel; a problem over an unreliable WebRTC data channel.
-- **The published tarball is untyped.** Its declarations are at `src/index.d.ts` and `package.json` has no `types`,
-  so consumers' hub imports are `any` (a call with wrong arguments type-checks).
-- **An untrusted peer's hub id must equal the id its edge assigns** (`LinkOptions.peer`), or its RPC replies can't
-  reach it: the RPC client listens on `$rpc.reply.<its own id>`, and the edge only permits `$rpc.reply.<assigned>`.
-  Documented; whoever creates a client must tell it its id. Could be lifted by addressing replies to the
-  authenticated `from`.
-
-### observability / debug-mcp (`editor/packages/observability`, `editor/packages/debug-mcp`)
-
-- **An unhandled worker error is reported twice**: once by the worker (over its hub, with its stack) and again by the
-  page that owns it, which the browser re-raises it in — attributed to the page. netsim marks those handled
-  (`ownWorker` in telemetry.ts); it belongs in observability, next to `tapConsoleAndErrors`.
-- **`page_eval`'s direct `eval` makes every consumer's build warn** (Rolldown's `[EVAL]`, three times per build).
-  An indirect eval (`(0, eval)(expression)`) evaluates in global scope, which is what page_eval means anyway.
-- **debug-mcp's tarball has no types for its entry points** (`.` → `index.js`, `./mcp` → `mcp.js`; the `.d.ts` files
-  ship under `src/` unmapped), so a consumer's imports are `any` — like hub's.
-- **Permissions for observing an untrusted peer are netsim's.** `observabilityPermissions(peer)` (publish its own
-  `$sys.log.<id>` / `$sys.arch.<id>`, receive `$sys.arch.sync`) is generic; it belongs in observability.
-- **The collector tags a record by the source it claims.** `LogRecord.context.source` is data the sender writes;
-  permissions enforce the *subject* (`$sys.log.<id>`), so the tag could disagree with it. Tag by subject instead.
-- **Page tools need a debug-mcp restart to appear** the first time debug-mcp is upgraded to a version that has them —
-  only an operational note, but worth knowing: an older running debug-mcp ignores them silently.
-
 ### the editor, running netsim (M3)
 
-- **netsim's `npm run dev` can't run in the editor.** It's `node scripts/dev.ts` (util's `serve`); the editor's
-  terminal starts a preview only through its own `vite` command (which ignores its arguments). In the editor, run
-  `vite` in `games/netsim`. A dev script both can run (plain `vite`) would make `npm run dev` and the Run picker
-  work in both places.
-- **An app in a preview shares its editor tab's log stream in debug-mcp**: its records are filed under the editor
-  tab (they ride its socket), so `query_logs` for the app's tab returns the editor's records too — filter by
-  `source`.
-- **The editor's tap isn't injected into workers**: a previewed app's worker console output and sockets are neither
-  captured nor capability-gated.
 - **Loading a repo needs a GitHub token**, even a public one (the loader is shown only once a PAT is connected).
 
 - **In the editor, every port shares one origin** (ports are paths under `/__virtual__/`), so origin-scoped state —
@@ -50,6 +18,20 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   it: players are tabs (windows) on one server.
 - **A player can't follow its match to a new host.** When the host's tab goes, its players are told and stop; the
   match's state went with the host (host-authoritative). Reloading hosts or joins afresh.
+- **An app's own new window has no handle.** The editor turns a same-server `window.open` into another preview window,
+  so the call returns `null` (as a blocked popup does): an app that talks to the window it opened — `postMessage` to
+  it, `close()` — can't. netsim doesn't; its windows meet through the lobby.
+- **A server on another port that isn't HTTP is out of reach of a preview.** war2's dev loop runs a WebSocket
+  signaling server on :9000 beside Vite; a preview's `ws://localhost:9000` goes to the real network (through the
+  capability gate), where nothing in the editor listens. Untried with war2 itself; the editor serves only HTTP
+  servers (`/__virtual__/<port>/`).
+- **netsim itself across editor windows is checked only by hand.** `play.test.ts` plays across tabs of a plain
+  browser; the editor's architecture fixture now plays a tiny lobby like netsim's (editor `b4206eb`) (a Web Lock picks the host, a
+  BroadcastChannel carries hello/welcome) across two preview windows on one server — the primitives netsim's lobby
+  rests on — but nothing runs netsim's own lobby in editor windows automatically (editor CI has no netsim to load).
+- **In the editor's terminal, an interrupted command's own `cd` doesn't stick**: after `cd games/netsim && vite` and
+  Ctrl-C you're still where you started (a desktop shell would have you in `games/netsim`). An interrupted run never
+  reaches the terminal's `$PWD` probe, the only way a `cd` reaches it.
 
 ### editor CI (`editor/components/monaco-vscode-api`, `editor/packages/vscode`)
 
@@ -63,20 +45,10 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ### lib / tooling
 
-- **`util-dev` is fixed to port 5173**, which the editor's dev server uses; netsim calls `serve(cwd, 5180)` itself.
 - **TypeScript `latest` is 7.0, which typescript-eslint doesn't support yet.** The games repo pins `^6.0.3`.
-- **util/playwright's `launch()` is a scraping helper**: headful with devtools by default, one browser per process
-  held in module state, closing the page closes the browser, and importing it loads Vite. Test harnesses (the
-  editor's, netsim's) use Playwright directly, each with its own "find a Chromium" fallback chain — a shared test
-  launcher belongs in util.
-- **util/vite/dev's `serve()` returns nothing** — no way to stop it or know its port is listening — so a test can't
-  own a dev server. netsim's browser tests serve the build instead (and take `NETSIM_URL` for a running server).
 - **Browser code isn't measured for coverage.** `src/browser/**` is excluded from the node coverage run, and
   Playwright's coverage API covers pages but not workers (where the referee and clients run). Needs V8 coverage
   collected per target over CDP (or instrumented builds reporting over the hub).
-- **A local `util-publish` run leaves `.d.ts` files in the source tree** — of the package it builds and of any
-  sibling whose sources it imports (debug-mcp → `observability/src/*.d.ts`). Harmless in CI's throwaway checkout;
-  locally they're untracked litter to clean up by hand.
 - **A fresh `pnpm install --ignore-workspace` of an editor package links nothing at the top level** (pnpm 12 writes a
   `.package-map.json` instead), so plain `node` can't resolve its dependencies. The packages are installed with npm
   locally (flat); a reused pnpm store also serves a stale copy of a mutable `@latest.tgz`.
@@ -84,6 +56,46 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ## Fixed
 
+- **A short-lived nested frame's reports sometimes never reached the architecture view** (roughly one run in three) —
+  root cause not proven, but the one way a report goes missing is closed: a reporter published even when nothing yet
+  listened (a viewer's interest not yet across its links), and that report — its realm, its traffic so far — went
+  nowhere. Now it holds reports until someone listens (node ops collapsed if they pile up). The fixture's check reads
+  a live frame (editor `c194527`), and if its timeout ever recurs it says what the frame itself saw: whether its reports
+  had a listener, and its links. editor `cfef034` — in apps once observability is published.
+- **An untrusted peer's hub id had to equal the id its edge assigns**, or its RPC replies couldn't reach it — the edge's
+  `hello` now tells the peer the id it assigned (`you`; `Hub.knownAs()`), taken only from a link the peer didn't assign
+  (a child can't rename its parent), and the RPC client replies and listens under it. editor `90dfd6a`.
+- **An app in a preview shared its editor tab's log stream in debug-mcp** — a preview app's tab now names its scope (its
+  window, the id the shell assigned its page), and `query_logs` / `query_spans` for that tab return only that window's
+  records. editor `181d005`. Both reach apps once hub and observability are published.
+- **Observability fixes netsim turned up** (editor `512b5fa`): an unhandled worker error was reported twice — `ownWorker`
+  now lives in observability; `observabilityPermissions(peer)` moved in too (netsim switches to both once observability
+  is published); `page_eval`'s `eval` alias made every consumer's build warn — it evaluates through `globalThis.eval`;
+  the collectors tagged a record by the source it claimed — they tag by its subject, which permissions enforce.
+- **A running debug-mcp didn't say it was outdated** — pages now announce an observability protocol number, and
+  `list_tabs` marks a page newer than the debug-mcp `outdated` (restart it). editor `512b5fa`.
+- **A replaced page's hubs stayed in the architecture view as if alive** — a page (or frame) reports itself ended as it
+  goes, and the view fades it and what ran under it (its workers, which can't say so); a reload brings the page back.
+  editor `512b5fa`, `4e381ba` (in apps once observability is published).
+- **The editor's tap didn't reach a preview's workers** — a worker's entry script now gets a worker tap (console,
+  errors, WebSocket gating) reporting to the editor over a BroadcastChannel. editor `b4206eb`.
+- **Capability prompts went to a port's last used window** — the WebSocket/WebRTC shim's decisions carry their window
+  now; only the service worker's gate (which sees just the address) still goes by port. editor `b4206eb`.
+- **The hub and debug-mcp tarballs were untyped** (and a local `util-publish` run left `.d.ts` files in the source
+  tree) — util-publish pairs every entry with its declaration and emits outside the tree. lib `058dfc8` (in the tarballs
+  once util is released and the packages republished).
+- **util's dev server couldn't be owned by a test, and `util-dev` was fixed to 5173** — `serve()` resolves with
+  `{ url, port, close }` (port 0: any free port); `util-dev --port` / `$PORT`. lib `7f3bf4a`.
+- **No shared test launcher** — `util/playwright/chromium.ts`'s `launchChromium()` (CHROME_PATH → Playwright's →
+  system Chrome → newest cached), no scraping machinery or Vite. lib `4433024` (netsim's harness can switch once util
+  is released).
+- **netsim's `npm run dev` couldn't run in the editor** — it was `node scripts/dev.ts` (util's `serve`), and the editor's
+  terminal starts a preview only through its own `vite`. Now it's plain `vite --port 5180` — the same dev server on a
+  desktop (netsim's browser tests pass against it) and, in the editor, its `vite` (which ignores the port).
+- **The editor's terminal lost its directory after a Ctrl-C** — a new terminal's first command interrupted (`vite`,
+  Ctrl-C) sent the next command, and the prompt, to `/home/user`: just-bash hands an interrupted run back its default
+  env, and its `PWD` beat the session's directory. The session now seeds `PWD` from its own directory on every run
+  (and reports a command's real exit code, which the probe always captured). editor `4020110`.
 - **In the editor, a second player had no window to play in** — the editor tied one preview window to one port, and
   "open another player" left the editor as a browser tab (a second `vite` only worked because the editor serves every
   port from one origin, which a desktop doesn't). Now a server has as many preview windows as the user opens: a
