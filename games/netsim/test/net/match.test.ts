@@ -1,0 +1,268 @@
+import type { StateUpdate } from "../../src/net/index.ts";
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { createHub } from "@brianjenkins94/hub";
+import { createClient, subjects } from "../../src/net/index.ts";
+import { decodeUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
+import { isConverged, MATCH, pump, randomOrders, startMatch } from "./match.ts";
+
+test("each client gets its own seat, and a full match turns the next one away", async () => {
+	const match = await startMatch({ "clients": 3, "config": { "teams": 3 } });
+
+	assert.deepEqual(match.clients.map((client) => client.team()).sort((left, right) => left - right), [0, 1, 2]);
+
+	const extra = match.addClient();
+
+	await assert.rejects(pump(match.network, extra.join()), /full/u);
+});
+
+test("on a clean network, every client's view is the referee's view of its team, every tick", async () => {
+	const match = await startMatch({ "clients": 4 });
+	const orders = randomOrders(match, 1);
+
+	match.run(150, () => {
+		orders();
+
+		for (const client of match.clients) {
+			assert.ok(isConverged(match, client), `team ${client.team()} at tick ${match.referee.world.tick}`);
+		}
+	});
+
+	for (const client of match.clients) {
+		assert.equal(client.stats.desyncs, 0);
+		assert.equal(client.stats.gaps, 0);
+		assert.equal(client.stats.stale, 0);
+		assert.equal(client.stats.keyframes, 1 + Math.floor((150 - 1) / 10), "a keyframe on the first tick, then every 10");
+	}
+
+	assert.ok(match.referee.stats.commandsApplied > 50, `${match.referee.stats.commandsApplied} commands`);
+	assert.equal(match.referee.stats.commandsRejected, 0);
+});
+
+test("fog: no team is ever sent a unit it can't see, and views change as units come and go", async () => {
+	const match = await startMatch({ "clients": 3, "config": { "sight": tiles(4) }, "perTeam": 4 });
+	const orders = randomOrders(match, 2, 0.5);
+	const names = subjects(MATCH);
+	let enemiesSent = 0;
+	let removals = 0;
+
+	// A local subscriber on the referee's own hub sees each update as it's published, while the world is at that tick.
+	match.refereeHub.subscribe(names.state(0).replace(/\d+$/u, "*"), (data, envelope) => {
+		const update = data as StateUpdate;
+		const team = Number(envelope.subject.split(".").pop());
+		const visible = new Set(visibleUnits(match.referee.world, team).map((unit) => unit.id));
+
+		assert.equal(update.tick, match.referee.world.tick);
+
+		for (const values of update.units) {
+			const unit = decodeUnit(values);
+
+			assert.ok(visible.has(unit.id), `team ${team} was sent unit ${unit.id}, which it can't see`);
+			enemiesSent += unit.team === team ? 0 : 1;
+		}
+
+		removals += update.removed.length;
+		assert.ok(update.removed.every((id) => !visible.has(id)));
+	});
+
+	match.run(300, orders);
+	assert.ok(enemiesSent > 0, "enemies came into view");
+	assert.ok(removals > 0, "and left it");
+});
+
+test("commands arrive exactly once and in order over a lossy, duplicating, reordering link", async () => {
+	const match = await startMatch({ "clients": 2, "faults": [{ "drop": 0.3, "duplicate": 0.3, "jitterMs": 60 }, {}] });
+	const [client] = match.clients;
+
+	// Its first keyframe may be one of the dropped frames: play until it has a view.
+	for (let round = 0; round < 100 && client.viewTick() < 0; round += 1) {
+		match.run(1);
+	}
+
+	const [unit] = [...client.view().values()].filter((candidate) => candidate.team === client.team());
+	const targets = Array.from({ "length": 40 }, (_, index) => [tiles(1 + (index % 20)), tiles(2 + (index % 7))]);
+
+	for (const [x, y] of targets) {
+		client.command({ "type": "move", "units": [unit.id], "x": x, "y": y });
+		match.run(1);
+	}
+
+	match.run(60);
+
+	const authority = match.referee.world.units.get(unit.id);
+
+	assert.equal(match.referee.stats.commandsApplied, targets.length, "every command applied once");
+	assert.deepEqual([authority.tx, authority.ty], targets.at(-1), "the last command is the one in effect");
+	assert.ok(match.referee.stats.batchesOutOfOrder > 0, "the link really did duplicate and reorder");
+	assert.equal(match.referee.seats().find((seat) => seat.team === client.team())?.lastSeq, targets.length);
+});
+
+test("loss, duplication and reordering delay a view but never corrupt it, and it converges once the link heals", async () => {
+	const faults = { "drop": 0.25, "duplicate": 0.25, "jitterMs": 80 };
+	const match = await startMatch({ "clients": 3, "faults": faults });
+	const orders = randomOrders(match, 3, 0.4);
+
+	match.run(200, orders);
+
+	for (const client of match.clients) {
+		assert.equal(client.stats.desyncs, 0, `team ${client.team()}: an applied view never disagreed with the referee`);
+		assert.ok(client.stats.gaps > 0 && client.stats.stale > 0, `team ${client.team()}: the faults were exercised`);
+		assert.ok(client.stats.resyncRequests > 0);
+	}
+
+	for (const linkFaults of match.faults) {
+		Object.assign(linkFaults, { "drop": 0, "duplicate": 0, "jitterMs": 0 });
+	}
+
+	match.run(25);
+
+	for (const client of match.clients) {
+		assert.ok(isConverged(match, client), `team ${client.team()} converged after healing`);
+	}
+
+	assert.ok(match.referee.stats.resyncs > 0);
+});
+
+test("prediction: a command shows on the client at once, and agrees with authority once it lands", async () => {
+	const match = await startMatch({ "clients": 2, "faults": { "latencyMs": 120 } });
+	const [client] = match.clients;
+
+	match.run(5);
+
+	const [unit] = [...client.view().values()].filter((candidate) => candidate.team === client.team());
+	const target = { "x": tiles(12), "y": tiles(12) };
+	const startX = unit.x;
+
+	client.command({ "type": "move", "units": [unit.id], ...target });
+	client.tick();
+
+	const guess = client.predicted().units.get(unit.id);
+
+	assert.equal(guess.moving, 1, "the prediction moves immediately");
+	assert.equal(client.view().get(unit.id).moving, 0, "while the authoritative view hasn't heard yet");
+	assert.notEqual(guess.x === startX && guess.y === unit.y, true);
+
+	match.run(250);
+
+	const settled = client.predicted().units.get(unit.id);
+
+	assert.deepEqual([settled.x, settled.y, settled.moving], [target.x, target.y, 0]);
+	assert.deepEqual([settled.x, settled.y], [client.view().get(unit.id).x, client.view().get(unit.id).y]);
+	assert.equal(client.stats.snaps, 0, "on a clean link the prediction never needed correcting");
+});
+
+test("forged and malformed traffic changes nothing", async () => {
+	const match = await startMatch({ "clients": 2 });
+	const [mine, theirs] = match.clients;
+	const rogue = createHub({ "id": "rogue" });
+	const names = subjects(MATCH);
+
+	match.network.link(match.refereeHub, rogue);
+	match.network.settle();
+	match.run(2);
+
+	const [victim] = [...theirs.view().values()].filter((unit) => unit.team === theirs.team());
+
+	// A batch with a made-up token, garbage payloads, and a real client ordering an enemy's unit.
+	rogue.publish(names.commands, { "token": "forged", "seq": 1, "commands": [{ "type": "stop", "units": [victim.id] }] });
+	rogue.publish(names.commands, { "token": "forged", "resync": true });
+
+	for (const garbage of [null, "x", 42, { "token": 1 }, { "token": "t", "seq": "1", "commands": [] }]) {
+		rogue.publish(names.commands, garbage);
+	}
+
+	mine.command({ "type": "move", "units": [victim.id], "x": 0, "y": 0 });
+	match.run(3);
+
+	assert.equal(match.referee.stats.unknownSender, 2);
+	assert.equal(match.referee.stats.commandsRejected, 1);
+	assert.equal(match.referee.world.units.get(victim.id).tx, victim.tx, "the enemy unit's orders are untouched");
+	assert.ok(isConverged(match, theirs), "and its team's view is still right");
+});
+
+test("a client that drops off and rejoins with its token gets its seat back, and catches up", async () => {
+	const match = await startMatch({ "clients": 2 });
+	const orders = randomOrders(match, 4);
+	const [leaving] = match.clients;
+	const { team, token } = match.replies[0];
+
+	match.run(20, orders);
+	match.unlinks[0]();
+	leaving.close();
+	match.clients.splice(0, 1);
+	match.run(30, orders);
+
+	const hub = createHub({ "id": "client-returning" });
+
+	match.network.link(match.refereeHub, hub);
+
+	const returning = createClient({ "hub": hub, "match": MATCH });
+	const reply = await pump(match.network, returning.join({ "token": token }));
+
+	match.clients.push(returning);
+	assert.equal(reply.team, team, "the same seat");
+	assert.equal(reply.token, token);
+	match.run(3, orders);
+	assert.ok(isConverged(match, returning), "caught up on the first keyframe");
+	assert.equal(match.referee.seats().length, 2, "no new seat was taken");
+});
+
+test("a corrupted view is caught by the hash check and repaired by a resync", async () => {
+	const match = await startMatch({ "clients": 2 });
+	const [client] = match.clients;
+
+	match.run(5);
+	assert.ok(isConverged(match, client));
+
+	// Corrupt one unit in the client's view (a bug, or a bad delta): the next update's hash won't match.
+	const [unit] = client.view().values();
+
+	unit.x += 1;
+	match.run(1);
+	assert.equal(client.stats.desyncs, 1, "detected on the very next update");
+	assert.equal(client.stats.resyncRequests, 1);
+	match.run(2);
+	assert.ok(isConverged(match, client), "and repaired by the keyframe it asked for");
+});
+
+test("a prediction that drifts too far from authority is snapped back", async () => {
+	const match = await startMatch({ "clients": 2 });
+	const [client] = match.clients;
+
+	match.run(3);
+
+	const [id] = [...client.predicted().units.keys()];
+
+	client.predicted().units.get(id).x += tiles(3);
+	match.run(1);
+	assert.equal(client.stats.snaps, 1);
+	assert.equal(client.predicted().units.get(id).x, client.view().get(id).x);
+});
+
+test("a closed referee stops seating clients and taking commands", async () => {
+	const match = await startMatch({ "clients": 2 });
+
+	match.run(2);
+	match.referee.close();
+
+	const late = match.addClient();
+
+	await assert.rejects(pump(match.network, late.join({ "timeoutMs": 200 })), /no responder/u);
+
+	const [client] = match.clients;
+	const [unit] = [...client.view().values()].filter((candidate) => candidate.team === client.team());
+
+	client.command({ "type": "stop", "units": [unit.id] });
+	match.run(2);
+	assert.equal(match.referee.stats.batchesApplied, 0);
+});
+
+test("a client can't command before it joins, and ticking before then does nothing", () => {
+	const client = createClient({ "hub": createHub(), "match": MATCH });
+
+	assert.throws(() => { client.command({ "type": "stop", "units": [1] }); }, /before join/u);
+	client.tick();
+	assert.equal(client.stats.batchesSent, 0);
+	assert.equal(client.team(), undefined);
+	assert.equal(client.viewTick(), -1);
+});
