@@ -45,11 +45,6 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   captured nor capability-gated.
 - **Loading a repo needs a GitHub token**, even a public one (the loader is shown only once a PAT is connected).
 
-- **In the editor, a second player has no window to play in.** The editor ties one preview window to one port, and
-  "open another player" opens a browser tab outside the editor. Running `vite` again doesn't help: it starts a second
-  server on the next port, and its pages meet the first's only because the editor serves every port from one origin
-  (on a desktop, two ports are two origins, and they wouldn't). The fix is the editor's: several preview windows per
-  server, and a same-server `window.open` / `target="_blank"` from a preview opening another preview window.
 - **In the editor, every port shares one origin** (ports are paths under `/__virtual__/`), so origin-scoped state —
   storage, Web Locks, BroadcastChannel — is shared across ports there and not on a desktop. netsim must not rely on
   it: players are tabs (windows) on one server.
@@ -89,6 +84,12 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ## Fixed
 
+- **In the editor, a second player had no window to play in** — the editor tied one preview window to one port, and
+  "open another player" left the editor as a browser tab (a second `vite` only worked because the editor serves every
+  port from one origin, which a desktop doesn't). Now a server has as many preview windows as the user opens: a
+  window's "new window" button, or the app's own same-server `window.open` / `target="_blank"` link, opens another
+  (each its own page, its app's hubs scoped under the window). Seen live: `play.html`'s link opening Preview :5173 (2)
+  as player-1 in the host's match, on one server. editor `5a1e9f7`, `055eefa`, `b1f0db1`.
 - **The editor's architecture view flagged netsim's hubs as undeclared** — they reached it through the preview link,
   but were checked against the editor's model ("needs review"). Contexts beyond a `preview:*` link are now the app's:
   drawn in an "App" group inside Previews, the page hub merged into its `preview:<port>` node, each frame under the

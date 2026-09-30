@@ -83,8 +83,8 @@ can call another's, see those calls, or answer anyone but the page.
 `index.html` is the harness: one tab, one referee, N instance iframes. `play.html?match=<id>` is a match between
 tabs: the first tab at a match hosts it (the referee, and its own player, `player-0`); every tab of the same origin
 that opens that match after it joins as the next player (`player-1`, `player-2`, …). The page's "open another player"
-link opens one: another tab on the same server, as on any desktop. (In the editor, that link is meant to open another
-preview window — see GAPS.md.)
+link opens one: another tab on the same server, as on any desktop — in the editor, another preview window onto the
+same server.
 
 The lobby (`src/browser/lobby.ts`) is scoped to the origin — one server — not to a URL, so tabs meet whatever page
 or path they were loaded from:
