@@ -1,9 +1,10 @@
 /** The referee, in its own worker: the page's child in the hub tree, and the hub every client links to. */
-import type { AttachMessage, InitMessage } from "./bootstrap.ts";
-import { createHub, portTransport } from "@brianjenkins94/hub";
+import type { Referee } from "../net/index.ts";
+import type { AttachMessage, InitMessage, RefereeControl, RefereeInspection } from "./bootstrap.ts";
+import { createHub, portTransport, serve } from "@brianjenkins94/hub";
 import { createReferee, lobbyPermissions } from "../net/index.ts";
-import { nextInt, spawnUnit, tiles } from "../sim/index.ts";
-import { MATCH, TICK_MS } from "./bootstrap.ts";
+import { encodeUnit, nextInt, spawnUnit, tiles, visibleUnits } from "../sim/index.ts";
+import { MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
 import { observe } from "./telemetry.ts";
 
 const hub = createHub({ "id": "referee" });
@@ -18,14 +19,61 @@ hub.tap((event) => {
 	}
 });
 
+let debugHost: string | undefined;
+let paused = false;
+let current: Referee | undefined;
+
+// The page's calls (its link is the trusted one; clients may not publish these). Debugging, when the page enables it.
+serve(hub, REFEREE_INSPECT, (): RefereeInspection | undefined => {
+	if (current === undefined) {
+		return undefined;
+	}
+
+	const { world } = current;
+	const seats = current.seats();
+
+	return {
+		"tick": world.tick,
+		"paused": paused,
+		"seats": seats,
+		"stats": { ...current.stats },
+		"units": [...world.units.values()].map(encodeUnit),
+		"visible": Object.fromEntries(seats.map((seat) => [seat.team, visibleUnits(world, seat.team).map(encodeUnit)]))
+	};
+});
+serve(hub, REFEREE_CONTROL, (args) => {
+	const { action, ticks = 1 } = args as RefereeControl;
+
+	if (current === undefined) {
+		throw new Error("the match hasn't started");
+	}
+
+	if (action === "step") {
+		paused = true;
+
+		for (let index = 0; index < Math.max(1, Math.min(ticks, 1000)); index += 1) {
+			current.tick();
+		}
+	} else {
+		paused = action === "pause";
+	}
+
+	log.info("control", { "action": action, "tick": current.world.tick });
+
+	return { "tick": current.world.tick, "paused": paused };
+});
+
 globalThis.addEventListener("message", (event: MessageEvent<InitMessage | AttachMessage | undefined>) => {
 	const message = event.data;
 
 	if (message?.type === "netsim-init") {
+		debugHost = message.debugHost;
+
 		const referee = createReferee({
 			"hub": hub,
 			"match": MATCH,
 			"config": message.config,
+			"debugHost": debugHost,
 			"setup": (world) => {
 				for (let team = 0; team < world.config.teams; team += 1) {
 					for (let index = 0; index < message.perTeam; index += 1) {
@@ -37,8 +85,14 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 
 		let seated = "";
 
+		current = referee;
+
 		log.info("referee started", { "teams": message.config.teams, "units": referee.world.units.size });
 		setInterval(() => {
+			if (paused) {
+				return;
+			}
+
 			referee.tick();
 
 			const seats = referee.seats().map((seat) => `${seat.peer}=${seat.team}`).join(",");
@@ -49,7 +103,7 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 			}
 		}, TICK_MS);
 	} else if (message?.type === "netsim-attach") {
-		hub.link(portTransport(message.port), { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer) });
+		hub.link(portTransport(message.port), { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer, debugHost) });
 		log.info("client linked", { "peer": message.peer });
 	}
 });

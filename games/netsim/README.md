@@ -49,6 +49,24 @@ war holds against a hostile client, and no one can snoop another's RPC replies (
 One consequence: a client's hub id must be the id its link assigns, or its RPC replies can't reach it. Whoever creates
 the client (the page, for an iframe) tells it its id.
 
+### Debugging a live match
+
+With debugging on (localhost, or `?debug`), the page serves its own MCP tools, which a running debug-mcp registers as
+real tools while the tab is connected (`src/browser/tools.ts`):
+
+- `netsim_status` — the referee's tick, pause state and stats; every client's sync state.
+- `netsim_state` — the authoritative world, and per client what it sees and predicts.
+- `netsim_divergence` — each client's view against what the referee says its team can see, unit by unit. Exact at
+  the same tick, so pause first.
+- `netsim_control` — pause, resume, or step the referee N ticks.
+- `netsim_command` — issue a command as a client, exactly as its player would.
+
+They're also callable from the page itself: `await __netsim.tool("netsim_divergence")`.
+
+The client tools reach a client over its `netsim.<match>.debug.<peer>.*` subjects, which its link permits only when
+the page starts the referee with a `debugHost` — and then only the page may call them (`debugPermissions`): no client
+can call another's, see those calls, or answer anyone but the page.
+
 ## Test
 
 ```bash

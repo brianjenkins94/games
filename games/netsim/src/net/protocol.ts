@@ -24,7 +24,9 @@ export function subjects(match: string) {
 		/** Each client's own diagnostics (ClientDiag), published by that client only. */
 		"diag": (peer: string) => `netsim.${match}.diag.${peer}`,
 		/** The referee's per-tick summary (RefereeTick) — for the host, never a client. */
-		"refereeTick": `netsim.${match}.referee.tick`
+		"refereeTick": `netsim.${match}.referee.tick`,
+		/** Debugging a client (RPC): `inspect`, `command`. Reachable only from the debug host (see debugPermissions). */
+		"debug": (peer: string, op: string) => `netsim.${match}.debug.${peer}.${op}`
 	};
 }
 
@@ -45,22 +47,39 @@ export function observabilityPermissions(peer: string): Required<LinkPermissions
 	};
 }
 
-/** What a not-yet-seated client (hub id `peer`) may do: ask to join, hear its own replies, report its own diagnostics
- *  and observability. */
-export function lobbyPermissions(match: string, peer: string): LinkPermissions {
-	const names = subjects(match);
-	const observability = observabilityPermissions(peer);
-
-	return { "publish": [rpcCall(names.join), names.diag(peer), ...observability.publish], "subscribe": [rpcReply(peer), ...observability.subscribe] };
+/**
+ * Letting the debug host (hub id `host` — the page) debug a client: the client may receive calls to its own
+ * `debug.<peer>.*` and answer the host. Opt-in (a host passes it only when debugging is on); another client can't call
+ * them, since no client may publish a debug call.
+ */
+export function debugPermissions(match: string, peer: string, host: string): Required<LinkPermissions> {
+	return { "publish": [rpcReply(host)], "subscribe": [rpcCall(subjects(match).debug(peer, "*"))] };
 }
 
-/** What a client seated on `team` may do: join (a reconnect), send commands, report its own diagnostics, and receive
- *  its own team's view. */
-export function seatPermissions(match: string, peer: string, team: number): LinkPermissions {
-	const names = subjects(match);
+/** Everything but the seat itself: diagnostics, observability, and (with a `debugHost`) debugging. */
+function common(match: string, peer: string, debugHost: string | undefined): Required<LinkPermissions> {
 	const observability = observabilityPermissions(peer);
+	const debug = debugHost === undefined ? { "publish": [], "subscribe": [] } : debugPermissions(match, peer, debugHost);
 
-	return { "publish": [rpcCall(names.join), names.commands, names.diag(peer), ...observability.publish], "subscribe": [rpcReply(peer), names.state(team), ...observability.subscribe] };
+	return { "publish": [subjects(match).diag(peer), ...observability.publish, ...debug.publish], "subscribe": [rpcReply(peer), ...observability.subscribe, ...debug.subscribe] };
+}
+
+/** What a not-yet-seated client (hub id `peer`) may do: ask to join, hear its own replies, report its own diagnostics
+ *  and observability (and be debugged by `debugHost`, when given). */
+export function lobbyPermissions(match: string, peer: string, debugHost?: string): LinkPermissions {
+	const names = subjects(match);
+	const shared = common(match, peer, debugHost);
+
+	return { "publish": [rpcCall(names.join), ...shared.publish], "subscribe": shared.subscribe };
+}
+
+/** What a client seated on `team` may do: everything in the lobby, plus send commands and receive its own team's
+ *  view. */
+export function seatPermissions(match: string, peer: string, team: number, debugHost?: string): LinkPermissions {
+	const names = subjects(match);
+	const shared = common(match, peer, debugHost);
+
+	return { "publish": [rpcCall(names.join), names.commands, ...shared.publish], "subscribe": [names.state(team), ...shared.subscribe] };
 }
 
 export interface JoinRequest {

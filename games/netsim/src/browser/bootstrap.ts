@@ -21,6 +21,41 @@ export interface InitMessage {
 	"type": "netsim-init";
 	"config": WorldConfig;
 	"perTeam": number;
+	/** The page's hub id when debugging is on: clients' links then let it debug them (debugPermissions). */
+	"debugHost"?: string;
+}
+
+/** The referee worker's host-only calls (RPC, page → referee): its state, and pausing / stepping it. */
+export const REFEREE_INSPECT = `netsim.${MATCH}.referee.inspect`;
+export const REFEREE_CONTROL = `netsim.${MATCH}.referee.control`;
+
+export interface RefereeInspection {
+	"tick": number;
+	"paused": boolean;
+	"seats": { "team": number; "peer": string; "lastSeq": number }[];
+	"stats": Record<string, number>;
+	/** Every unit, UNIT_FIELDS-encoded. */
+	"units": number[][];
+	/** Team → what that team can see now, UNIT_FIELDS-encoded. */
+	"visible": Record<number, number[][]>;
+}
+
+export interface RefereeControl {
+	"action": "pause" | "resume" | "step";
+	/** For `step`: how many ticks (default 1). */
+	"ticks"?: number;
+}
+
+/** A client worker's answer to `debug.<peer>.inspect`. */
+export interface ClientInspection {
+	"peer": string;
+	"team": number | undefined;
+	"viewTick": number;
+	"viewHash": number;
+	"inSync": boolean;
+	"stats": Record<string, number>;
+	"units": number[][];
+	"predicted": number[][];
 }
 
 /** page → referee worker: a client's end of its channel, and the id to know it by. */

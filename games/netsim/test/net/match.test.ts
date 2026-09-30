@@ -1,7 +1,7 @@
 import type { RefereeTick, StateUpdate } from "../../src/net/index.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createHub, createRpcClient } from "@brianjenkins94/hub";
+import { createHub, createRpcClient, serve } from "@brianjenkins94/hub";
 import { createClient, subjects } from "../../src/net/index.ts";
 import { decodeUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
 import { isConverged, MATCH, pump, randomOrders, startMatch } from "./match.ts";
@@ -411,4 +411,50 @@ test("a client's first keyframe waits for its subscription, so joining never cos
 	assert.equal(late.stats.keyframes, 1);
 	assert.ok(isConverged(match, late));
 	assert.ok(match.referee.stats.held > 0, "its first update was held until it was listening");
+});
+
+test("a debug host can call a seated client's debug RPCs; another client can neither call them nor hear the answers", async () => {
+	const match = await startMatch({ "clients": 2, "debugHost": "host" });
+	const names = subjects(MATCH);
+	const [first, second] = match.hubs;
+	// The host (the page) is trusted: its link carries no restrictions.
+	const host = createHub({ "id": "host" });
+	const overheard: unknown[] = [];
+	let calls = 0;
+
+	match.network.link(match.refereeHub, host, {});
+	serve(first, names.debug(first.id, "inspect"), () => {
+		calls += 1;
+
+		return { "peer": first.id, "viewTick": match.clients[0].viewTick() };
+	});
+	// The other client tries to intercept calls meant for the first, and to overhear the answers.
+	second.subscribe(`$rpc.call.${names.debug(first.id, "inspect")}`, (data) => { overheard.push(data); });
+	second.subscribe("$rpc.reply.>", (data) => { overheard.push(data); });
+	match.network.settle();
+	match.run(2);
+
+	assert.deepEqual(await pump(match.network, createRpcClient(host).request(names.debug(first.id, "inspect"), undefined, { "timeoutMs": 500 })), { "peer": first.id, "viewTick": match.referee.world.tick });
+	assert.deepEqual(overheard, [], "the other client saw neither the host's call nor its answer");
+	await assert.rejects(pump(match.network, createRpcClient(second).request(names.debug(first.id, "inspect"), undefined, { "timeoutMs": 300 })), /timed out|no responder/u);
+	assert.equal(calls, 1, "and its own call never arrived");
+
+	// Answering the host doesn't let a client answer anyone else (a forged reply to another client's call). (Set aside
+	// the other client's own call, which its hub delivered to itself.)
+	overheard.length = 0;
+	first.publish(`$rpc.reply.${second.id}`, { "id": "forged", "result": "forged" });
+	match.network.settle();
+	assert.deepEqual(overheard, []);
+});
+
+test("without a debug host, nobody can reach a client's debug RPCs — the page included", async () => {
+	const match = await startMatch({ "clients": 1 });
+	const names = subjects(MATCH);
+	const [first] = match.hubs;
+	const host = createHub({ "id": "host" });
+
+	match.network.link(match.refereeHub, host, {});
+	serve(first, names.debug(first.id, "inspect"), () => "reached");
+	match.network.settle();
+	await assert.rejects(pump(match.network, createRpcClient(host).request(names.debug(first.id, "inspect"), undefined, { "timeoutMs": 300, "waitForResponderMs": 100 })), /timed out|no responder/u);
 });

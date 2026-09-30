@@ -31,8 +31,13 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   `$sys.log.<id>` / `$sys.arch.<id>`, receive `$sys.arch.sync`) is generic; it belongs in observability.
 - **The collector tags a record by the source it claims.** `LogRecord.context.source` is data the sender writes;
   permissions enforce the *subject* (`$sys.log.<id>`), so the tag could disagree with it. Tag by subject instead.
-- **Game-specific debug-mcp tools: unverified** (M2c). Whether debug-mcp can expose tools a page serves (game state,
-  divergence, pause/step, commands), or only `page_eval` / `page_query`.
+- **A page tool that goes away stays registered.** debug-mcp registers page tools live with util/mcp's `updateTool`,
+  but util/mcp has no removal, so a tool whose tab closed stays listed and answers that no connected tab serves it.
+  Needs a `removeTool` in util/mcp (the SDK's `RegisteredTool.remove()` exists).
+- **debug-mcp reads the SDK's private tool map** (`_registeredTools`) to keep a page from taking over one of its own
+  tools' names; util/mcp exposes no listing. Needs a listing (or a "has") in util/mcp.
+- **Page tools need a debug-mcp restart to appear** the first time debug-mcp is upgraded to a version that has them —
+  only an operational note, but worth knowing: an older running debug-mcp ignores them silently.
 
 ### lib / tooling
 
@@ -41,6 +46,12 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **debug-mcp could expose only its own tools** (`page_eval`, `page_query`, …), so a game's state, divergence and
+  pause/step had to be reached by evaluating expressions. Now a page serves its own MCP tools
+  (observability's `servePageTools(hub, { tools })`), and debug-mcp registers them live (`tools/list_changed`) and
+  forwards calls to the tab. editor (M2c, uncommitted); netsim serves `netsim_status`, `netsim_state`,
+  `netsim_divergence`, `netsim_control`, `netsim_command`.
 
 - **hub had no access control and no sender identity** — any linked hub could subscribe to any subject (another
   team's state, another caller's RPC replies) and claim any id. Now: `link(transport, { peer, permissions })`,

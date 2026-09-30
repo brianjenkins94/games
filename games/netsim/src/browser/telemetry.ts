@@ -6,6 +6,7 @@
  * query logs, the architecture and the live page.
  */
 import type { Hub } from "@brianjenkins94/hub";
+import type { PageTool } from "@brianjenkins94/observability";
 import type { LogRecord } from "@brianjenkins94/util/logger";
 import { ArchitectureStore, collectArchReports, createArchReporter, installHubCollector, linkDebugMcp, relayLoggerToHub, requestArchSync, servePageTools, tapConsoleAndErrors } from "@brianjenkins94/observability";
 
@@ -19,8 +20,9 @@ export function observe(hub: Hub, source = hub.id) {
 	return { "log": log, "architecture": createArchReporter(hub) };
 }
 
-/** Wire the root (the page): collect every context's records and architecture reports, and link debug-mcp. */
-export function observeRoot(hub: Hub, { keep = 1000 } = {}) {
+/** Wire the root (the page): collect every context's records and architecture reports, and link debug-mcp (serving
+ *  `tools` as this tab's own MCP tools). `tab` is undefined when debugging is off (not localhost, no `?debug`). */
+export function observeRoot(hub: Hub, { keep = 1000, tools = [] as PageTool[] } = {}) {
 	const context = observe(hub);
 	const records: LogRecord[] = [];
 	const architecture = new ArchitectureStore();
@@ -37,5 +39,5 @@ export function observeRoot(hub: Hub, { keep = 1000 } = {}) {
 	setTimeout(() => { requestArchSync(hub); }, 500);
 	linkDebugMcp(hub);
 
-	return { ...context, "records": records, "store": architecture, "tab": servePageTools(hub) };
+	return { ...context, "records": records, "store": architecture, "tab": servePageTools(hub, { "tools": tools }) };
 }

@@ -4,10 +4,10 @@
  */
 import type { Hub } from "@brianjenkins94/hub";
 import type { Client } from "../net/index.ts";
-import type { InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
-import { createHub, portTransport } from "@brianjenkins94/hub";
+import type { ClientInspection, InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
+import { createHub, portTransport, serve } from "@brianjenkins94/hub";
 import { createClient, subjects } from "../net/index.ts";
-import { approxDistance, createRng, encodeUnit, nextInt, tiles } from "../sim/index.ts";
+import { approxDistance, createRng, encodeUnit, nextInt, tiles, validateCommand } from "../sim/index.ts";
 import { instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
 import { observe } from "./telemetry.ts";
 
@@ -24,6 +24,35 @@ function start(id: string, port: MessagePort, bots: boolean): void {
 
 	hub.link(portTransport(globalThis));
 	hub.link(portTransport(port));
+
+	// Debugging (reachable only from the debug host — the referee's hub permits nothing else to call these).
+	serve(hub, names.debug(id, "inspect"), (): ClientInspection => ({
+		"peer": id,
+		"team": client.team(),
+		"viewTick": client.viewTick(),
+		"viewHash": client.viewHash(),
+		"inSync": client.inSync(),
+		"stats": { ...client.stats },
+		"units": [...client.view().values()].map(encodeUnit),
+		"predicted": [...client.predicted()?.units.values() ?? []].map(encodeUnit)
+	}));
+	serve(hub, names.debug(id, "command"), (args) => {
+		const { command } = args as { "command": unknown };
+		const predicted = client.predicted();
+		const team = client.team();
+
+		if (predicted === undefined || team === undefined) {
+			throw new Error(`${id} isn't seated yet`);
+		}
+
+		// What the referee will say, checked against this client's prediction (the referee has the final word).
+		const validation = validateCommand(predicted, team, command);
+
+		client.command(command);
+		log.info("debug command", { "command": command, "ok": validation.ok });
+
+		return { ...validation, "viewTick": client.viewTick() };
+	});
 
 	const own = () => [...client.view().values()].filter((unit) => unit.team === client.team());
 

@@ -10,6 +10,7 @@ import { subjects } from "../net/index.ts";
 import { tiles } from "../sim/index.ts";
 import { MATCH, readSettings } from "./bootstrap.ts";
 import { observeRoot } from "./telemetry.ts";
+import { netsimTools } from "./tools.ts";
 
 const settings = readSettings(location.search);
 const names = subjects(MATCH);
@@ -23,14 +24,17 @@ const history = new Map<number, RefereeTick>();
 const diags = new Map<string, ClientDiag>();
 let last: RefereeTick | undefined;
 
-const telemetry = observeRoot(hub);
+const tools = netsimTools(hub, () => currentStatus());
+const telemetry = observeRoot(hub, { "tools": tools });
 
-telemetry.log.info("match starting", { ...settings });
+telemetry.log.info("match starting", { ...settings, "debug": telemetry.tab !== undefined });
 hub.link(portTransport(referee));
 referee.postMessage({
 	"type": "netsim-init",
 	"config": { "width": 24, "height": 24, "teams": settings.teams, "seed": settings.seed, "speed": 125, "sight": tiles(5) },
-	"perTeam": settings.perTeam
+	"perTeam": settings.perTeam,
+	// Only when debugging is on does the referee let the page reach into clients.
+	...telemetry.tab === undefined ? {} : { "debugHost": hub.id }
 } satisfies InitMessage);
 
 for (let index = 0; index < settings.clients; index += 1) {
@@ -98,14 +102,21 @@ function render(): void {
 
 setInterval(render, 250);
 
-/** For scripts and debugging: the latest status, as data. */
+/** The latest status, as data. */
+function currentStatus() {
+	return {
+		"tick": last?.tick,
+		"clients": [...diags.values()].sort((left, right) => left.peer.localeCompare(right.peer)).map((diag) => ({ "peer": diag.peer, "team": diag.team, "viewTick": diag.viewTick, "state": checkClient(diag), "stats": diag.stats }))
+	};
+}
+
+/** For scripts and debugging. */
 (globalThis as unknown as { "__netsim": unknown }).__netsim = {
 	"hub": hub,
 	"logs": (source?: string) => telemetry.records.filter((record) => source === undefined || record.context?.["source"] === source),
 	"architecture": () => telemetry.store.snapshot(),
 	"tab": telemetry.tab,
-	"status": () => ({
-		"tick": last?.tick,
-		"clients": [...diags.values()].map((diag) => ({ "peer": diag.peer, "team": diag.team, "viewTick": diag.viewTick, "state": checkClient(diag), "stats": diag.stats }))
-	})
+	"status": currentStatus,
+	/** The MCP tools this page serves, callable directly: `await __netsim.tool("netsim_status")`. */
+	"tool": async (name: string, args: Record<string, unknown> = {}) => await tools.find((tool) => tool.name === name)?.handler(args)
 };
