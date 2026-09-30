@@ -38,10 +38,6 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   terminal starts a preview only through its own `vite` command (which ignores its arguments). In the editor, run
   `vite` in `games/netsim`. A dev script both can run (plain `vite`) would make `npm run dev` and the Run picker
   work in both places.
-- **The editor's architecture view flags netsim's hubs as undeclared.** They reach it now (through the preview
-  link), but the editor's model declares only the editor's own contexts, so the app's `page`, `referee`, `client-*`
-  show as "needs review". Contexts beyond a `preview:*` link are the app's: the view should show them as such, not
-  check them against the editor's model.
 - **An app in a preview shares its editor tab's log stream in debug-mcp**: its records are filed under the editor
   tab (they ride its socket), so `query_logs` for the app's tab returns the editor's records too — filter by
   `source`.
@@ -82,6 +78,12 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ## Fixed
 
+- **The editor's architecture view flagged netsim's hubs as undeclared** — they reached it through the preview link,
+  but were checked against the editor's model ("needs review"). Contexts beyond a `preview:*` link are now the app's:
+  drawn in an "App" group inside Previews, the page hub merged into its `preview:<port>` node, each frame under the
+  window that loaded it and each worker under its window, and left out of the editor's conformance check. Hubs report
+  their realm (window/frame/worker, URL, parent URL) so the view can place them. A worker's nesting is inferred (its
+  one linked window); observing `new Worker` directly would make it certain. editor `bc86c8a`, `6f3e6fe`.
 - **netsim's hubs couldn't join the editor's hub tree** (M3c) — no link accepted a preview frame, so its logs,
   architecture and `netsim_*` tools stayed out of the editor, and its own debug-mcp socket tripped the editor's
   capability prompt. Now the shell links each preview's page (non-transit, confined to observability, tab discovery
