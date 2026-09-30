@@ -9,7 +9,7 @@ import { createHub, portTransport } from "@brianjenkins94/hub";
 import { subjects } from "../net/index.ts";
 import { tiles } from "../sim/index.ts";
 import { MATCH, readSettings } from "./bootstrap.ts";
-import { observeRoot } from "./telemetry.ts";
+import { observeRoot, ownWorker } from "./telemetry.ts";
 import { netsimTools } from "./tools.ts";
 
 const settings = readSettings(location.search);
@@ -27,6 +27,7 @@ let last: RefereeTick | undefined;
 const tools = netsimTools(hub, () => currentStatus());
 const telemetry = observeRoot(hub, { "tools": tools });
 
+ownWorker(referee, telemetry.log, "referee");
 telemetry.log.info("match starting", { ...settings, "debug": telemetry.tab !== undefined });
 hub.link(portTransport(referee));
 referee.postMessage({

@@ -88,7 +88,7 @@ export function netsimTools(hub: Hub, status: () => unknown): PageTool[] {
 		},
 		{
 			"name": "netsim_command",
-			"description": "Issue a command as a client, exactly as its player would (it's predicted locally, sent, validated by the referee). `move` sends `units` toward (x, y) in tiles; `stop` halts them.",
+			"description": "Issue a command as a client, exactly as its player would (it's predicted locally, sent, validated by the referee). `move` sends `units` toward (x, y) in tiles; `stop` halts them. Answers once the referee has received it (`received`), so a following netsim_control step applies it; `ok`/`reason` is the client's own check.",
 			"inputSchema": {
 				"type": "object",
 				"properties": {
@@ -101,9 +101,24 @@ export function netsimTools(hub: Hub, status: () => unknown): PageTool[] {
 				"required": ["client", "type", "units"]
 			},
 			"handler": async ({ client, type, units, x, y }) => {
+				const peer = String(client);
 				const command = type === "move" ? { "type": type, "units": units, "x": Math.round(Number(x) * FP), "y": Math.round(Number(y) * FP) } : { "type": type, "units": units };
+				const taken = async () => (await inspectReferee()).seats.find((seat) => seat.peer === peer)?.lastSeq ?? -1;
+				const before = await taken();
+				const result = await rpc.request(names.debug(peer, "command"), { "command": command }, CALL) as Record<string, unknown>;
+				// The client sends it with its next tick; wait for the referee to take the batch in (paused or not).
+				const deadline = Date.now() + 2000;
+				let received = false;
 
-				return await rpc.request(names.debug(String(client), "command"), { "command": command }, CALL);
+				while (!received && Date.now() < deadline) {
+					received = await taken() > before;
+
+					if (!received) {
+						await new Promise((resolve) => { setTimeout(resolve, 20); });
+					}
+				}
+
+				return { ...result, "received": received };
 			}
 		}
 	];

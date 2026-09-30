@@ -22,7 +22,25 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   Documented; whoever creates a client must tell it its id. Could be lifted by addressing replies to the
   authenticated `from`.
 
+### netsim itself
+
+- **A reloaded instance is lost for the rest of the match.** The page brokers an instance's channel to the referee
+  only on its first load, the instance doesn't keep its seat token, and the referee would have to replace the old
+  link for the same peer id. war2 players will refresh. A `todo` browser test covers it (M2d).
+- **The status table can't tell a dead client from a live one.** A client that stops reporting keeps the state of
+  its last report ("in sync") — only the lag column gives it away. Needs a liveness check (stale diagnostics).
+
 ### observability / debug-mcp (`editor/packages/observability`, `editor/packages/debug-mcp`)
+
+- **An unhandled worker error is reported twice**: once by the worker (over its hub, with its stack) and again by the
+  page that owns it, which the browser re-raises it in — attributed to the page. netsim marks those handled
+  (`ownWorker` in telemetry.ts); it belongs in observability, next to `tapConsoleAndErrors`.
+- **`page_eval`'s direct `eval` makes every consumer's build warn** (Rolldown's `[EVAL]`, three times per build).
+  An indirect eval (`(0, eval)(expression)`) evaluates in global scope, which is what page_eval means anyway.
+- **debug-mcp can't be installed from its tarball**: it depends on `@brianjenkins94/hub` as `file:../hub` (the problem
+  observability had), and its `bin` points at `src/bin.ts`, which the tarball doesn't ship. It does export
+  `createDebugMcp` / `createMcpServer`, so fixing the dependency would let netsim's browser tests drive a real
+  debug-mcp in-process — the missing end-to-end test of page tools (registered live, called by an MCP client).
 
 - **Tabs with the same hub ids are merged.** debug-mcp's logs and architecture key contexts by hub id alone, so two
   netsim tabs (each with a `referee`, `client-0`, …) interleave into one. Affects the editor too (every tab has a
@@ -43,6 +61,15 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 - **`util-dev` is fixed to port 5173**, which the editor's dev server uses; netsim calls `serve(cwd, 5180)` itself.
 - **TypeScript `latest` is 7.0, which typescript-eslint doesn't support yet.** The games repo pins `^6.0.3`.
+- **util/playwright's `launch()` is a scraping helper**: headful with devtools by default, one browser per process
+  held in module state, closing the page closes the browser, and importing it loads Vite. Test harnesses (the
+  editor's, netsim's) use Playwright directly, each with its own "find a Chromium" fallback chain — a shared test
+  launcher belongs in util.
+- **util/vite/dev's `serve()` returns nothing** — no way to stop it or know its port is listening — so a test can't
+  own a dev server. netsim's browser tests serve the build instead (and take `NETSIM_URL` for a running server).
+- **Browser code isn't measured for coverage.** `src/browser/**` is excluded from the node coverage run, and
+  Playwright's coverage API covers pages but not workers (where the referee and clients run). Needs V8 coverage
+  collected per target over CDP (or instrumented builds reporting over the hub).
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed

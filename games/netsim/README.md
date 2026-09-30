@@ -73,5 +73,11 @@ can call another's, see those calls, or answer anyone but the page.
 npm test
 ```
 
-Runs on `node:test` with type stripping (no build step), with coverage thresholds (95% lines and functions, 90%
-branches) enforced.
+Two suites, both on `node:test` with type stripping (no build step):
+
+- `test:node` — the sim and the network, in one process over the virtual network, with coverage thresholds (95%
+  lines and functions, 90% branches) enforced.
+- `test:browser` — the real runtime in headless Chromium: the page, the referee worker, the instance iframes and
+  their client workers, observability, input and the page's MCP tools. It builds netsim and serves the build under
+  the base Pages uses; `NETSIM_URL=http://localhost:5180/` runs it against a dev server instead. It needs a
+  Chromium: Playwright's own, the system Chrome, or `CHROME_PATH`.

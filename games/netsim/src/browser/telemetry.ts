@@ -20,6 +20,21 @@ export function observe(hub: Hub, source = hub.id) {
 	return { "log": log, "architecture": createArchReporter(hub) };
 }
 
+/**
+ * Own a worker's errors once: a worker reports its own uncaught errors over its hub (observe), but an unhandled one
+ * is then re-raised in the page that owns it too — so the owner would report it again, as its own. Mark those
+ * handled. A worker that failed to load can't report anything; that arrives as a plain Event, and is logged here.
+ */
+export function ownWorker(worker: Worker, log: ReturnType<typeof observe>["log"], name: string): void {
+	worker.addEventListener("error", (event) => {
+		if (event instanceof ErrorEvent) {
+			event.preventDefault();
+		} else {
+			log.error("worker failed to load", { "worker": name });
+		}
+	});
+}
+
 /** Wire the root (the page): collect every context's records and architecture reports, and link debug-mcp (serving
  *  `tools` as this tab's own MCP tools). `tab` is undefined when debugging is off (not localhost, no `?debug`). */
 export function observeRoot(hub: Hub, { keep = 1000, tools = [] as PageTool[] } = {}) {

@@ -6,7 +6,7 @@ import type { InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
 import { createHub, portTransport } from "@brianjenkins94/hub";
 import { decodeUnit, FP } from "../sim/index.ts";
 import { instanceSubjects } from "./bootstrap.ts";
-import { observe } from "./telemetry.ts";
+import { observe, ownWorker } from "./telemetry.ts";
 
 const params = new URLSearchParams(location.search);
 const id = params.get("id") ?? "client";
@@ -18,7 +18,7 @@ const context = canvas.getContext("2d")!;
 const TEAM_COLORS = ["#4f8cff", "#ff5f56", "#3ecf6e", "#f5b83d", "#b76cff", "#39c6d6"];
 let latest: InstanceView | undefined;
 
-observe(hub);
+ownWorker(worker, observe(hub).log, id);
 hub.link(portTransport(worker));
 
 globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefined>) => {
