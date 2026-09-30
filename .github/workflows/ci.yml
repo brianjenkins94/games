@@ -1,0 +1,34 @@
+{
+  "name": "ci",
+  "on": {
+    "pull_request": {
+      "branches": ["main"]
+    },
+    "push": {
+      "branches": ["main"]
+    },
+    "workflow_call": {}
+  },
+  "concurrency": {
+    "group": "${{ github.workflow }}-${{ github.ref }}",
+    "cancel-in-progress": true
+  },
+  "jobs": {
+    "build-lint": {
+      "runs-on": "ubuntu-latest",
+      "strategy": {
+        "matrix": {
+          "script": ["build", "lint", "test"]
+        }
+      },
+      "steps": [
+        { "uses": "actions/checkout@v4" },
+        # lib's published composite action: setup-node + pnpm + store cache + install. workspace-packages makes CI an
+        # ephemeral pnpm workspace (no committed pnpm-workspace.yaml) so sibling packages link.
+        { "uses": "brianjenkins94/lib/.github/actions/setup@main", "with": { "workspace-packages": "games/*,packages/*" } },
+        { "run": "pnpm run --if-present ${{ matrix.script }}" }
+      ],
+      "timeout-minutes": 15
+    }
+  }
+}

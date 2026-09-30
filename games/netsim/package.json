@@ -1,0 +1,13 @@
+{
+  "name": "netsim",
+  "description": "A minimal war2-shaped simulation + network harness: a deterministic, instance-scoped fixed-point sim, a host-authoritative referee and N clients, fully observable — built to prove the editor's hub / observability / debug-mcp stack covers what war2 needs before war2 moves onto it.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=95 \"test/**/*.test.ts\""
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
