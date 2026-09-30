@@ -355,7 +355,7 @@ test("the referee's per-tick summary carries every seated team's view hash, for 
 	const latest = ticks.at(-1);
 
 	assert.equal(latest.tick, match.referee.world.tick);
-	assert.deepEqual(latest.seats.map((seat) => seat.peer).sort(), match.hubs.map((hub) => hub.id).sort());
+	assert.deepEqual(latest.seats.map((seat) => seat.peer).sort((left, right) => left.localeCompare(right)), match.hubs.map((hub) => hub.id).sort((left, right) => left.localeCompare(right)));
 
 	for (const client of match.clients) {
 		assert.equal(latest.viewHashes[client.team()], client.viewHash(), `team ${client.team()}`);
