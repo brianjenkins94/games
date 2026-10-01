@@ -75,10 +75,12 @@ test("every context reports to the page: logs, and its place in the hub tree", a
 	const page = await session.open({ "clients": 2 });
 	const expected = ["page", "referee", "client-0", "client-1", "client-0/ui", "client-1/ui"];
 
-	await until(page, "every hub in the architecture", (ids: string[]) => {
-		const nodes = (globalThis as unknown as { "__netsim": { "architecture": () => { "nodes": { "id": string }[] } } }).__netsim.architecture().nodes;
+	// Every hub, and the tree's links between them (each reported as its hubs report — wait for them all).
+	await until(page, "every hub and link in the architecture", (ids: string[]) => {
+		const { nodes, channels } = (globalThis as unknown as { "__netsim": { "architecture": () => { "nodes": { "id": string }[]; "channels": { "a": string; "b": string }[] } } }).__netsim.architecture();
+		const joined = (a: string, b: string) => channels.some((channel) => (channel.a === a && channel.b === b) || (channel.a === b && channel.b === a));
 
-		return ids.every((id) => nodes.some((node) => node.id === id));
+		return ids.every((id) => nodes.some((node) => node.id === id)) && joined("page", "referee") && ["client-0", "client-1"].every((client) => joined("referee", client) && joined(client, client + "/ui"));
 	}, { "arg": expected });
 
 	const snapshot = await page.evaluate(() => (globalThis as unknown as { "__netsim": { "architecture": () => { "channels": { "a": string; "b": string }[] } } }).__netsim.architecture());
