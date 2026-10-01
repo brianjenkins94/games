@@ -5,6 +5,20 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ## Open
 
+### WebRTC (M4)
+
+- **Signaling is same-browser only.** The pages trade offers, answers and candidates in memory (one page) or over the
+  match's lobby BroadcastChannel (tabs of one origin) — the `Signaling` seam in `src/browser/rtc.ts`. Across machines
+  it needs a relay (a Worker, or a third party's) or a copy-paste invite; and ICE servers (STUN, maybe TURN) — the
+  host candidates are enough only on one machine.
+- **Not run in the editor yet.** The preview's tap gates WebRTC (`net.webrtc`, decided per peer connection): netsim
+  makes one per client, including the host's own, so expect a decision per connection unless it's remembered.
+- **Two channels between one pair are one line** in the architecture view (it draws one per pair of ends): two tabs'
+  pages meet through the lobby and through their peer connection, and only one shows. The comparison report keys by
+  pair the same way.
+- **Data channels can only be handed to a worker as they're created** — before anything's sent on them. rtc.ts does it
+  at once (`take`); a page that waited would be refused (`DataCloneError`).
+
 ### hub (`editor/packages/hub`)
 
 - **No deny lists.** Permissions are allow lists only; "everything but `$sys.>`" has to be spelled as what's allowed.
@@ -48,8 +62,9 @@ missing. What's left:
   tab's sessionStorage); in the editor, the editor names its preview windows itself.
 - **Hub's own control traffic shows** — interest frames — as messages on its links, counted under the subjects they
   name.
-- **Not exercised yet:** WebRTC, storage, and the probe gaps already listed under observability (raw MessagePorts,
-  storage events).
+- **Not exercised yet:** storage, and the probe gaps already listed under observability (raw MessagePorts, storage
+  events). WebRTC is: each data channel is the medium of its client's link to the referee, and a cross-tab peer
+  connection the edge between the two pages.
 
 ### observability / debug-mcp (`editor/packages/observability`, `editor/packages/debug-mcp`)
 
@@ -129,6 +144,17 @@ missing. What's left:
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **Players across tabs linked over a BroadcastChannel, not WebRTC** — fine in one browser, impossible across
+  machines. Every client now links the referee over a WebRTC data channel (`src/browser/rtc.ts`), the host's own
+  instances too (both ends in one page), so every browser test runs over WebRTC. Each page makes its end's peer
+  connection and hands the data channel straight to the worker — Chromium transfers a channel as it's created — so
+  the game runs worker to worker; the pages only signal (`Signaling`: in memory, or over the lobby). hub gained
+  `dataChannelTransport` (JSON-framed, held until open, unlinked on close, backlog = `bufferedAmount`); the referee's
+  links adopted the heartbeat and limits; observability's probe hooks RTCDataChannel's prototype, so a channel in a
+  worker is seen, names a peer connection by its data channel (both ends alike), and the store draws a data channel or
+  peer connection between two contexts as the edge between them. New tests: every client's link is a peer connection;
+  a player's tab going closes its channel and the referee lets it go.
 
 - **A medium was drawn as a node.** Each client reaches the referee through its BroadcastChannel; the probes drew
   client ⇄ `channel:…` ⇄ referee where today draws one link. observability's ArchitectureStore now draws a medium only

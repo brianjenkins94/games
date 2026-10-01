@@ -1,9 +1,10 @@
 /**
  * The browser runtime's wiring, shared by the pages, the instance iframes and the workers.
  *
- * One transport for every client: each links to the referee over a BroadcastChannel (hub's channelTransport) — a
- * client of the host's own page as much as a player in another tab (the lobby names that one's channel: lobby.ts) —
- * and the referee's hub holds every client link: it assigns each client its id (LinkOptions.peer; its hello tells the
+ * One transport for every client: each links to the referee over a WebRTC data channel (rtc.ts; hub's
+ * dataChannelTransport), handed straight to the workers at both ends — a client of the host's own page as much as a
+ * player in another tab (the two pages signal over the match's lobby: lobby.ts) — and the referee's hub holds every
+ * client link: it assigns each client its id (LinkOptions.peer; its hello tells the
  * client, whose uplink it is) and permissions. That link carries only the game, both ways (lobby / seat permissions
  * on the referee's side, hostPermissions on the client's). Everything else of a client — its logs, its architecture,
  * its debugging — rides its own tab's tree: page ─ instance ─ client worker, the instance naming its worker (the edge
@@ -13,8 +14,8 @@
  *                      └─ player-0 instance ─ player-0 worker
  *   player tab:  page ─ player-1 instance ─ player-1 worker
  *
- * (Each tree must stay a tree — hub has no loop protection beyond that.) Same-origin tabs trust each other (lobby.ts);
- * a shipped game's players link over WebRTC instead.
+ * (Each tree must stay a tree — hub has no loop protection beyond that.) Same-origin tabs trust each other to signal
+ * (lobby.ts); across machines, signaling would need a relay or a copy-paste invite.
  */
 import type { WorldConfig } from "../sim/index.ts";
 
@@ -61,28 +62,23 @@ export interface ClientInspection {
 	"predicted": number[][];
 }
 
-/** page → referee worker: the BroadcastChannel a client links over (hub's channelTransport), and the id to know it by. */
+/** page → referee worker: the data channel a client links over (transferred: rtc.ts), and the id to know it by. */
 export interface AttachMessage {
 	"type": "netsim-attach";
 	"peer": string;
-	"channel": string;
+	"channel": RTCDataChannel;
 }
 
-/** page → instance iframe → its client worker: the channel to the referee (who the client is, the referee tells it —
- *  hub's knownAs). Sent on every load of the iframe, so a reloaded instance gets a fresh channel (and the referee drops
- *  the old one). */
+/** page → instance iframe → its client worker: the data channel to the referee (transferred on, as it arrives: rtc.ts —
+ *  who the client is, the referee tells it: hub's knownAs). On every load of the iframe, so a reloaded instance gets a
+ *  fresh link (and the referee drops the old one). */
 export interface PortMessage {
 	"type": "netsim-port";
-	/** The BroadcastChannel to the referee (in this tab, or the host's). */
-	"channel": string;
+	/** The data channel to the referee (in this tab, or the host's). */
+	"channel": RTCDataChannel;
 	"bots"?: boolean;
 	/** The seat token from this instance's earlier join in this match, if any: rejoin that seat. */
 	"token"?: string;
-}
-
-/** A fresh, unguessable BroadcastChannel name for `peer`'s link to the referee of match `match`. */
-export function linkChannel(match: string, peer: string): string {
-	return `netsim.${match}.link.${peer}.${crypto.randomUUID()}`;
 }
 
 /** Instance-local subjects (client worker ⇄ its instance page). */

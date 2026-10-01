@@ -1,7 +1,7 @@
 /** The referee, in its own worker: the page's child in the hub tree, and the hub every client links to. */
 import type { Referee } from "../net/index.ts";
 import type { AttachMessage, InitMessage, RefereeControl, RefereeInspection } from "./bootstrap.ts";
-import { channelTransport, createHub, portTransport, serve } from "@brianjenkins94/hub";
+import { createHub, dataChannelTransport, portTransport, serve } from "@brianjenkins94/hub";
 import { observe } from "@brianjenkins94/observability";
 import { createReferee, lobbyPermissions } from "../net/index.ts";
 import { encodeUnit, nextInt, spawnUnit, tiles, visibleUnits } from "../sim/index.ts";
@@ -13,9 +13,12 @@ const { log } = observe(hub, { "network": true });
 hub.link(portTransport(globalThis));
 
 // What link permissions refuse is worth seeing: a client asking for another team's view, or sending what it may not.
+// And a client's link going: its data channel closed (its tab went), or it stopped answering.
 hub.tap((event) => {
 	if (event.type === "deny" && !event.envelope.subject.startsWith("$sys.")) {
 		log.warn("denied", { "peer": event.link.peerId, "direction": event.direction, "subject": event.envelope.subject });
+	} else if (event.type === "fault" && (event.kind === "closed" || event.kind === "stale")) {
+		log.info("client gone", { "peer": event.link?.peerId, "why": event.detail });
 	}
 });
 
@@ -105,10 +108,11 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 
 		replaced?.();
 
-		// Every client, ours or another tab's, over its own BroadcastChannel (closed with its link). The link carries only
-		// the game: the client's own tab observes and debugs it.
-		const channel = channelTransport(message.channel);
-		const unlink = hub.link(channel, { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer) });
+		// Every client, ours or another tab's, over its own data channel (closed with its link). The link carries only the
+		// game — the client's own tab observes and debugs it — heartbeat-checked (a killed tab's channel can take a while
+		// to close) and bounded: a data channel's messages have a size limit, and a slow peer mustn't back up the referee.
+		const { channel } = message;
+		const unlink = hub.link(dataChannelTransport(channel), { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer), "heartbeatMs": 1000, "maxPayload": 64 * 1024, "maxBacklog": 256 * 1024 });
 
 		links.set(message.peer, () => {
 			unlink();

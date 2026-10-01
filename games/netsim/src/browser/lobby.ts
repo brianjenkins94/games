@@ -6,22 +6,55 @@
  *   (closed, reloaded, crashed), which is also how players learn the host left.
  * - **Who's who:** a Web Lock per player id, held for the tab's life. A tab takes the id it had before a reload if
  *   it's free, else the lowest free one — atomically, with no one to ask.
- * - **Introductions:** a BroadcastChannel per match. A player's instance (on every load) names a fresh private
- *   channel and announces it; the host acknowledges and links its referee to it. The game then runs over that channel
- *   between the two workers (hub's channelTransport) — nothing else of either tab crosses it.
+ * - **Introductions and signaling:** a BroadcastChannel per match. A player's instance (on every load) asks for a
+ *   link, under a fresh id; the host accepts, and the two pages trade the WebRTC link's offer, answer and candidates
+ *   over the same channel, addressed by that id (rtc.ts). The game then runs over the data channel, between the two
+ *   workers — nothing else of either tab crosses it.
  *
  * Same-origin tabs are trusted: any of them can open the lobby channel, take a lock or claim a player id. That's the
- * editor's preview and a local dev server — a shipped game's players meet over WebRTC, not here.
+ * editor's preview and a local dev server; across machines, players would need another way to signal.
  */
 
-import { linkChannel } from "./bootstrap.ts";
+import type { Signal, Signaling } from "./rtc.ts";
 
 /** On the match's lobby channel. */
 type LobbyMessage =
-	/** player → host: link to my instance's client over `channel`. Repeated until accepted. */
-	| { "type": "connect"; "peer": string; "channel": string }
-	/** host → player: linked. */
-	| { "type": "accepted"; "channel": string };
+	/** player → host: link my instance's client, as `link`. Repeated until accepted. */
+	| { "type": "connect"; "peer": string; "link": string }
+	/** host → player: accepted — its signals follow. */
+	| { "type": "accepted"; "link": string }
+	/** Either way: a WebRTC signal for link `link`. */
+	| { "type": "signal"; "link": string; "from": "host" | "player"; "signal": Signal };
+
+/** Signaling for link `link` over the lobby, as `me`: it hears only the other end's signals for that link — and holds
+ *  any that come before it has a handler. */
+function lobbySignaling(lobby: BroadcastChannel, link: string, me: "host" | "player"): Signaling {
+	let handler: ((signal: Signal) => void) | undefined;
+	const early: Signal[] = [];
+
+	lobby.addEventListener("message", (event: MessageEvent<LobbyMessage>) => {
+		const message = event.data;
+
+		if (message.type === "signal" && message.link === link && message.from !== me) {
+			if (handler === undefined) {
+				early.push(message.signal);
+			} else {
+				handler(message.signal);
+			}
+		}
+	});
+
+	return {
+		"send": (signal) => { lobby.postMessage({ "type": "signal", "link": link, "from": me, "signal": signal } satisfies LobbyMessage); },
+		"onSignal": (next) => {
+			handler = next;
+
+			for (const signal of early.splice(0)) {
+				next(signal);
+			}
+		}
+	};
+}
 
 interface Common {
 	"match": string;
@@ -32,8 +65,8 @@ interface Common {
 }
 
 export type Lobby =
-	| Common & { "role": "host"; /** Each time a player's instance needs a link to the referee: the channel to link over. */ "onPlayer": (handler: (peer: string, channel: string) => void) => void }
-	| Common & { "role": "player"; /** A fresh private channel to the host's referee (resolves once the host has linked it). */ "connect": () => Promise<string>; "onHostLeft": (handler: () => void) => void };
+	| Common & { "role": "host"; /** Each time a player's instance needs a link to the referee: its signaling. */ "onPlayer": (handler: (peer: string, signaling: Signaling) => void) => void }
+	| Common & { "role": "player"; /** Signaling for a fresh link to the host's referee (resolves once the host has accepted it). */ "connect": () => Promise<Signaling>; "onHostLeft": (handler: () => void) => void };
 
 /** How often a player repeats an unanswered `connect` (a host still starting up hasn't heard it). */
 const RETRY_MS = 250;
@@ -87,7 +120,7 @@ export async function joinLobby(match: string): Promise<Lobby> {
 
 	if (await hold(hostLock, released)) {
 		const accepted = new Set<string>();
-		let onPlayer: (peer: string, channel: string) => void = () => undefined;
+		let onPlayer: (peer: string, signaling: Signaling) => void = () => undefined;
 
 		lobby.addEventListener("message", (event: MessageEvent<LobbyMessage>) => {
 			const message = event.data;
@@ -97,12 +130,12 @@ export async function joinLobby(match: string): Promise<Lobby> {
 			}
 
 			// A repeat (our answer crossed its retry) is answered again, not linked again.
-			if (!accepted.has(message.channel)) {
-				accepted.add(message.channel);
-				onPlayer(message.peer, message.channel);
+			if (!accepted.has(message.link)) {
+				accepted.add(message.link);
+				onPlayer(message.peer, lobbySignaling(lobby, message.link, "host"));
 			}
 
-			lobby.postMessage({ "type": "accepted", "channel": message.channel } satisfies LobbyMessage);
+			lobby.postMessage({ "type": "accepted", "link": message.link } satisfies LobbyMessage);
 		});
 		remember(peerKey, "player-0");
 
@@ -139,10 +172,12 @@ export async function joinLobby(match: string): Promise<Lobby> {
 		"peer": peer,
 		"close": close,
 		"connect": async () => {
-			const channel = linkChannel(match, peer);
+			const link = crypto.randomUUID();
+			// Listening before asking: the host's offer can follow its acceptance straight away.
+			const signaling = lobbySignaling(lobby, link, "player");
 
 			await new Promise<void>((resolve) => {
-				const send = (): void => { lobby.postMessage({ "type": "connect", "peer": peer, "channel": channel } satisfies LobbyMessage); };
+				const send = (): void => { lobby.postMessage({ "type": "connect", "peer": peer, "link": link } satisfies LobbyMessage); };
 				const timer = setInterval(send, RETRY_MS);
 				const stop = (): void => {
 					clearInterval(timer);
@@ -150,7 +185,7 @@ export async function joinLobby(match: string): Promise<Lobby> {
 					stops.delete(stop);
 				};
 				const answered = (event: MessageEvent<LobbyMessage>): void => {
-					if (event.data.type === "accepted" && event.data.channel === channel) {
+					if (event.data.type === "accepted" && event.data.link === link) {
 						stop();
 						resolve();
 					}
@@ -162,7 +197,7 @@ export async function joinLobby(match: string): Promise<Lobby> {
 				send();
 			});
 
-			return channel;
+			return signaling;
 		},
 		"onHostLeft": (handler) => {
 			onHostLeft = handler;

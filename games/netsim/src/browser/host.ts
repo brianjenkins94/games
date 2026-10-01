@@ -1,15 +1,18 @@
 /**
- * Hosting a match, in a page: starts the referee worker, brokers each client's channel to it — an instance iframe of
- * this page's (`addInstance`), or a player in another tab (`attachRemote`) — and shows every client's status checked
- * against the referee (its view hash at that tick must match the referee's hash of what that team can see).
+ * Hosting a match, in a page: starts the referee worker, makes each client's WebRTC link to it — for an instance iframe
+ * of this page's (`addInstance`, both ends here) or a player in another tab (`attachRemote`, signaling over the lobby)
+ * — and shows every client's status checked against the referee (its view hash at that tick must match the referee's
+ * hash of what that team can see).
  */
 import type { ClientDiag, RefereeTick } from "../net/index.ts";
 import type { AttachMessage, InitMessage, PortMessage, Settings } from "./bootstrap.ts";
+import type { RtcLink, Signaling } from "./rtc.ts";
 import type { Hub } from "@brianjenkins94/hub";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { subjects } from "../net/index.ts";
 import { tiles } from "../sim/index.ts";
-import { linkChannel, MATCH } from "./bootstrap.ts";
+import { MATCH } from "./bootstrap.ts";
+import { answerLink, linkLabel, localSignaling, offerLink } from "./rtc.ts";
 import { observeApp, ownWorker } from "@brianjenkins94/observability";
 import { netsimTools } from "./tools.ts";
 
@@ -53,6 +56,23 @@ export function startHost({ observed, settings, matchId, grid, status, summary }
 	/** Each client's latest report, and when it arrived. */
 	const diags = new Map<string, ClientDiag & { "receivedAt": number }>();
 	let last: RefereeTick | undefined;
+	/** Each client's connections (both ends, for one of this page's instances): closed when it links again. */
+	const connections = new Map<string, RtcLink[]>();
+
+	/** The referee's end of `peer`'s link: its data channel goes straight to the referee worker. */
+	function attach(peer: string, signaling: Signaling): RtcLink[] {
+		for (const connection of connections.get(peer) ?? []) {
+			connection.close();
+		}
+
+		const ends = [offerLink(linkLabel(MATCH, peer), signaling, (channel) => {
+			referee.postMessage({ "type": "netsim-attach", "peer": peer, "channel": channel } satisfies AttachMessage, [channel as unknown as Transferable]);
+		})];
+
+		connections.set(peer, ends);
+
+		return ends;
+	}
 
 	const tools = netsimTools(hub, () => currentStatus());
 
@@ -138,30 +158,31 @@ export function startHost({ observed, settings, matchId, grid, status, summary }
 		"tab": telemetry.tab,
 		"status": currentStatus,
 		/** The MCP tools this page serves, callable directly: `await __netsim.tool("netsim_status")`. */
-		"tool": async (name: string, args: Record<string, unknown> = {}) => await tools.find((tool) => tool.name === name)?.handler(args)
+		"tool": async (name: string, args: Record<string, unknown> = {}) => await tools.find((tool) => tool.name === name)?.handler(args, { "signal": new AbortController().signal })
 	};
 
 	return {
 		"hub": hub,
 		"telemetry": telemetry,
-		/** Seat a client in an instance iframe of this page's: on every load of it, a fresh channel to the referee (its
-		 *  worker died with the old document) — over a BroadcastChannel, as a player in another tab's would be. The
-		 *  instance links up to this page, which observes and debugs the client through it. */
+		/** Seat a client in an instance iframe of this page's: on every load of it, a fresh link to the referee (its worker
+		 *  died with the old document) — over WebRTC, as a player in another tab's is, both ends made here. The instance
+		 *  links up to this page, which observes and debugs the client through it. */
 		"addInstance": (id: string): HTMLIFrameElement => {
 			const frame = createInstanceFrame(grid, { "id": id, "matchId": matchId, "bots": settings.bots }, (loaded) => {
-				const channel = linkChannel(MATCH, id);
+				const [refereeEnd, clientEnd] = localSignaling();
 
-				referee.postMessage({ "type": "netsim-attach", "peer": id, "channel": channel } satisfies AttachMessage);
-				loaded.contentWindow!.postMessage({ "type": "netsim-port", "channel": channel } satisfies PortMessage, location.origin);
+				attach(id, refereeEnd).push(answerLink(clientEnd, (channel) => {
+					loaded.contentWindow!.postMessage({ "type": "netsim-port", "channel": channel } satisfies PortMessage, location.origin, [channel as unknown as Transferable]);
+				}));
 			});
 
 			hub.link(windowTransport(frame.contentWindow!, location.origin));
 
 			return frame;
 		},
-		/** A player in another tab, known as `peer`: the BroadcastChannel its client links over (the lobby named it). */
-		"attachRemote": (peer: string, channel: string): void => {
-			referee.postMessage({ "type": "netsim-attach", "peer": peer, "channel": channel } satisfies AttachMessage);
+		/** A player in another tab, known as `peer`: the referee's end of its link, signaling over the lobby. */
+		"attachRemote": (peer: string, signaling: Signaling): void => {
+			attach(peer, signaling);
 		}
 	};
 }

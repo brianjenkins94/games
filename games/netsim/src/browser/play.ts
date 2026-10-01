@@ -1,15 +1,17 @@
 /**
  * Players in separate tabs (play.html?match=<id>): the first tab at a match hosts it — the referee, and its own player
  * (`player-0`) — and every tab of this origin that opens the same match after it joins as another player (whatever
- * page or path it was loaded from), its client linked to the host's referee over a channel the lobby names
- * (lobby.ts). Each tab is its own hub tree, observed on its own (its own tab in debug-mcp); the host's also serves
+ * page or path it was loaded from), its client linked to the host's referee over WebRTC, the two pages signaling
+ * through the lobby (lobby.ts, rtc.ts). Each tab is its own hub tree, observed on its own (its own tab in debug-mcp); the host's also serves
  * netsim's tools over the whole match.
  */
 import type { InstanceView, PortMessage } from "./bootstrap.ts";
+import type { RtcLink } from "./rtc.ts";
 import { createHub, windowTransport } from "@brianjenkins94/hub";
 import { instanceSubjects, readSettings } from "./bootstrap.ts";
 import { createInstanceFrame, startHost } from "./host.ts";
 import { joinLobby } from "./lobby.ts";
+import { answerLink } from "./rtc.ts";
 import { observeApp } from "@brianjenkins94/observability";
 
 const params = new URLSearchParams(location.search);
@@ -46,16 +48,21 @@ if (lobby.role === "host") {
 	});
 
 	host.addInstance(lobby.peer);
-	lobby.onPlayer((peer, channel) => {
+	lobby.onPlayer((peer, signaling) => {
 		host.telemetry.log.info("player connected", { "peer": peer });
-		host.attachRemote(peer, channel);
+		host.attachRemote(peer, signaling);
 	});
 } else {
 	const bots = params.get("bots") !== "0";
 	let latest: InstanceView | undefined;
+	// The client's end of its link, made here (its worker is in the instance frame), its data channel passed on to it.
+	let link: RtcLink | undefined;
 	const frame = createInstanceFrame(grid, { "id": lobby.peer, "matchId": match, "bots": bots }, (loaded) => {
-		void lobby.connect().then((channel) => {
-			loaded.contentWindow!.postMessage({ "type": "netsim-port", "channel": channel } satisfies PortMessage, location.origin);
+		void lobby.connect().then((signaling) => {
+			link?.close();
+			link = answerLink(signaling, (channel) => {
+				loaded.contentWindow!.postMessage({ "type": "netsim-port", "channel": channel } satisfies PortMessage, location.origin, [channel as unknown as Transferable]);
+			});
 		});
 	});
 

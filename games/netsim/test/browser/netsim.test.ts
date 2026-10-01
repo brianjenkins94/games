@@ -103,6 +103,20 @@ test("every context reports to the page: logs, and its place in the hub tree", a
 	await page.close();
 });
 
+test("every client links the referee over WebRTC: a peer connection each, made by the page, named by its data channel", async () => {
+	const page = await session.open({ "clients": 2 });
+	const connections = await until(page, "the clients' peer connections", () => {
+		const { nodes, channels } = (globalThis as unknown as { "__netsim": { "architecture": () => { "nodes": { "id": string; "spec": { "role"?: string } }[]; "channels": { "a": string; "b": string; "labels": Record<string, unknown> }[] } } }).__netsim.architecture();
+		const connected = (id: string) => channels.some((channel) => (channel.a === "page" || channel.b === "page") && (channel.a === id || channel.b === id) && "connection: connected" in channel.labels);
+		const ids = nodes.filter((node) => node.spec.role === "peer connection").map((node) => node.id).sort();
+
+		return ids.length === 2 && ids.every(connected) ? ids : undefined;
+	});
+
+	assert.deepEqual(connections, ["rtc:netsim.local.link.client-0", "rtc:netsim.local.link.client-1"]);
+	await page.close();
+});
+
 test("the messages past the hub are seen too: the page's to its workers and frames, each frame's to its worker", async () => {
 	const page = await session.open({ "clients": 2 });
 	// Each channel, and a raw message that must have crossed it (a worker's start-up, a frame's channel to the referee).

@@ -41,7 +41,8 @@ globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefi
 			hub.link(windowTransport(parent, location.origin));
 		}
 
-		worker.postMessage(message);
+		// On to the worker at once: a data channel can be passed on only as it arrives.
+		worker.postMessage(message, [message.channel as unknown as Transferable]);
 	}
 });
 

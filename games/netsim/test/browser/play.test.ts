@@ -207,6 +207,19 @@ test("a player who reloads their tab keeps their id and seat, and plays on", asy
 	await player.close();
 });
 
+test("when a player's tab goes, its data channel closes and the referee lets it go", async () => {
+	const host = await openPlay("gone");
+	const player = await openPlay("gone");
+
+	await untilInSync(host, 2);
+	await player.close();
+
+	const gone = await until(host, "the referee letting the player go", () => (globalThis as unknown as { "__netsim": { "logs": (source: string) => { "message"?: string; "attrs"?: Record<string, unknown> }[] } }).__netsim.logs("referee").find((record) => record.message === "client gone" && record.attrs?.["peer"] === "player-1")?.attrs, { "timeoutMs": 10_000 });
+
+	assert.equal(gone["why"], "the transport closed", "its data channel closed — no need to wait out the heartbeat");
+	await host.close();
+});
+
 test("when the host's tab goes, its players are told", async () => {
 	const host = await openPlay("leave");
 	const player = await openPlay("leave");

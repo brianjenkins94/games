@@ -11,8 +11,8 @@ talking to each other, fully observable and tested — before war2 itself moves 
   keyframes, prediction, command validation, fault injection.
 - **M2** — the browser: a page, N instance iframes and sim workers, observability, game-specific debug-mcp tools.
 - **M3** — the same project run inside the editor.
-- **M4** — players in separate tabs (and separate editor preview windows) playing one match; WebRTC across machines
-  next.
+- **M4** — players in separate tabs (and separate editor preview windows) playing one match, every client linked to
+  the referee over WebRTC; signaling across machines (a relay, or a copy-paste invite) next.
 
 ## The sim (`src/sim`)
 
@@ -94,9 +94,15 @@ or path they were loaded from:
   which is also how its players learn the host left.
 - **Who's who** is a Web Lock per player id, held for the tab's life: a reloaded tab takes its old id back if it's
   free (and its seat, with the seat token it kept).
-- **Introductions** ride a BroadcastChannel per match: a player's instance names a fresh private channel and
-  announces it; the host acknowledges and links its referee to it. The game then runs over that channel, worker to
-  worker.
+- **Introductions and signaling** ride a BroadcastChannel per match: a player's instance asks for a link under a fresh
+  id, the host accepts, and the two pages trade the link's WebRTC offer, answer and candidates over the same channel.
+
+Every client — in the host's own tab or another — links the referee over a WebRTC data channel (`src/browser/rtc.ts`).
+Each end's page makes its peer connection and hands the data channel straight to its worker (a channel can be
+transferred as it's created; a worker can't make a peer connection), so the game runs worker to worker and the pages
+only signal: in memory within a page, over the lobby between tabs. The referee's side of each link is heartbeat-checked
+and bounded (hub's `heartbeatMs`, `maxPayload`, `maxBacklog`); a player's tab going closes its data channel, and the
+referee lets it go at once.
 
 Each tab is its own hub tree, observed on its own (its own tab in debug-mcp). A player's client worker belongs to
 both trees and joins neither to the other: both of its links are non-transit, the referee doesn't take a remote

@@ -1,6 +1,6 @@
 /**
- * One client, in its instance's worker: links to its instance page (for drawing and input) and, over the
- * BroadcastChannel its page named, to the referee. Nobody tells it who it is: the referee's hub assigns its id
+ * One client, in its instance's worker: links to its instance page (for drawing and input) and, over the data
+ * channel its page handed it (rtc.ts), to the referee. Nobody tells it who it is: the referee's hub assigns its id
  * (LinkOptions.peer) and says so in its hello (hub's knownAs) — the id it's stamped with, permitted as, and names its
  * subjects by. Its logs and reports go out under its hub's own id, to its own tab, and the edge names them: its
  * instance.
@@ -11,7 +11,7 @@
 import type { Hub } from "@brianjenkins94/hub";
 import type { Client } from "../net/index.ts";
 import type { ClientInspection, InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
-import { channelTransport, createHub, portTransport, serve } from "@brianjenkins94/hub";
+import { createHub, dataChannelTransport, portTransport, serve } from "@brianjenkins94/hub";
 import { observe } from "@brianjenkins94/observability";
 import { createClient, hostPermissions, subjects } from "../net/index.ts";
 import { approxDistance, createRng, encodeUnit, nextInt, tiles, validateCommand } from "../sim/index.ts";
@@ -24,7 +24,7 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 	// The referee is its uplink: the hub that decides who it is (only an uplink's hello can name a hub). Its link is
 	// confined — to nothing until the client knows its id, then to the game (hostPermissions). The hello that carries the
 	// id is a control frame, which permissions don't stop.
-	const toReferee = hub.link(channelTransport(channel), { "uplink": true, "transit": false, "permissions": { "publish": [], "subscribe": [] } });
+	const toReferee = hub.link(dataChannelTransport(channel), { "uplink": true, "transit": false, "permissions": { "publish": [], "subscribe": [] } });
 
 	hub.link(portTransport(globalThis), { "transit": false });
 	await toReferee.ready;
