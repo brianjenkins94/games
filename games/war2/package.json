@@ -1,0 +1,21 @@
+{
+  "name": "war2",
+  "description": "A Warcraft II clone on a deterministic bitecs sim \u2014 being moved here from the old monorepo, onto netsim's skeleton (see MIGRATION.md).",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "tsx --test \"test/*.test.ts\"",
+    "record": "tsx test/oracle/record.ts"
+  },
+  "dependencies": {
+    "bitecs": "^0.4.0"
+  },
+  "devDependencies": {
+    "@brianjenkins94/util": "https://brianjenkins94.github.io/lib/util@latest.tgz",
+    "tsx": "^4.20.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
