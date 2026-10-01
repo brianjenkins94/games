@@ -11,8 +11,6 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   match's lobby BroadcastChannel (tabs of one origin) — the `Signaling` seam in `src/browser/rtc.ts`. Across machines
   it needs a relay (a Worker, or a third party's) or a copy-paste invite; and ICE servers (STUN, maybe TURN) — the
   host candidates are enough only on one machine.
-- **Not run in the editor yet.** The preview's tap gates WebRTC (`net.webrtc`, decided per peer connection): netsim
-  makes one per client, including the host's own, so expect a decision per connection unless it's remembered.
 - **Two channels between one pair are one line** in the architecture view (it draws one per pair of ends): two tabs'
   pages meet through the lobby and through their peer connection, and only one shows. The comparison report keys by
   pair the same way.
@@ -87,6 +85,7 @@ missing. What's left:
 
 ### the editor, running netsim (M3)
 
+
 - **Loading a repo needs a GitHub token**, even a public one (the loader is shown only once a PAT is connected).
 
 - **In the editor, every port shares one origin** (ports are paths under `/__virtual__/`), so origin-scoped state —
@@ -145,11 +144,26 @@ missing. What's left:
 
 ## Fixed
 
+- **Every structured log line reached the editor twice** — once from its context through the hub
+  (`preview:5173/referee: client linked`), once as console text from the preview's tap (`preview:5173: client linked
+  {"peer":…}`): observability keeps the context's own console sink (debuggable standalone), and the tap captured every
+  console call. observability now marks what its console sink prints of a relayed record (`CONSOLE_ECHO`, a registered
+  symbol), and the editor's page and worker taps leave those to the hub — the developer's console still has every
+  line; the editor gets each once, structured. The editor's architecture test checks it: one copy, from the hub.
+
+- **netsim over WebRTC hadn't been run in the editor** — and each of its peer connections raised its own capability
+  prompt: six identical `net.webrtc:peer` requests, opened together, queued six prompts (an "Allow once" covers the
+  session, but only for requests made after it). The editor's capability decider now gives identical requests still
+  waiting one prompt and one answer (`extensions/capabilities/coalesce.ts`); "Allow always" is written once. Run in the
+  editor: the match syncs about a second after the preview loads, behind one prompt; the architecture view draws each
+  client's link to the referee and each peer connection beside the page, and the model check finds nothing.
+
 - **Three races WebRTC's timing exposed** (CI flaked twice in three runs; each now has a test that fails without its
   fix). A client that joined or rejoined while the match was paused got no view until it resumed — the referee sends
   only when it ticks; now a paused referee's timer calls `sync()`, which sends the keyframes owed without stepping the
   world. debug-mcp read a tab's page tools once per trigger with a 1s/2s deadline, so a page busy starting up was
-  missed for good; it now reads again (up to 10 times, a second apart) while a linked tab hasn't answered. And a
+  missed for good; it now reads again (up to 10 times, a second apart) while a linked tab hasn't answered — and a read
+  that misses a tab no longer unregisters its tools (editor `cec9317`; the first retry did, for a moment). And a
   context's records logged before its link's interest arrived were dropped (a worker's first "joined" line);
   observability's relay now holds them until someone listens. netsim's debug-mcp and reload tests say what they saw
   when they time out.
