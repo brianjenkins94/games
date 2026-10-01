@@ -11,6 +11,7 @@
  */
 import type { AddressInfo } from "node:net";
 import type { Browser, BrowserContext, Page } from "playwright";
+import type { InlineConfig } from "vite";
 import { createServer } from "node:http";
 import * as path from "node:path";
 import * as fs from "@brianjenkins94/util/fs";
@@ -23,11 +24,18 @@ const APP_ROOT = path.resolve(import.meta.dirname, "../..");
 const BASE = "/games/netsim/";
 const TYPES: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".map": "application/json" };
 
+export interface ServeOptions {
+	/** Extra vite config for the build (a `resolve.alias`). */
+	"overrides"?: InlineConfig;
+	/** Rewrite every script served (prepend something to it). */
+	"transformScript"?: (source: string) => string;
+}
+
 /** Build netsim and serve it statically. Resolves to its URL and a stop. */
-async function serveBuild(): Promise<{ "url": string; "stop": () => Promise<void> }> {
+export async function serveBuild({ overrides, transformScript }: ServeOptions = {}): Promise<{ "url": string; "stop": () => Promise<void> }> {
 	const root = await fs.mkdtemp(path.join(fs.tmpdir(), "netsim-"));
 
-	await buildApp(APP_ROOT, root, { "baseDir": "games" });
+	await buildApp(APP_ROOT, root, { "baseDir": "games", ...overrides === undefined ? {} : { "overrides": overrides } });
 
 	const out = path.join(root, "docs", "netsim");
 	const server = createServer((request, response) => {
@@ -42,7 +50,12 @@ async function serveBuild(): Promise<{ "url": string; "stop": () => Promise<void
 		}
 
 		response.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream" });
-		fs.createReadStream(file).pipe(response);
+
+		if (transformScript !== undefined && path.extname(file) === ".js") {
+			response.end(transformScript(fs.readFileSync(file)));
+		} else {
+			fs.createReadStream(file).pipe(response);
+		}
 	});
 
 	await new Promise<void>((resolve) => { server.listen(0, "127.0.0.1", resolve); });

@@ -9,7 +9,8 @@
     "build": "node scripts/build.ts",
     "test": "node --run test:node && node --run test:browser",
     "test:node": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-exclude=\"src/browser/**\" --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=95 \"test/*.test.ts\" \"test/net/*.test.ts\"",
-    "test:browser": "node --test \"test/browser/*.test.ts\""
+    "test:browser": "node --test \"test/browser/*.test.ts\"",
+    "compare:zero-knowledge": "node test/browser/zero-knowledge/compare.ts"
   },
   "dependencies": {
     "@brianjenkins94/hub": "https://brianjenkins94.github.io/editor/packages/hub@latest.tgz",

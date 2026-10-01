@@ -22,6 +22,29 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **Loop detection skips confined links.** A loop through a link with permissions isn't detected — a confined peer is
   an untrusted leaf, and letting it carry `$sys.lds.*` would let it echo a hub's subject back to have a link cut.
 
+### the zero-knowledge diagram (`npm run compare:zero-knowledge`)
+
+The goal: the architecture diagram drawn for an app the editor knows nothing about. The comparison builds netsim with
+observability stubbed out, injects a generic probe into every realm from outside (test/browser/zero-knowledge/), and
+lines the result up against today's self-reported diagram. With no help from the app, the probes find every realm (the
+page, 3 instance frames, the referee and 3 client workers) and every connection between them, under names that match
+today's and with the same subjects on the data traffic (see Fixed). What's left:
+
+- **Control and data look alike.** Today separates `interest (sub)` / `hello` from data; to a probe a hub's `sub` frame
+  is a message naming a subject, so it's counted under that subject (and a `hello`, which names nothing, as `message`).
+  Telling them apart needs hub's protocol — the one place hub knowledge might be worth having (as a describer for a
+  known wire format, like JSON-RPC's), or not shown apart at all.
+- **A medium is drawn as a node.** Each client reaches the referee through its BroadcastChannel (client ⇄
+  `channel:netsim.local.link.client-0.*` ⇄ referee); today draws one hub link. Both are true; the probes' is the
+  physical one. A channel with exactly two participants could be drawn as an edge marked with its medium.
+- **What only the hub knows doesn't show:** each link's interest (who subscribed to what), RPC call/reply pairing,
+  and authenticated `from`. Interest is hub-internal state no probe can see; pairing could be done generically
+  (correlate a reply to a request by an `id` field, as JSON-RPC already is).
+- **Probes see what today's diagram can't:** the messages the page's hub sends each instance frame while it's still
+  `about:blank` (lost; hub's handshake recovers them) — counted on the frame, though no page was there to hear them.
+- **Not exercised yet:** play.html (separate tabs: the lobby's BroadcastChannel and Web Locks), WebRTC, storage, and
+  the probe gaps already listed under observability (raw MessagePorts, storage events).
+
 ### observability / debug-mcp (`editor/packages/observability`, `editor/packages/debug-mcp`)
 
 - **Some subjects sit outside the reserved `$sys` namespace.** `tab.discover` / `tab.here` and `page_tools.*` share the
@@ -100,6 +123,15 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **The zero-knowledge diagram couldn't name anything.** Every probed message was `message` / `object`, and a window was
+  its URL, query and all (`window:/games/netsim/instance.html?id=client-0&match=1600cfd7&bots=1` — new every match).
+  observability's probes now name a message by what it says it is, protocol-agnostic: JSON-RPC, DAP, `type`, else the
+  usual fields (`subject`, `topic`, `event`, `channel`; ids folded), through a one-key wrapper (`{ "\0hub": frame }`) —
+  so a hub's traffic reads by subject without knowing hub. And a window is named by `windowName`: what the page
+  embedding it calls its frame (the `<iframe>`'s `title`, `name` or `id`), else its URL with id-like query values folded
+  — `window:client-0`, `window:/games/netsim/?clients=*`. The probes also record hub frames on request
+  (`hubFrames: "record"`), for a realm with no hub tap.
 
 - **hub was a happy-path router** (the NATS audit's fix-now list). A throwing handler stopped the others and the
   forwarding, and threw into the publisher; a transport that threw broke the publish; a dead transport left a link (and
