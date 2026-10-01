@@ -9,6 +9,9 @@
  * - **Introductions:** a BroadcastChannel per match. A player's instance (on every load) names a fresh private
  *   channel and announces it; the host acknowledges and links its referee to it. The game then runs over that channel
  *   between the two workers (channelTransport, in bootstrap.ts) — nothing else of either tab crosses it.
+ *
+ * Same-origin tabs are trusted: any of them can open the lobby channel, take a lock or claim a player id. That's the
+ * editor's preview and a local dev server — a shipped game's players meet over WebRTC, not here.
  */
 
 /** On the match's lobby channel. */
@@ -68,8 +71,15 @@ export async function joinLobby(match: string): Promise<Lobby> {
 	const lobby = new BroadcastChannel(`${prefix}.lobby`);
 	let leave = (): void => undefined;
 	const released = new Promise<void>((resolve) => { leave = resolve; });
+	// What leaving also stops: a player's unanswered connects, and its wait for the host to go.
+	const stops = new Set<() => void>();
 	const close = (): void => {
 		leave();
+
+		for (const stop of stops) {
+			stop();
+		}
+
 		lobby.close();
 	};
 
@@ -113,10 +123,13 @@ export async function joinLobby(match: string): Promise<Lobby> {
 	let hostLeft = false;
 	let onHostLeft = (): void => undefined;
 
-	void navigator.locks.request(hostLock, { "mode": "shared" }, () => {
+	const waiting = new AbortController();
+
+	stops.add(() => { waiting.abort(); });
+	navigator.locks.request(hostLock, { "mode": "shared", "signal": waiting.signal }, () => {
 		hostLeft = true;
 		onHostLeft();
-	});
+	}).catch(() => undefined); // aborted: this tab left first
 
 	return {
 		"role": "player",
@@ -129,13 +142,19 @@ export async function joinLobby(match: string): Promise<Lobby> {
 			await new Promise<void>((resolve) => {
 				const send = (): void => { lobby.postMessage({ "type": "connect", "peer": peer, "channel": channel } satisfies LobbyMessage); };
 				const timer = setInterval(send, RETRY_MS);
+				const stop = (): void => {
+					clearInterval(timer);
+					lobby.removeEventListener("message", answered);
+					stops.delete(stop);
+				};
 				const answered = (event: MessageEvent<LobbyMessage>): void => {
 					if (event.data.type === "accepted" && event.data.channel === channel) {
-						clearInterval(timer);
-						lobby.removeEventListener("message", answered);
+						stop();
 						resolve();
 					}
 				};
+
+				stops.add(stop); // left before the host answered: stop asking (the connect never resolves)
 
 				lobby.addEventListener("message", answered);
 				send();

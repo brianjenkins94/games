@@ -19,10 +19,10 @@ async function start({ port, channel, bots = true, token, remote = false, debugH
 	// Its own name is a placeholder that nobody sees (both its links name it): who it is comes from the referee.
 	const hub: Hub = createHub({ "id": "client" });
 
-	// The referee first: knownAs lists links in order, so the id taken below is the referee's. A remote client (the
-	// referee is the host's) confines the host's link — to nothing until it knows its id, then to the game
+	// The referee is its uplink: the hub that decides who it is (only an uplink's hello can name a hub). A remote client
+	// (the referee is the host's) confines the host's link — to nothing until it knows its id, then to the game
 	// (hostPermissions). The hello that carries the id is a control frame, which permissions don't stop.
-	const toReferee = hub.link(channel === undefined ? portTransport(port!) : channelTransport(channel), remote ? { "transit": false, "permissions": { "publish": [], "subscribe": [] } } : {});
+	const toReferee = hub.link(channel === undefined ? portTransport(port!) : channelTransport(channel), { "uplink": true, ...remote ? { "transit": false, "permissions": { "publish": [], "subscribe": [] } } : {} });
 
 	hub.link(portTransport(globalThis), remote ? { "transit": false } : {});
 	await toReferee.ready;

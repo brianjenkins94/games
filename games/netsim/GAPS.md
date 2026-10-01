@@ -57,6 +57,19 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ## Fixed
 
+- **What the independent review of the multi-window work found** (editor `f7c18fd`, `d066e84`, `20d5b18`, `ef4d7e7`): the RPC client answered
+  to its assigned id everywhere, so in the editor a preview page's calls down its own tree (netsim's debug tools) got
+  no reply — responders now reply to the call's `from`; any linked hub's `hello` could rename it — only an uplink's
+  can; `interested()` counted a link whose permissions would refuse the message; an app hub named `shell` escaped its
+  window's scope; a closed preview window's hubs never ended in the architecture view, and a reopened window could
+  reuse a closed one's number (and its stale records); the shell's bridge took messages from other origins, and its
+  capability prompt with no window open opened a phantom `:5173` window; a worker's injected tap shifted its source
+  map by a line and was only recognized at a fixed path depth; the static capability checks and the canary missed fs
+  methods the runtime gates (`rm`, `rename`, `copyFile`, …) — all now derive from almostnode's table; an RPC client
+  could never stop listening (`dispose()`), and a player that left the lobby kept retrying its connect. The lobby's
+  trust model is by design: same-origin tabs are trusted (the editor and a local dev server); a shipped game's
+  players meet over WebRTC.
+
 - **A short-lived nested frame's reports sometimes never reached the architecture view** (roughly one run in three) —
   root cause not proven, but the one way a report goes missing is closed: a reporter published even when nothing yet
   listened (a viewer's interest not yet across its links), and that report — its realm, its traffic so far — went
@@ -64,8 +77,9 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   a live frame (editor `c194527`), and if its timeout ever recurs it says what the frame itself saw: whether its reports
   had a listener, and its links. editor `cfef034` — in apps once observability is published.
 - **An untrusted peer's hub id had to equal the id its edge assigns**, or its RPC replies couldn't reach it — the edge's
-  `hello` now tells the peer the id it assigned (`you`; `Hub.knownAs()`), taken only from a link the peer didn't assign
-  (a child can't rename its parent), and the RPC client replies and listens under it. editor `90dfd6a`; netsim's client
+  `hello` now tells the peer the id it assigned (`you`; `Hub.knownAs()`), taken only from the peer's uplink
+  (`LinkOptions.uplink`: a child can't rename its parent), and a responder replies to the call's `from` — the id the
+  caller's edge stamped — so a hub its uplink named still calls down its own tree. editor `90dfd6a`, `f7c18fd`; netsim's client
   workers no longer get their id at all — they take it from the referee's hello (observability's reporter can name
   itself by it: `createArchReporter(hub, { self })`).
 - **An app in a preview shared its editor tab's log stream in debug-mcp** — a preview app's tab now names its scope (its

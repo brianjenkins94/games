@@ -449,7 +449,7 @@ test("a client in another tab plays through a host it confines: neither tab's tr
 
 	match.network.link(match.refereeHub, hub, {}, {
 		"left": { "peer": "remote", "permissions": lobbyPermissions(MATCH, "remote", { "observed": false }) },
-		"right": { "transit": false, "permissions": hostPermissions(MATCH, "remote") }
+		"right": { "uplink": true, "transit": false, "permissions": hostPermissions(MATCH, "remote") }
 	});
 	match.network.link(hub, ui, {}, { "left": { "transit": false } });
 
@@ -487,7 +487,7 @@ test("a client confines a hostile host to the game: its state and replies in, th
 	const refused = [`netsim.${MATCH}.input.remote`, "$sys.arch.sync", "$sys.log.page", `$rpc.call.${names.debug("remote", "inspect")}`, `$rpc.reply.other`];
 
 	// No permissions on the host's side (it listens to everything); the client's own link does the confining.
-	network.link(host, hub, {}, { "right": { "transit": false, "permissions": hostPermissions(MATCH, "remote") } });
+	network.link(host, hub, {}, { "right": { "uplink": true, "transit": false, "permissions": hostPermissions(MATCH, "remote") } });
 	host.subscribe(">", (_data, envelope) => { heard.host.push(envelope.subject); });
 
 	for (const subject of [...allowed, ...refused]) {
@@ -516,7 +516,7 @@ test("with debugging on at both ends, the host may call a remote client's debug 
 	const names = subjects(MATCH);
 	const heard: string[] = [];
 
-	network.link(host, hub, {}, { "right": { "transit": false, "permissions": hostPermissions(MATCH, "remote", { "debugHost": "page" }) } });
+	network.link(host, hub, {}, { "right": { "uplink": true, "transit": false, "permissions": hostPermissions(MATCH, "remote", { "debugHost": "page" }) } });
 	host.subscribe("$rpc.reply.page", (_data, envelope) => { heard.push(envelope.subject); });
 	hub.subscribe(`$rpc.call.${names.debug("remote", "*")}`, (_data, envelope) => {
 		heard.push(envelope.subject);

@@ -85,7 +85,7 @@ test("every context reports to the page: logs, and its place in the hub tree", a
 	const linked = (a: string, b: string) => snapshot.channels.some((channel) => (channel.a === a && channel.b === b) || (channel.a === b && channel.b === a));
 
 	// Every context under the id it's known by — no client worker under the placeholder its hub starts as.
-	assert.ok(!snapshot.channels.some((channel) => channel.a === "client" || channel.b === "client"), JSON.stringify(snapshot.channels.map((channel) => channel.id)));
+	assert.ok(!snapshot.channels.some((channel) => channel.a === "client" || channel.b === "client"), JSON.stringify(snapshot.channels.map((channel) => channel.a + " ─ " + channel.b)));
 
 	// The tree: page ─ referee ─ client-i ─ client-i.ui.
 	assert.ok(linked("page", "referee"), JSON.stringify(snapshot.channels));

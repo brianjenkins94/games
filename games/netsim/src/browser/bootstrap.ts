@@ -8,16 +8,16 @@
  *                          └─ …
  *
  * The page brokers a MessageChannel per client straight from the referee worker to that client's worker, so the
- * referee's hub holds every client link: it assigns each client its id (LinkOptions.peer; its hello tells the client)
- * and permissions. In the
- * harness (index.html) the page and the instance iframes aren't hub-linked — the page only hands the iframes their
- * ports.
+ * referee's hub holds every client link: it assigns each client its id (LinkOptions.peer; its hello tells the client,
+ * whose uplink it is) and permissions. In the harness (index.html) the page and the instance iframes aren't hub-linked
+ * — the page only hands the iframes their ports.
  *
  * Players in separate tabs (play.html): the host's tab is the tree above with one instance; each other player's tab is
  * its own tree — its page, its instance, its client worker — and the client worker also links to the host's referee,
  * over a BroadcastChannel the lobby named (lobby.ts; channelTransport). Both of the client worker's links are
- * non-transit, so the two trees meet only at the client: neither sees the other's traffic, and the host's link carries only the game (the referee
- * doesn't observe a remote client — PeerOptions.observed; the client confines the host — hostPermissions).
+ * non-transit, so the two trees meet only at the client: neither sees the other's traffic, and the host's link carries
+ * only the game (the referee doesn't observe a remote client — PeerOptions.observed; the client confines the host —
+ * hostPermissions). Same-origin tabs trust each other (lobby.ts); a shipped game's players link over WebRTC instead.
  *
  *   host tab:    page ─ referee worker ─┬─ player-0 worker ─ player-0 instance
  *                                       └┄ (remote)

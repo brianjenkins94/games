@@ -104,7 +104,7 @@ export async function startMatch({ "clients": count = 2, config = {}, faults = {
 				onTick?.();
 			}
 		},
-		"linkHub": (hub, linkFaults = {}, peer = hub.id) => network.link(refereeHub, hub, linkFaults, { "left": { "peer": peer, "permissions": lobbyPermissions(MATCH, peer, { "debugHost": debugHost, "observed": observed(peer) }) } }),
+		"linkHub": (hub, linkFaults = {}, peer = hub.id) => network.link(refereeHub, hub, linkFaults, { "left": { "peer": peer, "permissions": lobbyPermissions(MATCH, peer, { "debugHost": debugHost, "observed": observed(peer) }) }, "right": { "uplink": true } }),
 		"addClient": (linkFaults = {}, id = `client-${match.hubs.length}`) => {
 			const hub = createHub({ "id": id });
 
