@@ -1,27 +1,20 @@
 /**
  * The browser runtime's wiring, shared by the pages, the instance iframes and the workers.
  *
- * The hub tree (it must stay a tree — hub has no loop protection beyond that):
+ * One transport for every client: each links to the referee over a BroadcastChannel (hub's channelTransport) — a
+ * client of the host's own page as much as a player in another tab (the lobby names that one's channel: lobby.ts) —
+ * and the referee's hub holds every client link: it assigns each client its id (LinkOptions.peer; its hello tells the
+ * client, whose uplink it is) and permissions. That link carries only the game, both ways (lobby / seat permissions
+ * on the referee's side, hostPermissions on the client's). Everything else of a client — its logs, its architecture,
+ * its debugging — rides its own tab's tree: page ─ instance ─ client worker, the instance naming its worker (the edge
+ * names). Both of the client worker's links are non-transit, so the trees meet only at the client.
  *
- *   page ─ referee worker ─┬─ client-0 worker ─ client-0 instance (canvas)
- *                          ├─ client-1 worker ─ client-1 instance
- *                          └─ …
+ *   host tab:    page ─┬─ referee worker ┄┬┄ (each client, over its channel)
+ *                      └─ player-0 instance ─ player-0 worker
+ *   player tab:  page ─ player-1 instance ─ player-1 worker
  *
- * The page brokers a MessageChannel per client straight from the referee worker to that client's worker, so the
- * referee's hub holds every client link: it assigns each client its id (LinkOptions.peer; its hello tells the client,
- * whose uplink it is) and permissions. In the harness (index.html) the page and the instance iframes aren't hub-linked
- * — the page only hands the iframes their ports.
- *
- * Players in separate tabs (play.html): the host's tab is the tree above with one instance; each other player's tab is
- * its own tree — its page, its instance, its client worker — and the client worker also links to the host's referee,
- * over a BroadcastChannel the lobby named (lobby.ts; hub's channelTransport). Both of the client worker's links are
- * non-transit, so the two trees meet only at the client: neither sees the other's traffic, and the host's link carries
- * only the game (the referee doesn't observe a remote client — PeerOptions.observed; the client confines the host —
- * hostPermissions). Same-origin tabs trust each other (lobby.ts); a shipped game's players link over WebRTC instead.
- *
- *   host tab:    page ─ referee worker ─┬─ player-0 worker ─ player-0 instance
- *                                       └┄ (remote)
- *   player tab:  page ─ player-1 instance ─ player-1 worker ┄┘
+ * (Each tree must stay a tree — hub has no loop protection beyond that.) Same-origin tabs trust each other (lobby.ts);
+ * a shipped game's players link over WebRTC instead.
  */
 import type { WorldConfig } from "../sim/index.ts";
 
@@ -33,8 +26,6 @@ export interface InitMessage {
 	"type": "netsim-init";
 	"config": WorldConfig;
 	"perTeam": number;
-	/** The page's hub id when debugging is on: clients' links then let it debug them (debugPermissions). */
-	"debugHost"?: string;
 }
 
 /** The referee worker's host-only calls (RPC, page → referee): its state, and pausing / stepping it. */
@@ -70,15 +61,11 @@ export interface ClientInspection {
 	"predicted": number[][];
 }
 
-/** page → referee worker: a client's end of its channel, and the id to know it by. */
+/** page → referee worker: the BroadcastChannel a client links over (hub's channelTransport), and the id to know it by. */
 export interface AttachMessage {
 	"type": "netsim-attach";
 	"peer": string;
-	/** A client of this page's: its end of a MessageChannel. */
-	"port"?: MessagePort;
-	/** A player in another tab: the BroadcastChannel its client links over (hub's channelTransport). Its link carries only
-	 *  the game — no observability; its own tab observes it. */
-	"channel"?: string;
+	"channel": string;
 }
 
 /** page → instance iframe → its client worker: the channel to the referee (who the client is, the referee tells it —
@@ -86,19 +73,16 @@ export interface AttachMessage {
  *  the old one). */
 export interface PortMessage {
 	"type": "netsim-port";
-	/** The channel to the referee: a MessageChannel's end (the referee is in this tab)… */
-	"port"?: MessagePort;
-	/** …or a BroadcastChannel's name (it's in the host's tab: this is a remote client — see `remote`). */
-	"channel"?: string;
+	/** The BroadcastChannel to the referee (in this tab, or the host's). */
+	"channel": string;
 	"bots"?: boolean;
 	/** The seat token from this instance's earlier join in this match, if any: rejoin that seat. */
 	"token"?: string;
-	/** The referee is in another tab (the host's): link to it non-transit and confined (hostPermissions), and to this
-	 *  instance non-transit too, so the two tabs' trees don't join; and link the instance up to its page. Set with
-	 *  `channel`. */
-	"remote"?: boolean;
-	/** For a remote client: the host page's hub id, when this player has debugging on — the host may then debug it. */
-	"debugHost"?: string;
+}
+
+/** A fresh, unguessable BroadcastChannel name for `peer`'s link to the referee of match `match`. */
+export function linkChannel(match: string, peer: string): string {
+	return `netsim.${match}.link.${peer}.${crypto.randomUUID()}`;
 }
 
 /** Instance-local subjects (client worker ⇄ its instance page). */

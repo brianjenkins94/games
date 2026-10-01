@@ -5,10 +5,10 @@
  */
 import type { ClientDiag, RefereeTick } from "../net/index.ts";
 import type { AttachMessage, InitMessage, PortMessage, Settings } from "./bootstrap.ts";
-import { createHub, portTransport } from "@brianjenkins94/hub";
+import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { subjects } from "../net/index.ts";
 import { tiles } from "../sim/index.ts";
-import { MATCH } from "./bootstrap.ts";
+import { linkChannel, MATCH } from "./bootstrap.ts";
 import { observeApp, ownWorker } from "@brianjenkins94/observability";
 import { netsimTools } from "./tools.ts";
 
@@ -56,9 +56,7 @@ export function startHost({ settings, matchId, grid, status, summary }: HostOpti
 	referee.postMessage({
 		"type": "netsim-init",
 		"config": { "width": 24, "height": 24, "teams": settings.teams, "seed": settings.seed, "speed": 125, "sight": tiles(5) },
-		"perTeam": settings.perTeam,
-		// Only when debugging is on does the referee let the page reach into clients.
-		...telemetry.tab === undefined ? {} : { "debugHost": hub.id }
+		"perTeam": settings.perTeam
 	} satisfies InitMessage);
 
 	hub.subscribe(names.refereeTick, (data) => {
@@ -139,13 +137,20 @@ export function startHost({ settings, matchId, grid, status, summary }: HostOpti
 		"hub": hub,
 		"telemetry": telemetry,
 		/** Seat a client in an instance iframe of this page's: on every load of it, a fresh channel to the referee (its
-		 *  worker, and the old channel's end, died with the old document). */
-		"addInstance": (id: string): HTMLIFrameElement => createInstanceFrame(grid, { "id": id, "matchId": matchId, "bots": settings.bots }, (frame) => {
-			const channel = new MessageChannel();
+		 *  worker died with the old document) — over a BroadcastChannel, as a player in another tab's would be. The
+		 *  instance links up to this page, which observes and debugs the client through it. */
+		"addInstance": (id: string): HTMLIFrameElement => {
+			const frame = createInstanceFrame(grid, { "id": id, "matchId": matchId, "bots": settings.bots }, (loaded) => {
+				const channel = linkChannel(MATCH, id);
 
-			referee.postMessage({ "type": "netsim-attach", "peer": id, "port": channel.port1 } satisfies AttachMessage, [channel.port1]);
-			frame.contentWindow!.postMessage({ "type": "netsim-port", "port": channel.port2 } satisfies PortMessage, location.origin, [channel.port2]);
-		}),
+				referee.postMessage({ "type": "netsim-attach", "peer": id, "channel": channel } satisfies AttachMessage);
+				loaded.contentWindow!.postMessage({ "type": "netsim-port", "channel": channel } satisfies PortMessage, location.origin);
+			});
+
+			hub.link(windowTransport(frame.contentWindow!, location.origin));
+
+			return frame;
+		},
 		/** A player in another tab, known as `peer`: the BroadcastChannel its client links over (the lobby named it). */
 		"attachRemote": (peer: string, channel: string): void => {
 			referee.postMessage({ "type": "netsim-attach", "peer": peer, "channel": channel } satisfies AttachMessage);

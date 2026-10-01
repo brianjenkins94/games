@@ -3,7 +3,6 @@ import type { Hub } from "@brianjenkins94/hub";
 import type { Client, Faults, JoinReply, Network, Referee } from "../../src/net/index.ts";
 import type { WorldConfig } from "../../src/sim/index.ts";
 import { createHub } from "@brianjenkins94/hub";
-import { scopedTransport } from "@brianjenkins94/observability";
 import { createClient, createNetwork, createReferee, lobbyPermissions } from "../../src/net/index.ts";
 import { createRng, hashUnits, nextInt, spawnUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
 
@@ -18,10 +17,6 @@ export interface MatchOptions {
 	"seed"?: number;
 	"perTeam"?: number;
 	"keyframeEvery"?: number;
-	/** A debug host's hub id: clients' links then let it debug them (debugPermissions). */
-	"debugHost"?: string;
-	/** Which clients' links carry their observability (RefereeOptions.observed). Default: all. */
-	"observed"?: (peer: string) => boolean;
 }
 
 export interface Match {
@@ -61,7 +56,7 @@ export async function pump<T>(network: Network, promise: Promise<T>): Promise<T>
 	return promise;
 }
 
-export async function startMatch({ "clients": count = 2, config = {}, faults = {}, seed = 1, perTeam = 3, keyframeEvery = 10, debugHost, observed = () => true }: MatchOptions = {}): Promise<Match> {
+export async function startMatch({ "clients": count = 2, config = {}, faults = {}, seed = 1, perTeam = 3, keyframeEvery = 10 }: MatchOptions = {}): Promise<Match> {
 	const network = createNetwork({ "seed": seed });
 	const refereeHub = createHub({ "id": "referee" });
 	const teams = config.teams ?? Math.max(count, 2);
@@ -70,8 +65,6 @@ export async function startMatch({ "clients": count = 2, config = {}, faults = {
 		"match": MATCH,
 		"config": { "width": 24, "height": 24, "teams": teams, "seed": seed, "speed": 125, "sight": tiles(5), ...config },
 		"keyframeEvery": keyframeEvery,
-		"debugHost": debugHost,
-		"observed": observed,
 		"setup": (world) => {
 			for (let team = 0; team < world.config.teams; team += 1) {
 				for (let index = 0; index < perTeam; index += 1) {
@@ -105,7 +98,7 @@ export async function startMatch({ "clients": count = 2, config = {}, faults = {
 				onTick?.();
 			}
 		},
-		"linkHub": (hub, linkFaults = {}, peer = hub.id) => network.link(refereeHub, hub, linkFaults, { "left": { "peer": peer, "permissions": lobbyPermissions(MATCH, peer, { "debugHost": debugHost, "observed": observed(peer) }) }, "right": { "uplink": true }, "through": { "left": (transport) => scopedTransport(transport, peer, { "keep": (id) => id === refereeHub.id }) } }),
+		"linkHub": (hub, linkFaults = {}, peer = hub.id) => network.link(refereeHub, hub, linkFaults, { "left": { "peer": peer, "permissions": lobbyPermissions(MATCH, peer) }, "right": { "uplink": true } }),
 		"addClient": (linkFaults = {}, id = `client-${match.hubs.length}`) => {
 			const hub = createHub({ "id": id });
 

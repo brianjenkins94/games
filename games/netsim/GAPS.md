@@ -63,6 +63,19 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ## Fixed
 
+- **The preview tap was a side channel, and netsim had two transports** (the simplification audit, step 4). The
+  editor's page tap is now a hub client: a preview window's top frame holds its one hub into the editor (the tap's,
+  named as the window), the app's own hub joins through it (observability's `linkPreviewHost`), and console records,
+  capability requests (`preview.decide`) and new windows (`preview.open`) ride it — the shell takes the window from the
+  link, and the ad-hoc `obs-log` / `cap-decide` / `open-window` protocol is gone (workers keep a BroadcastChannel tap:
+  they can't reach the editor's window). netsim links every client to the referee over a BroadcastChannel — the host's
+  own too — carrying only the game (permissions: lobby, seat, host); each client is observed and debugged through its
+  own tab (page ─ instance ─ worker), so the host inspects its own players, not another tab's (`netsim_divergence`
+  says which are elsewhere). It found a hub gap: a confined link still advertised interest its permissions would
+  refuse, so a page took a player's debug RPC for reachable and waited out a timeout — hub now advertises only what
+  each link could deliver. And the editor's architecture CI tested this commit's editor against the *published*
+  observability (a race with its publish): it now packs this commit's hub and observability for the fixture.
+
 - **Identity was guessed downstream** (the simplification audit, step 3). One naming rule now: the edge names. The hub
   where an app joins a tree (the editor's shell per preview window, netsim's referee per client, a player tab's
   instance) renames what comes across (observability's `scopedTransport`): the hub across the link IS the scope

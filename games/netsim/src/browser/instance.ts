@@ -23,26 +23,24 @@ let latest: InstanceView | undefined;
 const { log } = observe(hub);
 
 ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); });
-// This page made the worker, and names it on its link — the same id the page assigned at the referee — so what this
-// page reports links to `client-0`, not to the placeholder the worker's hub starts as; and in a player's tab, where the
-// worker's reports reach the page through here, this is the edge that names them.
-hub.link(scopedTransport(portTransport(worker), id, { "keep": (other) => other === hub.id }), { "peer": id });
+// This page made the worker, and names it on its link — the same id the page assigned at the referee — and, the
+// worker's reports reaching its page through here, it's the edge that names them: the worker as `client-0`. What they
+// name outside the client — this page, the referee its game links to — keeps its name.
+hub.link(scopedTransport(portTransport(worker), id, { "keep": (other) => other === hub.id || other === "referee" }), { "peer": id });
 
 let linkedUp = false;
 
 globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefined>) => {
 	if (event.source === parent && event.data?.type === "netsim-port") {
-		const { port, channel, remote, debugHost } = event.data;
-		const message: PortMessage = { "type": "netsim-port", "bots": params.get("bots") !== "0", ...storedToken(), ...port === undefined ? { "channel": channel } : { "port": port }, ...remote === true ? { "remote": true, "debugHost": debugHost } : {} };
+		const message: PortMessage = { "type": "netsim-port", "channel": event.data.channel, "bots": params.get("bots") !== "0", ...storedToken() };
 
-		// A remote client's page is its tab's root (in the harness, the page isn't linked — the instance's records reach
-		// it through the referee): link up to it, so this tab observes its own player.
-		if (remote === true && !linkedUp) {
+		// Its page is its tab's root: link up to it, so the tab observes (and debugs) its own client.
+		if (!linkedUp) {
 			linkedUp = true;
 			hub.link(windowTransport(parent, location.origin));
 		}
 
-		worker.postMessage(message, port === undefined ? [] : [port]);
+		worker.postMessage(message);
 	}
 });
 

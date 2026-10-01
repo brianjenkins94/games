@@ -22,11 +22,6 @@ export interface RefereeOptions {
 	"setup"?: (world: World) => void;
 	/** Send a keyframe at least this often (ticks). Default 10. */
 	"keyframeEvery"?: number;
-	/** The debug host's hub id (the page), when debugging is on: seated clients' links let it debug them. */
-	"debugHost"?: string;
-	/** Whether a client's link carries its observability (default: every client's). A client in another tab reports
-	 *  to its own tab instead (PeerOptions.observed). */
-	"observed"?: (peer: string) => boolean;
 }
 
 export interface RefereeStats {
@@ -86,7 +81,7 @@ function isResync(value: unknown): value is ResyncRequest {
 	return typeof request === "object" && request !== null && request.resync === true;
 }
 
-export function createReferee({ hub, match, config, setup, keyframeEvery = 10, debugHost, observed = () => true }: RefereeOptions): Referee {
+export function createReferee({ hub, match, config, setup, keyframeEvery = 10 }: RefereeOptions): Referee {
 	const world = createWorld(config);
 	const names = subjects(match);
 	/** By token. */
@@ -101,13 +96,13 @@ export function createReferee({ hub, match, config, setup, keyframeEvery = 10, d
 	function seatPeer(seat: Seat, peer: string): JoinReply {
 		if (seat.peer !== peer) {
 			// Moving the seat to a new link: the old one (if it's still there) goes back to the lobby.
-			hub.permit(seat.peer, lobbyPermissions(match, seat.peer, { "debugHost": debugHost, "observed": observed(seat.peer) }));
+			hub.permit(seat.peer, lobbyPermissions(match, seat.peer));
 			seat.peer = peer;
 		}
 
 		// Whatever the client had is gone (or never was): its next update is a keyframe.
 		seat.needKeyframe = true;
-		hub.permit(peer, seatPermissions(match, peer, seat.team, { "debugHost": debugHost, "observed": observed(peer) }));
+		hub.permit(peer, seatPermissions(match, peer, seat.team));
 
 		return { "team": seat.team, "token": seat.token, "config": world.config, "nextSeq": seat.lastSeq + 1 };
 	}

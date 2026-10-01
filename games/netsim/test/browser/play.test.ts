@@ -11,7 +11,7 @@ import { FP } from "../../src/sim/index.ts";
 import { startSession, status, tool, until, untilInSync } from "./harness.ts";
 
 interface Unit { "id": number; "team": number; "x": number; "y": number; "tx": number; "ty": number }
-interface Divergence { "tick": number; "clients": { "peer": string; "comparable": boolean; "identical"?: boolean }[] }
+interface Divergence { "tick": number; "clients": { "peer": string; "comparable": boolean; "identical"?: boolean; "reason"?: string }[] }
 interface View { "team": number | undefined; "viewTick": number; "inSync": boolean; "units": number[][] }
 interface LogEntry { "message"?: string; "context"?: { "source"?: string } }
 
@@ -55,7 +55,8 @@ async function pauseAndSettle(host: Page): Promise<Divergence> {
 		const netsim = (globalThis as unknown as { "__netsim": { "tool": (name: string) => Promise<Divergence> } }).__netsim;
 		const divergence = await netsim.tool("netsim_divergence");
 
-		return divergence.clients.every((client) => client.comparable) ? divergence : undefined;
+		// (Another tab's player is that tab's to inspect: the host diffs its own.)
+		return divergence.clients.every((client) => client.comparable || client.reason?.startsWith("in another tab")) ? divergence : undefined;
 	});
 }
 
@@ -87,11 +88,11 @@ test("players in separate tabs play one match: the first tab hosts, the rest joi
 
 	assert.equal(teams.size, 3, "three players, three teams");
 
-	// And the host can check every one of them against authority — the other tabs' clients included (debugging is on
-	// at both ends: localhost).
+	// And the host can check its own player against authority, unit by unit; the other tabs' players are theirs to
+	// inspect (their sync is checked here all the same: their view hashes, above).
 	const divergence = await pauseAndSettle(host);
 
-	assert.deepEqual(divergence.clients.map((client) => [client.peer, client.identical]), [["player-0", true], ["player-1", true], ["player-2", true]]);
+	assert.deepEqual(divergence.clients.map((client) => [client.peer, client.comparable ? client.identical : "elsewhere"]), [["player-0", true], ["player-1", "elsewhere"], ["player-2", "elsewhere"]]);
 
 	for (const page of [host, ...players]) {
 		await page.close();

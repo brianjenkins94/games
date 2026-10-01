@@ -2,7 +2,7 @@
 import type { Referee } from "../net/index.ts";
 import type { AttachMessage, InitMessage, RefereeControl, RefereeInspection } from "./bootstrap.ts";
 import { channelTransport, createHub, portTransport, serve } from "@brianjenkins94/hub";
-import { observe, scopedTransport } from "@brianjenkins94/observability";
+import { observe } from "@brianjenkins94/observability";
 import { createReferee, lobbyPermissions } from "../net/index.ts";
 import { encodeUnit, nextInt, spawnUnit, tiles, visibleUnits } from "../sim/index.ts";
 import { MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
@@ -19,12 +19,8 @@ hub.tap((event) => {
 	}
 });
 
-let debugHost: string | undefined;
 /** Each client's current link, by peer id: a reloaded instance attaches again, replacing its dead one. */
 const links = new Map<string, () => void>();
-/** Players in other tabs: their links carry only the game (their own tabs observe them). */
-const remote = new Set<string>();
-const observed = (peer: string): boolean => !remote.has(peer);
 let paused = false;
 let current: Referee | undefined;
 
@@ -72,14 +68,10 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 	const message = event.data;
 
 	if (message?.type === "netsim-init") {
-		debugHost = message.debugHost;
-
 		const referee = createReferee({
 			"hub": hub,
 			"match": MATCH,
 			"config": message.config,
-			"debugHost": debugHost,
-			"observed": observed,
 			"setup": (world) => {
 				for (let team = 0; team < world.config.teams; team += 1) {
 					for (let index = 0; index < message.perTeam; index += 1) {
@@ -110,27 +102,18 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 		}, TICK_MS);
 	} else if (message?.type === "netsim-attach") {
 		const replaced = links.get(message.peer);
-		const isRemote = message.channel !== undefined;
 
 		replaced?.();
 
-		if (isRemote) {
-			remote.add(message.peer);
-		} else {
-			remote.delete(message.peer);
-		}
-
-		// A player in another tab links over a BroadcastChannel (closed with its link); ours over a MessageChannel.
-		const channel = message.channel === undefined ? undefined : channelTransport(message.channel);
-		// The referee names its clients: what a client reports is filed under the id it was given here — its own hub as
-		// that id, anything behind it (its instance page) under it.
-		const transport = scopedTransport(channel ?? portTransport(message.port!), message.peer, { "keep": (id) => id === hub.id });
-		const unlink = hub.link(transport, { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer, { "debugHost": debugHost, "observed": observed(message.peer) }) });
+		// Every client, ours or another tab's, over its own BroadcastChannel (closed with its link). The link carries only
+		// the game: the client's own tab observes and debugs it.
+		const channel = channelTransport(message.channel);
+		const unlink = hub.link(channel, { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer) });
 
 		links.set(message.peer, () => {
 			unlink();
-			channel?.close();
+			channel.close();
 		});
-		log.info(replaced === undefined ? "client linked" : "client relinked", { "peer": message.peer, "remote": isRemote });
+		log.info(replaced === undefined ? "client linked" : "client relinked", { "peer": message.peer });
 	}
 });

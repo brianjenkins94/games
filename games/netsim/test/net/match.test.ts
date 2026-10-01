@@ -184,11 +184,13 @@ test("a hub that hasn't joined can neither send commands nor read any state", as
 		}
 	});
 	match.network.settle();
+	// The referee never even asks it for commands (its link may not send them), so they don't leave it.
+	assert.equal(lurker.interested(subjects(MATCH).commands), false);
 	lurker.publish(subjects(MATCH).commands, { "seq": 1, "commands": [] });
 	match.run(5);
 	assert.deepEqual(heard, []);
-	assert.deepEqual(denied, [subjects(MATCH).commands]);
-	assert.equal(match.referee.stats.unknownSender, 0, "it never even reached the referee");
+	assert.deepEqual(denied, [], "nothing for the link to refuse");
+	assert.equal(match.referee.stats.unknownSender, 0, "it never reached the referee");
 });
 
 test("a client can't speak for another: whatever id it claims, it's the one its link was given", async () => {
@@ -379,39 +381,13 @@ test("a client may report diagnostics on its own subject only", async () => {
 	assert.deepEqual(heard, [names.diag(match.hubs[0].id)]);
 });
 
-test("the referee names a client's observability: whatever it publishes is filed under its seat's id", async () => {
+test("a client's link to the referee carries none of its observability, either way — its own tab observes it", async () => {
 	const match = await startMatch({ "clients": 2 });
-	const [first] = match.hubs;
-	const heard: string[] = [];
-	let synced = 0;
-
-	match.refereeHub.subscribe("$sys.log.>", (_data, envelope) => { heard.push(envelope.subject); });
-	match.refereeHub.subscribe("$sys.arch.>", (_data, envelope) => { heard.push(envelope.subject); });
-	first.subscribe("$sys.arch.sync", (_data, envelope) => {
-		synced += envelope.from === "referee" ? 1 : 0;
-	});
-	match.network.settle();
-
-	for (const subject of [`$sys.log.${first.id}`, `$sys.log.${first.id}/ui`, `$sys.arch.${first.id}`, `$sys.arch.${first.id}/ui`, "$sys.log.referee", `$sys.log.${match.hubs[1].id}`, "$sys.arch.sync"]) {
-		first.publish(subject, {});
-	}
-
-	match.refereeHub.publish("$sys.arch.sync");
-	match.network.settle();
-	// (The referee's own sync request is heard locally too; set it aside.)
-	// Its own, and its instance page's (named under it); another's — the referee's, another client's — under it too.
-	assert.deepEqual(heard.filter((subject) => subject !== "$sys.arch.sync"), [`$sys.log.${first.id}`, `$sys.log.${first.id}/ui`, `$sys.arch.${first.id}`, `$sys.arch.${first.id}/ui`, `$sys.log.${first.id}/referee`, `$sys.log.${first.id}/${match.hubs[1].id}`], "never as another");
-	assert.equal(synced, 1, "and it hears the viewers' sync requests");
-});
-
-test("an unobserved client (another tab's) plays as usual, but its link carries no observability either way", async () => {
-	const match = await startMatch({ "clients": 2, "observed": (peer) => peer !== "client-0" });
 	const [first, second] = match.hubs;
 	const heard: string[] = [];
 	const synced: string[] = [];
 
-	match.refereeHub.subscribe("$sys.log.>", (_data, envelope) => { heard.push(envelope.subject); });
-	match.refereeHub.subscribe("$sys.arch.>", (_data, envelope) => { heard.push(envelope.subject); });
+	match.refereeHub.subscribe("$sys.>", (_data, envelope) => { heard.push(envelope.subject); });
 
 	for (const hub of [first, second]) {
 		hub.subscribe("$sys.arch.sync", () => { synced.push(hub.id); });
@@ -427,8 +403,8 @@ test("an unobserved client (another tab's) plays as usual, but its link carries 
 
 	match.refereeHub.publish("$sys.arch.sync");
 	match.network.settle();
-	assert.deepEqual(heard.filter((subject) => subject !== "$sys.arch.sync"), [`$sys.log.${second.id}`, `$sys.arch.${second.id}`]);
-	assert.deepEqual(synced, [second.id]);
+	assert.deepEqual(heard.filter((subject) => subject !== "$sys.arch.sync"), []);
+	assert.deepEqual(synced, []);
 
 	match.run(5);
 
@@ -441,7 +417,7 @@ test("an unobserved client (another tab's) plays as usual, but its link carries 
 });
 
 test("a client in another tab plays through a host it confines: neither tab's tree reaches the other's", async () => {
-	const match = await startMatch({ "clients": 1, "observed": (peer) => peer !== "remote" });
+	const match = await startMatch({ "clients": 1 });
 	// The remote player's tab: its client hub, and its instance page behind it — linked non-transit on both sides, so
 	// the client belongs to both trees while joining neither to the other.
 	const hub = createHub({ "id": "remote" });
@@ -449,7 +425,7 @@ test("a client in another tab plays through a host it confines: neither tab's tr
 	const heard = { "referee": [] as string[], "ui": [] as string[], "client": [] as string[] };
 
 	match.network.link(match.refereeHub, hub, {}, {
-		"left": { "peer": "remote", "permissions": lobbyPermissions(MATCH, "remote", { "observed": false }) },
+		"left": { "peer": "remote", "permissions": lobbyPermissions(MATCH, "remote") },
 		"right": { "uplink": true, "transit": false, "permissions": hostPermissions(MATCH, "remote") }
 	});
 	match.network.link(hub, ui, {}, { "left": { "transit": false } });
@@ -510,25 +486,6 @@ test("a client confines a hostile host to the game: its state and replies in, th
 	assert.deepEqual(heard.host.filter((subject) => ![...allowed, ...refused].includes(subject)), [`$rpc.call.${names.join}`, names.commands, names.diag("remote")]);
 });
 
-test("with debugging on at both ends, the host may call a remote client's debug RPCs and hear the answers", () => {
-	const network = createNetwork({ "seed": 1 });
-	const host = createHub({ "id": "page" });
-	const hub = createHub({ "id": "remote" });
-	const names = subjects(MATCH);
-	const heard: string[] = [];
-
-	network.link(host, hub, {}, { "right": { "uplink": true, "transit": false, "permissions": hostPermissions(MATCH, "remote", { "debugHost": "page" }) } });
-	host.subscribe("$rpc.reply.page", (_data, envelope) => { heard.push(envelope.subject); });
-	hub.subscribe(`$rpc.call.${names.debug("remote", "*")}`, (_data, envelope) => {
-		heard.push(envelope.subject);
-		hub.publish("$rpc.reply.page", {});
-	});
-	network.settle();
-	host.publish(`$rpc.call.${names.debug("remote", "inspect")}`, {});
-	network.settle();
-	assert.deepEqual(heard, [`$rpc.call.${names.debug("remote", "inspect")}`, "$rpc.reply.page"]);
-});
-
 test("a client's first keyframe waits for its subscription, so joining never costs a resync", async () => {
 	const match = await startMatch({ "clients": 1 });
 	const late = match.addClient();
@@ -543,41 +500,7 @@ test("a client's first keyframe waits for its subscription, so joining never cos
 	assert.ok(match.referee.stats.held > 0, "its first update was held until it was listening");
 });
 
-test("a debug host can call a seated client's debug RPCs; another client can neither call them nor hear the answers", async () => {
-	const match = await startMatch({ "clients": 2, "debugHost": "host" });
-	const names = subjects(MATCH);
-	const [first, second] = match.hubs;
-	// The host (the page) is trusted: its link carries no restrictions.
-	const host = createHub({ "id": "host" });
-	const overheard: unknown[] = [];
-	let calls = 0;
-
-	match.network.link(match.refereeHub, host, {});
-	serve(first, names.debug(first.id, "inspect"), () => {
-		calls += 1;
-
-		return { "peer": first.id, "viewTick": match.clients[0].viewTick() };
-	});
-	// The other client tries to intercept calls meant for the first, and to overhear the answers.
-	second.subscribe(`$rpc.call.${names.debug(first.id, "inspect")}`, (data) => { overheard.push(data); });
-	second.subscribe("$rpc.reply.>", (data) => { overheard.push(data); });
-	match.network.settle();
-	match.run(2);
-
-	assert.deepEqual(await pump(match.network, createRpcClient(host).request(names.debug(first.id, "inspect"), undefined, { "timeoutMs": 500 })), { "peer": first.id, "viewTick": match.referee.world.tick });
-	assert.deepEqual(overheard, [], "the other client saw neither the host's call nor its answer");
-	await assert.rejects(pump(match.network, createRpcClient(second).request(names.debug(first.id, "inspect"), undefined, { "timeoutMs": 300 })), /timed out|no responder/u);
-	assert.equal(calls, 1, "and its own call never arrived");
-
-	// Answering the host doesn't let a client answer anyone else (a forged reply to another client's call). (Set aside
-	// the other client's own call, which its hub delivered to itself.)
-	overheard.length = 0;
-	first.publish(`$rpc.reply.${second.id}`, { "id": "forged", "result": "forged" });
-	match.network.settle();
-	assert.deepEqual(overheard, []);
-});
-
-test("without a debug host, nobody can reach a client's debug RPCs — the page included", async () => {
+test("nobody can reach a client's debug RPCs across the referee — the page included (a client is debugged in its own tab)", async () => {
 	const match = await startMatch({ "clients": 1 });
 	const names = subjects(MATCH);
 	const [first] = match.hubs;

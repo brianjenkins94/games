@@ -1,11 +1,12 @@
 /**
- * One client, in its instance's worker: links to its instance page (for drawing and input) and, over the channel the
- * page brokered, to the referee. Nobody tells it who it is: the referee's hub assigns its id (LinkOptions.peer) and
- * says so in its hello (hub's knownAs) — the id it's stamped with, permitted as, and names its subjects by. Its logs and
- * reports go out under its hub's own id, and the edge names them: the referee (or, in a player's tab, its instance).
+ * One client, in its instance's worker: links to its instance page (for drawing and input) and, over the
+ * BroadcastChannel its page named, to the referee. Nobody tells it who it is: the referee's hub assigns its id
+ * (LinkOptions.peer) and says so in its hello (hub's knownAs) — the id it's stamped with, permitted as, and names its
+ * subjects by. Its logs and reports go out under its hub's own id, to its own tab, and the edge names them: its
+ * instance.
  *
- * A remote client (its referee in the host's tab) belongs to two trees — its own tab's and the host's — and joins
- * neither to the other: both links are non-transit, and it confines the host's link to the game (hostPermissions).
+ * It belongs to two trees — its own tab's and the referee's — and joins neither to the other: both links are
+ * non-transit, and it confines the referee's link to the game (hostPermissions).
  */
 import type { Hub } from "@brianjenkins94/hub";
 import type { Client } from "../net/index.ts";
@@ -16,16 +17,16 @@ import { createClient, hostPermissions, subjects } from "../net/index.ts";
 import { approxDistance, createRng, encodeUnit, nextInt, tiles, validateCommand } from "../sim/index.ts";
 import { instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
 
-async function start({ port, channel, bots = true, token, remote = false, debugHost }: PortMessage): Promise<void> {
+async function start({ channel, bots = true, token }: PortMessage): Promise<void> {
 	// Its own name is a placeholder that nobody sees (both its links name it): who it is comes from the referee.
 	const hub: Hub = createHub({ "id": "client" });
 
-	// The referee is its uplink: the hub that decides who it is (only an uplink's hello can name a hub). A remote client
-	// (the referee is the host's) confines the host's link — to nothing until it knows its id, then to the game
-	// (hostPermissions). The hello that carries the id is a control frame, which permissions don't stop.
-	const toReferee = hub.link(channel === undefined ? portTransport(port!) : channelTransport(channel), { "uplink": true, ...remote ? { "transit": false, "permissions": { "publish": [], "subscribe": [] } } : {} });
+	// The referee is its uplink: the hub that decides who it is (only an uplink's hello can name a hub). Its link is
+	// confined — to nothing until the client knows its id, then to the game (hostPermissions). The hello that carries the
+	// id is a control frame, which permissions don't stop.
+	const toReferee = hub.link(channelTransport(channel), { "uplink": true, "transit": false, "permissions": { "publish": [], "subscribe": [] } });
 
-	hub.link(portTransport(globalThis), remote ? { "transit": false } : {});
+	hub.link(portTransport(globalThis), { "transit": false });
 	await toReferee.ready;
 
 	const id = hub.knownAs()[0];
@@ -34,9 +35,7 @@ async function start({ port, channel, bots = true, token, remote = false, debugH
 		throw new Error("the referee didn't say who this client is");
 	}
 
-	if (remote) {
-		hub.permit("referee", hostPermissions(MATCH, id, { "debugHost": debugHost }));
-	}
+	hub.permit("referee", hostPermissions(MATCH, id));
 
 	const names = subjects(MATCH);
 	const local = instanceSubjects(id);
@@ -47,7 +46,7 @@ async function start({ port, channel, bots = true, token, remote = false, debugH
 	const { log } = observe(hub);
 	const reported = { "gaps": 0, "desyncs": 0, "snaps": 0 };
 
-	// Debugging (reachable only from the debug host — the referee's hub permits nothing else to call these).
+	// Debugging, from its own tab (its page reaches it through its instance; the referee's link carries no calls to these).
 	serve(hub, names.debug(id, "inspect"), (): ClientInspection => ({
 		"peer": id,
 		"team": client.team(),

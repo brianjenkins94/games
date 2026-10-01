@@ -14,6 +14,8 @@
  * editor's preview and a local dev server — a shipped game's players meet over WebRTC, not here.
  */
 
+import { linkChannel } from "./bootstrap.ts";
+
 /** On the match's lobby channel. */
 type LobbyMessage =
 	/** player → host: link to my instance's client over `channel`. Repeated until accepted. */
@@ -137,7 +139,7 @@ export async function joinLobby(match: string): Promise<Lobby> {
 		"peer": peer,
 		"close": close,
 		"connect": async () => {
-			const channel = `${prefix}.link.${peer}.${crypto.randomUUID()}`;
+			const channel = linkChannel(match, peer);
 
 			await new Promise<void>((resolve) => {
 				const send = (): void => { lobby.postMessage({ "type": "connect", "peer": peer, "channel": channel } satisfies LobbyMessage); };

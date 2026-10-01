@@ -15,7 +15,6 @@
  */
 import type { LinkPermissions } from "@brianjenkins94/hub";
 import { rpcCallSubject, rpcReplySubject } from "@brianjenkins94/hub";
-import { observabilityPermissions } from "@brianjenkins94/observability";
 import type { WorldConfig } from "../sim/index.ts";
 
 export function subjects(match: string) {
@@ -27,68 +26,48 @@ export function subjects(match: string) {
 		"diag": (peer: string) => `netsim.${match}.diag.${peer}`,
 		/** The referee's per-tick summary (RefereeTick) — for the host, never a client. */
 		"refereeTick": `netsim.${match}.referee.tick`,
-		/** Debugging a client (RPC): `inspect`, `command`. Reachable only from the debug host (see debugPermissions). */
+		/** Debugging a client (RPC): `inspect`, `command` — served in its own tab's tree (its page reaches it through its
+		 *  instance), never across the referee link. */
 		"debug": (peer: string, op: string) => `netsim.${match}.debug.${peer}.${op}`
 	};
 }
 
-/**
- * Letting the debug host (hub id `host` — the page) debug a client: the client may receive calls to its own
- * `debug.<peer>.*` and answer the host. Opt-in (a host passes it only when debugging is on); another client can't call
- * them, since no client may publish a debug call.
- */
-export function debugPermissions(match: string, peer: string, host: string): Required<LinkPermissions> {
-	return { "publish": [rpcReplySubject(host)], "subscribe": [rpcCallSubject(subjects(match).debug(peer, "*"))] };
+/** Every client's link, whatever its seat: report its own diagnostics, hear its own replies. Nothing else crosses — not
+ *  its observability or its debugging, which ride its own tab's tree (its instance page). */
+function common(match: string, peer: string): Required<LinkPermissions> {
+	return { "publish": [subjects(match).diag(peer)], "subscribe": [rpcReplySubject(peer)] };
 }
 
-export interface PeerOptions {
-	/** The debug host's hub id (the page), when debugging is on: the client's link lets it debug the client. */
-	"debugHost"?: string;
-	/** Default true. False for a client in another tab (another player's): its logs and architecture belong to its
-	 *  own tab's tree, not the host's — its link carries only the game. */
-	"observed"?: boolean;
-}
-
-/** Everything but the seat itself: diagnostics, observability (when observed), and debugging (with a `debugHost`). */
-function common(match: string, peer: string, { debugHost, observed = true }: PeerOptions): Required<LinkPermissions> {
-	const none = { "publish": [], "subscribe": [] };
-	const observability = observed ? observabilityPermissions() : none;
-	const debug = debugHost === undefined ? none : debugPermissions(match, peer, debugHost);
-
-	return { "publish": [subjects(match).diag(peer), ...observability.publish, ...debug.publish], "subscribe": [rpcReplySubject(peer), ...observability.subscribe, ...debug.subscribe] };
-}
-
-/** What a not-yet-seated client (hub id `peer`) may do: ask to join, hear its own replies, report its own diagnostics
- *  and observability (and be debugged by the debug host, when given). */
-export function lobbyPermissions(match: string, peer: string, options: PeerOptions = {}): LinkPermissions {
+/** What a not-yet-seated client (hub id `peer`) may do: ask to join, hear its own replies, report its own
+ *  diagnostics. */
+export function lobbyPermissions(match: string, peer: string): LinkPermissions {
 	const names = subjects(match);
-	const shared = common(match, peer, options);
+	const shared = common(match, peer);
 
 	return { "publish": [rpcCallSubject(names.join), ...shared.publish], "subscribe": shared.subscribe };
 }
 
 /** What a client seated on `team` may do: everything in the lobby, plus send commands and receive its own team's
  *  view. */
-export function seatPermissions(match: string, peer: string, team: number, options: PeerOptions = {}): LinkPermissions {
+export function seatPermissions(match: string, peer: string, team: number): LinkPermissions {
 	const names = subjects(match);
-	const shared = common(match, peer, options);
+	const shared = common(match, peer);
 
 	return { "publish": [rpcCallSubject(names.join), names.commands, ...shared.publish], "subscribe": [names.state(team), ...shared.subscribe] };
 }
 
 /**
- * The other direction, for a client whose referee is in another tab (another player's — the host's): what the client's
- * own hub lets that host do. It may send the client its team's state and its RPC replies (and call its debug RPCs, when
- * the client's player turned debugging on — `debugHost` is the host page's hub id); it hears only the client's join,
- * commands, diagnostics (and debug answers). Nothing of the client's own tab — its logs, its instance page's input —
- * crosses, whatever the host subscribes to or sends.
+ * The other direction — what a client's own hub lets its referee do (the referee is another tab's, the host's, or in
+ * its own tab: either way, not its tree): send the client its team's state and its RPC replies, and hear only the
+ * client's join, commands and diagnostics. Nothing of the client's own tab — its logs, its debugging, its instance
+ * page's input — crosses, whatever the referee subscribes to or sends.
  */
-export function hostPermissions(match: string, peer: string, { debugHost }: Pick<PeerOptions, "debugHost"> = {}): Required<LinkPermissions> {
+export function hostPermissions(match: string, peer: string): Required<LinkPermissions> {
 	const names = subjects(match);
 
 	return {
-		"publish": [`netsim.${match}.state.*`, rpcReplySubject(peer), ...debugHost === undefined ? [] : [rpcCallSubject(names.debug(peer, "*"))]],
-		"subscribe": [rpcCallSubject(names.join), names.commands, names.diag(peer), ...debugHost === undefined ? [] : [rpcReplySubject(debugHost)]]
+		"publish": [`netsim.${match}.state.*`, rpcReplySubject(peer)],
+		"subscribe": [rpcCallSubject(names.join), names.commands, names.diag(peer)]
 	};
 }
 

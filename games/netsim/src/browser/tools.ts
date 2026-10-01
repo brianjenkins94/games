@@ -1,12 +1,12 @@
 /**
  * netsim's own MCP tools, served from the page (observability's page tools; debug-mcp registers them live while the
- * tab is connected). They reach the referee over the page's trusted link and each client over its `debug.<peer>.*`
- * subjects, which the referee's hub lets only the page call (debugPermissions).
+ * tab is connected). They reach the referee over the page's trusted link, and each of this tab's clients over its
+ * `debug.<peer>.*` subjects — through its instance, in this tab's own tree (the referee's link carries no such calls).
  */
 import type { Hub } from "@brianjenkins94/hub";
 import type { PageTool } from "@brianjenkins94/observability";
 import type { ClientInspection, RefereeControl, RefereeInspection } from "./bootstrap.ts";
-import { createRpcClient } from "@brianjenkins94/hub";
+import { createRpcClient, rpcCallSubject } from "@brianjenkins94/hub";
 import { diffUnits, isEmpty, subjects } from "../net/index.ts";
 import { decodeUnit, FP } from "../sim/index.ts";
 import { MATCH, REFEREE_CONTROL, REFEREE_INSPECT } from "./bootstrap.ts";
@@ -18,6 +18,15 @@ export function netsimTools(hub: Hub, status: () => unknown): PageTool[] {
 	const names = subjects(MATCH);
 	const inspectReferee = async () => await rpc.request(REFEREE_INSPECT, undefined, CALL) as RefereeInspection;
 	const inspectClient = async (peer: string) => await rpc.request(names.debug(peer, "inspect"), undefined, CALL) as ClientInspection;
+	/** A client this tab can reach — its own (through its instance); another tab's player is that tab's to inspect. */
+	const reachable = async (peer: string): Promise<ClientInspection | undefined> => {
+		if (!await hub.whenInterested(rpcCallSubject(names.debug(peer, "inspect")), CALL.waitForResponderMs)) {
+			return undefined;
+		}
+
+		return inspectClient(peer);
+	};
+	const ELSEWHERE = "in another tab — its own tab inspects it (the referee's link carries only the game)";
 	/** The named client, or every seated one. */
 	const peers = async (client: unknown) => typeof client === "string" ? [client] : (await inspectReferee()).seats.map((seat) => seat.peer).sort();
 	const clientArg = { "client": { "type": "string", "description": "A client's id (client-0, client-1, …). Omit for every seated client." } };
@@ -40,9 +49,9 @@ export function netsimTools(hub: Hub, status: () => unknown): PageTool[] {
 			"handler": async ({ client }) => {
 				const referee = await inspectReferee();
 				const clients = await Promise.all((await peers(client)).map(async (peer) => {
-					const inspection = await inspectClient(peer);
+					const inspection = await reachable(peer);
 
-					return { ...inspection, "units": inspection.units.map(decodeUnit), "predicted": inspection.predicted.map(decodeUnit) };
+					return inspection === undefined ? { "peer": peer, "elsewhere": ELSEWHERE } : { ...inspection, "units": inspection.units.map(decodeUnit), "predicted": inspection.predicted.map(decodeUnit) };
 				}));
 
 				return { "tick": referee.tick, "paused": referee.paused, "units": referee.units.map(decodeUnit), "clients": clients };
@@ -59,7 +68,12 @@ export function netsimTools(hub: Hub, status: () => unknown): PageTool[] {
 					"tick": referee.tick,
 					"paused": referee.paused,
 					"clients": await Promise.all((await peers(client)).map(async (peer) => {
-						const inspection = await inspectClient(peer);
+						const inspection = await reachable(peer);
+
+						if (inspection === undefined) {
+							return { "peer": peer, "comparable": false, "reason": ELSEWHERE };
+						}
+
 						const base = { "peer": peer, "team": inspection.team, "viewTick": inspection.viewTick, "inSync": inspection.inSync };
 
 						if (inspection.team === undefined || inspection.viewTick !== referee.tick) {
