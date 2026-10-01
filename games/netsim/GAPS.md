@@ -9,6 +9,18 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 - **Control frames assume reliable delivery.** A lost `sub`/`unsub` isn't repaired until a reconnect (`hello`
   re-advertises). Fine over a MessagePort or a reliable channel; a problem over an unreliable WebRTC data channel.
+
+### observability / debug-mcp (`editor/packages/observability`, `editor/packages/debug-mcp`)
+
+- **Some subjects sit outside the reserved `$sys` namespace.** `tab.discover` / `tab.here` and `page_tools.*` share the
+  app's namespace, and the observability subjects are defined across index.ts, arch.ts, tabs.ts and page-tools.ts.
+  One `subjects.ts`, everything under `$sys`, would make the plane's footprint one rule.
+- **debug-mcp imports observability by relative source path** (`../../observability/src/…`) without declaring it as a
+  dependency — monorepo coupling it doesn't own up to (and part of why a protocol number is needed: the two can skew).
+- **A reloaded page's workers end only by going silent.** The page says it's gone (pagehide), but its workers can't;
+  a viewer ends them once their heartbeat stops (15s). The page's tap knows the workers it started and could end them
+  with the page, rather than leaving a 15s lag.
+
 ### the editor, running netsim (M3)
 
 - **Loading a repo needs a GitHub token**, even a public one (the loader is shown only once a PAT is connected).
@@ -30,6 +42,11 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   the host, a BroadcastChannel carries hello/welcome) across two preview windows on one server — the primitives
   netsim's lobby rests on — but nothing runs netsim's own lobby in editor windows automatically (editor CI has no
   netsim to load).
+- **The page tap knows its preview window by its frame's name.** An app that sets `window.name` in its top frame loses
+  its tap (it finds no window, so it stays out of the way): its console, new windows and WebSocket/WebRTC gate go
+  dark. Rare, but the window id could come from somewhere the app doesn't own (the tap's own URL, say).
+- **The architecture model repeats the preview link's permissions by hand.** Its `preview:*` subject rows restate
+  shell-preview.ts's `previewAppPermissions`; they could be derived from it, so the two can't drift.
 - **In the editor's terminal, an interrupted command's own `cd` doesn't stick**: after `cd games/netsim && vite` and
   Ctrl-C you're still where you started (a desktop shell would have you in `games/netsim`). An interrupted run never
   reaches the terminal's `$PWD` probe, the only way a `cd` reaches it.
@@ -40,7 +57,8 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   hub's *published* tarball (a devDependency), and the editor publishes only once CI passes — so importing a hub export
   added in the same push fails CI, and nothing publishes (hit with `rpcCallSubject`, editor `bc719af`). Ship the export
   first, or have the packages' tests resolve siblings from source (a `link:` devDependency would, since node then
-  strips types at the real path outside node_modules).
+  strips types at the real path outside node_modules). The workaround is still in place: observability's arch.ts
+  spells out the RPC prefixes rather than import hub's `rpcCallSubject` / `rpcReplySubject`, which are published now.
 
 - **The editor's lint only passes when the monaco-vscode-api demo is installed** (the component's `install.sh` sets it
   up; it can come up empty when upstream tags a release before publishing it to npm, as on 2026-09-30). `packages/vscode`'s extensions import `"vscode"`,
