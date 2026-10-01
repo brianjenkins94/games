@@ -8,7 +8,7 @@ import { encodeUnit, nextInt, spawnUnit, tiles, visibleUnits } from "../sim/inde
 import { MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
 
 const hub = createHub({ "id": "referee" });
-const { log } = observe(hub);
+const { log } = observe(hub, { "network": true });
 
 hub.link(portTransport(globalThis));
 

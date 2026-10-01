@@ -5,6 +5,7 @@
  */
 import type { ClientDiag, RefereeTick } from "../net/index.ts";
 import type { AttachMessage, InitMessage, PortMessage, Settings } from "./bootstrap.ts";
+import type { Hub } from "@brianjenkins94/hub";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { subjects } from "../net/index.ts";
 import { tiles } from "../sim/index.ts";
@@ -16,6 +17,9 @@ import { netsimTools } from "./tools.ts";
 const STALLED_MS = 1000;
 
 export interface HostOptions {
+	/** The page's hub and its observability, when the page started them first (play.ts: before its lobby, so the lobby
+	 *  is observed too). Default: started here. */
+	"observed"?: { "hub": Hub; "telemetry": ReturnType<typeof observeApp> };
 	"settings": Settings;
 	/** This page's match: an instance reloaded within it rejoins its seat; a reloaded page starts a new one. */
 	"matchId": string;
@@ -37,9 +41,12 @@ export function createInstanceFrame(grid: HTMLElement, { id, matchId, bots }: { 
 	return frame;
 }
 
-export function startHost({ settings, matchId, grid, status, summary }: HostOptions) {
+export function startHost({ observed, settings, matchId, grid, status, summary }: HostOptions) {
 	const names = subjects(MATCH);
-	const hub = createHub({ "id": "page" });
+	const hub = observed?.hub ?? createHub({ "id": "page" });
+	// Every channel of this realm's, past its hub too: the workers it starts and their messages, sockets, BroadcastChannels,
+	// Web Locks (observability's probes) — set up before the referee starts, so its probe sees it.
+	const telemetry = observed?.telemetry ?? observeApp(hub, { "network": true, "messages": true });
 	const referee = new Worker(new URL("referee.worker.ts", import.meta.url), { "type": "module", "name": "referee" });
 	/** The referee's view hashes for recent ticks, to check a client's report at whatever tick it's on. */
 	const history = new Map<number, RefereeTick>();
@@ -48,7 +55,8 @@ export function startHost({ settings, matchId, grid, status, summary }: HostOpti
 	let last: RefereeTick | undefined;
 
 	const tools = netsimTools(hub, () => currentStatus());
-	const telemetry = observeApp(hub, { "tools": tools });
+
+	telemetry.addTools(tools);
 
 	ownWorker(referee, () => { telemetry.log.error("worker failed to load", { "worker": "referee" }); });
 	telemetry.log.info("match starting", { ...settings, "match": matchId, "debug": telemetry.tab !== undefined });

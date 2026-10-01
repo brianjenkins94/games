@@ -43,7 +43,7 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 	const rng = createRng([...id].reduce((sum, char) => sum + char.charCodeAt(0), 7));
 	let selected: number | undefined;
 
-	const { log } = observe(hub);
+	const { log } = observe(hub, { "network": true });
 	const reported = { "gaps": 0, "desyncs": 0, "snaps": 0 };
 
 	// Debugging, from its own tab (its page reaches it through its instance; the referee's link carries no calls to these).

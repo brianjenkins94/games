@@ -123,6 +123,16 @@ test("each tab observes its own player; no tab hears another's", async () => {
 	};
 
 	assert.deepEqual(await until(player, "the player's tree", reporting, { "arg": 3 }), ["page", "player-1", "player-1/ui"]);
+
+	// And what's past the hubs: the lobby's channel and its locks, as each tab used them.
+	const crossed = (wanted: [string, string, string][]) => {
+		const channels = (globalThis as unknown as { "__netsim": { "architecture": () => { "channels": { "a": string; "b": string; "labels": Record<string, unknown> }[] } } }).__netsim.architecture().channels;
+
+		return wanted.every(([a, b, label]) => channels.some((channel) => ((channel.a === a && channel.b === b) || (channel.a === b && channel.b === a)) && label in channel.labels));
+	};
+
+	await until(host, "the host's lobby", crossed, { "arg": [["page", "channel:netsim.observe.lobby", "connect"], ["page", "channel:netsim.observe.lobby", "accepted"], ["page", "lock:netsim.observe.host", "granted"]] });
+	await until(player, "the player's lobby", crossed, { "arg": [["page", "channel:netsim.observe.lobby", "connect"], ["page", "lock:netsim.observe.host", "request (shared)"], ["page", "lock:netsim.observe.player-1", "granted"]] });
 	assert.deepEqual(await until(host, "the host's tree", reporting, { "arg": 4 }), ["page", "player-0", "player-0/ui", "referee"]);
 
 	// Not even interest crosses: what the player's client asks the host for is its own (the game), never its tab's —

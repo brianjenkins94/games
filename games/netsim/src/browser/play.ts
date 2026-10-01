@@ -27,6 +27,9 @@ if (!/^[\w-]{1,32}$/u.test(match)) {
 
 invite.href = location.href;
 
+// Observed first — every channel of this realm's, its lobby's BroadcastChannel and Web Locks included — then the lobby.
+const hub = createHub({ "id": "page" });
+const telemetry = observeApp(hub, { "network": true, "messages": true });
 const lobby = await joinLobby(match);
 
 role.textContent = `match ${match} · you are ${lobby.peer} (${lobby.role === "host" ? "hosting" : "joined"})`;
@@ -34,6 +37,7 @@ document.body.dataset["role"] = lobby.role;
 
 if (lobby.role === "host") {
 	const host = startHost({
+		"observed": { "hub": hub, "telemetry": telemetry },
 		"settings": readSettings(location.search, { "clients": 1, "teams": 4 }),
 		"matchId": match,
 		"grid": grid,
@@ -47,8 +51,6 @@ if (lobby.role === "host") {
 		host.attachRemote(peer, channel);
 	});
 } else {
-	const hub = createHub({ "id": "page" });
-	const telemetry = observeApp(hub);
 	const bots = params.get("bots") !== "0";
 	let latest: InstanceView | undefined;
 	const frame = createInstanceFrame(grid, { "id": lobby.peer, "matchId": match, "bots": bots }, (loaded) => {

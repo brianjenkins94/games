@@ -15,6 +15,14 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **Some subjects sit outside the reserved `$sys` namespace.** `tab.discover` / `tab.here` and `page_tools.*` share the
   app's namespace, and the observability subjects are defined across index.ts, arch.ts, tabs.ts and page-tools.ts.
   One `subjects.ts`, everything under `$sys`, would make the plane's footprint one rule.
+- **A MessagePort outside the hub isn't probed.** A MessageChannel handed to a frame or worker and used raw (not linked
+  by a hub) carries messages no probe sees — the transfer itself shows (on the window or worker message that carried
+  it: `+MessagePort`), its traffic doesn't. Nothing in netsim does this now; the editor's tsval render surface does
+  (its own records stand in).
+- **Storage isn't observed** — `localStorage` / `sessionStorage` (netsim keeps its seat token there) are state, not a
+  channel, but a write in one tab is an event in another (`storage`), which nothing records.
+- **Probes see only what's created after they're installed.** A realm must observe before it opens channels or starts
+  workers (netsim's pages now do — play.ts observes before joining its lobby); one that doesn't misses them silently.
 - **debug-mcp imports observability by relative source path** (`../../observability/src/…`) without declaring it as a
   dependency — monorepo coupling it doesn't own up to (and part of why a protocol number is needed: the two can skew).
 - **A reloaded page's workers end only by going silent.** The page says it's gone (pagehide), but its workers can't;
@@ -80,6 +88,17 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **Channels past the hub were invisible** — BroadcastChannels, Web Locks and WebRTC had no probe, and netsim installed
+  none of the ones that existed, so its lobby, its locks and its raw worker/frame messages (`netsim-init`,
+  `netsim-attach`, `netsim-port`) never showed. observability now probes BroadcastChannels (`channel:<name>`), Web
+  Locks (`lock:<name>`: requested, granted / unavailable, released) and WebRTC peer connections (`rtc:<n>`: signaling
+  steps, states, data channels and their messages) with the network probes, and `observe(hub, { network, messages })`
+  turns them (and the worker / window-message probes, naming a worker by its `name`) on per realm — every netsim realm
+  does, before it opens anything. And opt-in **payload capture**: `requestArchSync(hub, { capture })` (the
+  architecture view's "Payloads" toggle, debug-mcp's `capture_payloads`) makes every sampled message keep a size-capped
+  preview of what it carried, shown in a channel's recent traffic; off by default. The editor's model now declares
+  the channels the probe found it using (VS Code's storage-sync BroadcastChannels, the preview workers' tap channel).
 
 - **The preview tap was a side channel, and netsim had two transports** (the simplification audit, step 4). The
   editor's page tap is now a hub client: a preview window's top frame holds its one hub into the editor (the tap's,

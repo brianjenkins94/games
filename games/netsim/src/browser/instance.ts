@@ -14,13 +14,14 @@ const tokenKey = seatKey(params.get("match") ?? "", id);
 const local = instanceSubjects(id);
 // Named under its client (`client-0/ui`), as the edge would name it: what's behind the client is under the client.
 const hub = createHub({ "id": id + "/ui" });
+// Every channel of this realm's, past its hub too — its worker's messages, the page's messages to it (from the page's hub,
+// `page`), sockets, BroadcastChannels. Before the worker starts, so its probe sees it.
+const { log } = observe(hub, { "network": true, "messages": { "window": (source) => (source === parent ? "page" : undefined) } });
 const worker = new Worker(new URL("client.worker.ts", import.meta.url), { "type": "module", "name": id });
 const canvas = document.querySelector("canvas")!;
 const context = canvas.getContext("2d")!;
 const TEAM_COLORS = ["#4f8cff", "#ff5f56", "#3ecf6e", "#f5b83d", "#b76cff", "#39c6d6"];
 let latest: InstanceView | undefined;
-
-const { log } = observe(hub);
 
 ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); });
 // This page made the worker, and names it on its link — the same id the page assigned at the referee — and, the

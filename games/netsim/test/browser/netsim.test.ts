@@ -101,6 +101,19 @@ test("every context reports to the page: logs, and its place in the hub tree", a
 	await page.close();
 });
 
+test("the messages past the hub are seen too: the page's to its workers and frames, each frame's to its worker", async () => {
+	const page = await session.open({ "clients": 2 });
+	// Each channel, and a raw message that must have crossed it (a worker's start-up, a frame's channel to the referee).
+	const expected: [string, string, string][] = [["page", "referee", "netsim-init"], ["page", "referee", "netsim-attach"], ["page", "client-0/ui", "netsim-port"], ["client-0/ui", "client-0", "netsim-port"]];
+
+	await until(page, "every raw message in the architecture", (wanted: [string, string, string][]) => {
+		const channels = (globalThis as unknown as { "__netsim": { "architecture": () => { "channels": { "a": string; "b": string; "labels": Record<string, unknown> }[] } } }).__netsim.architecture().channels;
+
+		return wanted.every(([a, b, label]) => channels.some((channel) => ((channel.a === a && channel.b === b) || (channel.a === b && channel.b === a)) && label in channel.labels));
+	}, { "arg": expected });
+	await page.close();
+});
+
 test("an uncaught error in a client's worker is reported to the page, attributed to that client", async () => {
 	const page = await session.open({ "clients": 2 });
 	const workers = page.workers().filter((worker) => worker.url().includes("client.worker"));
