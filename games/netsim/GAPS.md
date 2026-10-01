@@ -19,8 +19,11 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   content type, a sequence number, a dedupe id) goes in `data`.
 - **No reconnect.** A dropped link stays dropped (now reported: `closed` / `stale` faults); relinking is the transport
   owner's job (debug-mcp's socket retries; netsim's referee relinks a seat). Kept: a hub doesn't own its transports.
-- **Loop detection skips confined links.** A loop through a link with permissions isn't detected — a confined peer is
-  an untrusted leaf, and letting it carry `$sys.lds.*` would let it echo a hub's subject back to have a link cut.
+- **No loop detection.** Hubs must be wired as a tree; a cycle would carry a message round it forever. It was built
+  (NATS's `$sys.lds` subjects) and taken out again: heuristic and timing-dependent, for a wiring mistake we don't make —
+  the architecture view's duplicate-peer check flags the common one.
+- **A lost interest frame isn't repaired** until the link's next `hello`. The transport contract (reliable, ordered after
+  the handshake) rules it out; an RTCDataChannel must be opened `ordered` with no retransmit limit.
 
 ### the zero-knowledge diagram (`npm run compare:zero-knowledge`, held by `zero-knowledge.test.ts`)
 
@@ -43,8 +46,8 @@ missing. What's left:
   `about:blank` (lost; hub's handshake recovers them) — counted on the frame, though no page was there to hear them.
 - **Two tabs at one URL are one name** to `windowName`. The comparison's probe adds a per-tab id (`~<tab>`, from the
   tab's sessionStorage); in the editor, the editor names its preview windows itself.
-- **Hub's own control traffic shows** — interest frames, now including every hub's loop-detection subject
-  (`$sys.lds.*`) — as messages on its links, counted under the subjects they name.
+- **Hub's own control traffic shows** — interest frames — as messages on its links, counted under the subjects they
+  name.
 - **Not exercised yet:** WebRTC, storage, and the probe gaps already listed under observability (raw MessagePorts,
   storage events).
 
@@ -144,18 +147,19 @@ missing. What's left:
 
 - **hub was a happy-path router** (the NATS audit's fix-now list). A throwing handler stopped the others and the
   forwarding, and threw into the publisher; a transport that threw broke the publish; a dead transport left a link (and
-  its interest) forever; a lost `sub`/`unsub` was never repaired; a reloaded frame on the same transport left its old
-  interest behind; a cycle stormed forever; nothing bounded a message, a backlog or a peer's interest; a broad
-  subscription behind a narrow allowance was advertised broad; and `a..b`, `a.>.b` or an id with a dot went through.
-  Now every failure is contained and reported as a `fault` tap event (`handler`, `send`, `frame`, `payload`, `backlog`,
-  `limit`, `drift`, `closed`, `stale`, `loop`); `Transport.onClose` unlinks (pipe, WebSocket, BroadcastChannel ends
-  have it); `heartbeatMs` pings, unlinks a silent peer, and checks an interest digest each time, resyncing on drift;
-  every control frame carries the hub's session, so a new hub on the same transport resets what the old one held;
-  every hub advertises `$sys.lds.<session>`, and the one with the least session cuts a loop's link (with a `bye`, so
-  the far end lets go too); `maxPayload` / `maxBacklog` / `maxInterest` bound a link; readvertise narrows interest to
-  each permission (`>` behind `game.state.1` is asked for as `game.state.1`); subjects, patterns, ids and permissions
-  are validated — thrown at locally, dropped from a peer. The transport contract (reliable, ordered after the
-  handshake) is written down on `Transport`. netsim adopts the heartbeat and limits with WebRTC.
+  its interest) forever; a reloaded frame on the same transport left its old interest behind; nothing bounded a message
+  or a backlog; a broad subscription behind a narrow allowance was advertised broad; and `a..b`, `a.>.b` or an id with
+  a dot went through. Now every failure is contained and reported as a `fault` tap event (`handler`, `send`, `frame`,
+  `payload`, `backlog`, `closed`, `stale`); `Transport.onClose` unlinks (pipe, WebSocket, BroadcastChannel ends have
+  it); `heartbeatMs` pings and unlinks a silent peer; every control frame carries the hub's session, so a new hub on
+  the same transport resets what the old one held; `maxPayload` / `maxBacklog` bound a link; readvertise narrows
+  interest to each permission (`>` behind `game.state.1` is asked for as `game.state.1`); subjects, patterns, ids and
+  permissions are validated — thrown at locally, dropped from a peer. Then trimmed to what fits in one's head: loop
+  detection, the heartbeat's interest-digest resync and the per-link interest cap came out again (see Open). What hub
+  promises, assumes and doesn't do is one page, `packages/hub/README.md`, each promise with its test — and a
+  randomized model test (`test/model.test.ts`: 1000 random trees, permissions, non-transit links and changes, against a
+  reference router a few lines long) holds delivery, interest and convergence. netsim adopts the heartbeat and limits
+  with WebRTC.
 
 - **Channels past the hub were invisible** — BroadcastChannels, Web Locks and WebRTC had no probe, and netsim installed
   none of the ones that existed, so its lobby, its locks and its raw worker/frame messages (`netsim-init`,
