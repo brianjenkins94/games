@@ -9,11 +9,11 @@
 import type { Hub } from "@brianjenkins94/hub";
 import type { Client } from "../net/index.ts";
 import type { ClientInspection, InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
-import { createHub, portTransport, serve } from "@brianjenkins94/hub";
+import { channelTransport, createHub, portTransport, serve } from "@brianjenkins94/hub";
+import { observe } from "@brianjenkins94/observability";
 import { createClient, hostPermissions, subjects } from "../net/index.ts";
 import { approxDistance, createRng, encodeUnit, nextInt, tiles, validateCommand } from "../sim/index.ts";
-import { channelTransport, instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
-import { observe } from "./telemetry.ts";
+import { instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
 
 async function start({ port, channel, bots = true, token, remote = false, debugHost }: PortMessage): Promise<void> {
 	// Its own name is a placeholder that nobody sees (both its links name it): who it is comes from the referee.
@@ -43,7 +43,7 @@ async function start({ port, channel, bots = true, token, remote = false, debugH
 	const rng = createRng([...id].reduce((sum, char) => sum + char.charCodeAt(0), 7));
 	let selected: number | undefined;
 
-	const { log } = observe(hub, id);
+	const { log } = observe(hub, { "source": id });
 	const reported = { "gaps": 0, "desyncs": 0, "snaps": 0 };
 
 	// Debugging (reachable only from the debug host — the referee's hub permits nothing else to call these).

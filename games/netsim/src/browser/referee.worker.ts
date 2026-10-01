@@ -1,11 +1,11 @@
 /** The referee, in its own worker: the page's child in the hub tree, and the hub every client links to. */
 import type { Referee } from "../net/index.ts";
 import type { AttachMessage, InitMessage, RefereeControl, RefereeInspection } from "./bootstrap.ts";
-import { createHub, portTransport, serve } from "@brianjenkins94/hub";
+import { channelTransport, createHub, portTransport, serve } from "@brianjenkins94/hub";
+import { observe } from "@brianjenkins94/observability";
 import { createReferee, lobbyPermissions } from "../net/index.ts";
 import { encodeUnit, nextInt, spawnUnit, tiles, visibleUnits } from "../sim/index.ts";
-import { channelTransport, MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
-import { observe } from "./telemetry.ts";
+import { MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
 
 const hub = createHub({ "id": "referee" });
 const { log } = observe(hub);

@@ -6,7 +6,7 @@ import type { InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { decodeUnit, FP } from "../sim/index.ts";
 import { instanceSubjects, seatKey } from "./bootstrap.ts";
-import { observe, ownWorker } from "./telemetry.ts";
+import { observe, ownWorker } from "@brianjenkins94/observability";
 
 const params = new URLSearchParams(location.search);
 const id = params.get("id") ?? "client";

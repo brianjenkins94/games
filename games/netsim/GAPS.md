@@ -36,6 +36,12 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ### editor CI (`editor/components/monaco-vscode-api`, `editor/packages/vscode`)
 
+- **A package can't use a sibling's new export in the push that adds it.** observability and debug-mcp test against
+  hub's *published* tarball (a devDependency), and the editor publishes only once CI passes — so importing a hub export
+  added in the same push fails CI, and nothing publishes (hit with `rpcCallSubject`, editor `bc719af`). Ship the export
+  first, or have the packages' tests resolve siblings from source (a `link:` devDependency would, since node then
+  strips types at the real path outside node_modules).
+
 - **The editor's lint only passes when the monaco-vscode-api demo is installed** (the component's `install.sh` sets it
   up; it can come up empty when upstream tags a release before publishing it to npm, as on 2026-09-30). `packages/vscode`'s extensions import `"vscode"`,
   and in the root-tsconfig program the only thing that satisfies it is the demo's
@@ -56,6 +62,16 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **Observing a context took four calls, and a tab exposed tools three ways** (the simplification audit, step 2).
+  observability's `observe(hub, { source, network })` wires a context's logger, uncaught errors and architecture in one
+  call, and `observeApp(hub, { tools })` an app's root (collect, then the editor's tree or debug-mcp) — netsim's own
+  `telemetry.ts` and the editor's six hand-wired sites use them. Everything a tab exposes is now a page tool
+  (`tool.<name>.<tab>`): `page_eval` / `page_query` are built in, and the editor serves its debugger, provoke and CDP
+  tools itself — debug-mcp keeps only its own store tools and no longer knows the editor's debugger (observability
+  protocol 3). hub's `channelTransport` replaces netsim's copy; observability's `scopedTransport` the editor's
+  hand-written one. The reporter's pending-link placeholders went: traffic before a peer's hello is held until the
+  hello names it.
 
 - **Test helpers were copied file to file, and wire formats lived as scattered regexes** (the reuse audit). Now: util's
   `until()` (lib, browser-safe) replaces the polling loops — debug-mcp's tests, the editor's architecture harness and

@@ -10,7 +10,7 @@ import { createHub, windowTransport } from "@brianjenkins94/hub";
 import { instanceSubjects, readSettings } from "./bootstrap.ts";
 import { createInstanceFrame, startHost } from "./host.ts";
 import { joinLobby } from "./lobby.ts";
-import { observeRoot } from "./telemetry.ts";
+import { observeApp } from "@brianjenkins94/observability";
 
 const params = new URLSearchParams(location.search);
 const grid = document.querySelector<HTMLElement>("#instances")!;
@@ -48,7 +48,7 @@ if (lobby.role === "host") {
 	});
 } else {
 	const hub = createHub({ "id": "page" });
-	const telemetry = observeRoot(hub);
+	const telemetry = observeApp(hub);
 	const bots = params.get("bots") !== "0";
 	let latest: InstanceView | undefined;
 	const frame = createInstanceFrame(grid, { "id": lobby.peer, "matchId": match, "bots": bots }, (loaded) => {

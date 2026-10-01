@@ -8,7 +8,7 @@
  *   it's free, else the lowest free one — atomically, with no one to ask.
  * - **Introductions:** a BroadcastChannel per match. A player's instance (on every load) names a fresh private
  *   channel and announces it; the host acknowledges and links its referee to it. The game then runs over that channel
- *   between the two workers (channelTransport, in bootstrap.ts) — nothing else of either tab crosses it.
+ *   between the two workers (hub's channelTransport) — nothing else of either tab crosses it.
  *
  * Same-origin tabs are trusted: any of them can open the lobby channel, take a lock or claim a player id. That's the
  * editor's preview and a local dev server — a shipped game's players meet over WebRTC, not here.

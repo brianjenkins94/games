@@ -9,7 +9,7 @@ import { createHub, portTransport } from "@brianjenkins94/hub";
 import { subjects } from "../net/index.ts";
 import { tiles } from "../sim/index.ts";
 import { MATCH } from "./bootstrap.ts";
-import { observeRoot, ownWorker } from "./telemetry.ts";
+import { observeApp, ownWorker } from "@brianjenkins94/observability";
 import { netsimTools } from "./tools.ts";
 
 /** A client reports every tick, paused or not (see client.worker.ts); this long without one, it's stalled. */
@@ -48,7 +48,7 @@ export function startHost({ settings, matchId, grid, status, summary }: HostOpti
 	let last: RefereeTick | undefined;
 
 	const tools = netsimTools(hub, () => currentStatus());
-	const telemetry = observeRoot(hub, { "tools": tools });
+	const telemetry = observeApp(hub, { "tools": tools });
 
 	ownWorker(referee, () => { telemetry.log.error("worker failed to load", { "worker": "referee" }); });
 	telemetry.log.info("match starting", { ...settings, "match": matchId, "debug": telemetry.tab !== undefined });

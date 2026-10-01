@@ -14,7 +14,7 @@
  *
  * Players in separate tabs (play.html): the host's tab is the tree above with one instance; each other player's tab is
  * its own tree — its page, its instance, its client worker — and the client worker also links to the host's referee,
- * over a BroadcastChannel the lobby named (lobby.ts; channelTransport). Both of the client worker's links are
+ * over a BroadcastChannel the lobby named (lobby.ts; hub's channelTransport). Both of the client worker's links are
  * non-transit, so the two trees meet only at the client: neither sees the other's traffic, and the host's link carries
  * only the game (the referee doesn't observe a remote client — PeerOptions.observed; the client confines the host —
  * hostPermissions). Same-origin tabs trust each other (lobby.ts); a shipped game's players link over WebRTC instead.
@@ -24,26 +24,6 @@
  *   player tab:  page ─ player-1 instance ─ player-1 worker ┄┘
  */
 import type { WorldConfig } from "../sim/index.ts";
-
-/** A hub transport over the BroadcastChannel named `name` — from anywhere: a page or a worker. `close` also closes the
- *  channel. How players in other tabs link (lobby.ts names the channel). BroadcastChannel reaches every same-origin
- *  context that opens the same name, so it's private only in that its name is unguessable — same-origin pages are
- *  trusted. */
-export function channelTransport(name: string): { "send": (message: unknown) => void; "listen": (onMessage: (message: unknown) => void) => () => void; "close": () => void } {
-	const channel = new BroadcastChannel(name);
-
-	return {
-		"send": (message) => { channel.postMessage(message); },
-		"listen": (onMessage) => {
-			const handler = (event: MessageEvent): void => { onMessage(event.data); };
-
-			channel.addEventListener("message", handler);
-
-			return () => { channel.removeEventListener("message", handler); };
-		},
-		"close": () => { channel.close(); }
-	};
-}
 
 export const MATCH = "local";
 export const TICK_MS = 50;
@@ -96,7 +76,7 @@ export interface AttachMessage {
 	"peer": string;
 	/** A client of this page's: its end of a MessageChannel. */
 	"port"?: MessagePort;
-	/** A player in another tab: the BroadcastChannel its client links over (channelTransport). Its link carries only
+	/** A player in another tab: the BroadcastChannel its client links over (hub's channelTransport). Its link carries only
 	 *  the game — no observability; its own tab observes it. */
 	"channel"?: string;
 }
