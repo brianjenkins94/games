@@ -7,8 +7,20 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ### hub (`editor/packages/hub`)
 
-- **Control frames assume reliable delivery.** A lost `sub`/`unsub` isn't repaired until a reconnect (`hello`
-  re-advertises). Fine over a MessagePort or a reliable channel; a problem over an unreliable WebRTC data channel.
+- **No deny lists.** Permissions are allow lists only; "everything but `$sys.>`" has to be spelled as what's allowed.
+  NATS has `deny`. Nothing in netsim needs it yet.
+- **No `allow_responses`.** A confined peer that serves a call must be granted `$rpc.reply.>` (every reply subject)
+  rather than "a reply to whoever just called me", as NATS's `allow_responses` grants. Requester-chosen inboxes
+  (NATS's `_INBOX.<random>`) would let a reply grant be that narrow; hub replies to the caller's `from` instead (kept:
+  it's what makes an edge-assigned id authenticate the reply's destination).
+- **No queue groups.** Every subscriber gets every message; there's no "one of these N workers takes it". A pool of
+  sim workers would want it.
+- **No headers.** An Envelope carries `subject`, `data`, `from` and `traceContext` — anything else per-message (a
+  content type, a sequence number, a dedupe id) goes in `data`.
+- **No reconnect.** A dropped link stays dropped (now reported: `closed` / `stale` faults); relinking is the transport
+  owner's job (debug-mcp's socket retries; netsim's referee relinks a seat). Kept: a hub doesn't own its transports.
+- **Loop detection skips confined links.** A loop through a link with permissions isn't detected — a confined peer is
+  an untrusted leaf, and letting it carry `$sys.lds.*` would let it echo a hub's subject back to have a link cut.
 
 ### observability / debug-mcp (`editor/packages/observability`, `editor/packages/debug-mcp`)
 
@@ -88,6 +100,21 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **hub was a happy-path router** (the NATS audit's fix-now list). A throwing handler stopped the others and the
+  forwarding, and threw into the publisher; a transport that threw broke the publish; a dead transport left a link (and
+  its interest) forever; a lost `sub`/`unsub` was never repaired; a reloaded frame on the same transport left its old
+  interest behind; a cycle stormed forever; nothing bounded a message, a backlog or a peer's interest; a broad
+  subscription behind a narrow allowance was advertised broad; and `a..b`, `a.>.b` or an id with a dot went through.
+  Now every failure is contained and reported as a `fault` tap event (`handler`, `send`, `frame`, `payload`, `backlog`,
+  `limit`, `drift`, `closed`, `stale`, `loop`); `Transport.onClose` unlinks (pipe, WebSocket, BroadcastChannel ends
+  have it); `heartbeatMs` pings, unlinks a silent peer, and checks an interest digest each time, resyncing on drift;
+  every control frame carries the hub's session, so a new hub on the same transport resets what the old one held;
+  every hub advertises `$sys.lds.<session>`, and the one with the least session cuts a loop's link (with a `bye`, so
+  the far end lets go too); `maxPayload` / `maxBacklog` / `maxInterest` bound a link; readvertise narrows interest to
+  each permission (`>` behind `game.state.1` is asked for as `game.state.1`); subjects, patterns, ids and permissions
+  are validated — thrown at locally, dropped from a peer. The transport contract (reliable, ordered after the
+  handshake) is written down on `Transport`. netsim adopts the heartbeat and limits with WebRTC.
 
 - **Channels past the hub were invisible** — BroadcastChannels, Web Locks and WebRTC had no probe, and netsim installed
   none of the ones that existed, so its lobby, its locks and its raw worker/frame messages (`netsim-init`,
