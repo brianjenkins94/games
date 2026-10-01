@@ -6,13 +6,14 @@ import type { InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { decodeUnit, FP } from "../sim/index.ts";
 import { instanceSubjects, seatKey } from "./bootstrap.ts";
-import { observe, ownWorker } from "@brianjenkins94/observability";
+import { observe, ownWorker, scopedTransport } from "@brianjenkins94/observability";
 
 const params = new URLSearchParams(location.search);
 const id = params.get("id") ?? "client";
 const tokenKey = seatKey(params.get("match") ?? "", id);
 const local = instanceSubjects(id);
-const hub = createHub({ "id": id + ".ui" });
+// Named under its client (`client-0/ui`), as the edge would name it: what's behind the client is under the client.
+const hub = createHub({ "id": id + "/ui" });
 const worker = new Worker(new URL("client.worker.ts", import.meta.url), { "type": "module", "name": id });
 const canvas = document.querySelector("canvas")!;
 const context = canvas.getContext("2d")!;
@@ -23,8 +24,9 @@ const { log } = observe(hub);
 
 ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); });
 // This page made the worker, and names it on its link — the same id the page assigned at the referee — so what this
-// page reports links to `client-0`, not to the placeholder the worker's hub starts as.
-hub.link(portTransport(worker), { "peer": id });
+// page reports links to `client-0`, not to the placeholder the worker's hub starts as; and in a player's tab, where the
+// worker's reports reach the page through here, this is the edge that names them.
+hub.link(scopedTransport(portTransport(worker), id, { "keep": (other) => other === hub.id }), { "peer": id });
 
 let linkedUp = false;
 

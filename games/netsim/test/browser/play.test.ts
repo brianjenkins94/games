@@ -109,7 +109,7 @@ test("each tab observes its own player; no tab hears another's", async () => {
 	const playerSources = await sources(player);
 
 	assert.ok(["page", "referee", "player-0"].every((source) => hostSources.has(source)), [...hostSources].join());
-	assert.ok(!hostSources.has("player-1") && !hostSources.has("player-1.ui"), `the host hears nothing of the player's tab: ${[...hostSources].join()}`);
+	assert.ok(!hostSources.has("player-1") && !hostSources.has("player-1/ui"), `the host hears nothing of the player's tab: ${[...hostSources].join()}`);
 	assert.ok(["page", "player-1"].every((source) => playerSources.has(source)), [...playerSources].join());
 	assert.ok(!playerSources.has("referee") && !playerSources.has("player-0"), `the player hears nothing of the host's tab: ${[...playerSources].join()}`);
 
@@ -121,8 +121,8 @@ test("each tab observes its own player; no tab hears another's", async () => {
 		return hubs.length >= expected ? hubs : undefined;
 	};
 
-	assert.deepEqual(await until(player, "the player's tree", reporting, { "arg": 3 }), ["page", "player-1", "player-1.ui"]);
-	assert.deepEqual(await until(host, "the host's tree", reporting, { "arg": 4 }), ["page", "player-0", "player-0.ui", "referee"]);
+	assert.deepEqual(await until(player, "the player's tree", reporting, { "arg": 3 }), ["page", "player-1", "player-1/ui"]);
+	assert.deepEqual(await until(host, "the host's tree", reporting, { "arg": 4 }), ["page", "player-0", "player-0/ui", "referee"]);
 
 	// Not even interest crosses: what the player's client asks the host for is its own (the game), never its tab's —
 	// its page collecting logs, its instance drawing its view.

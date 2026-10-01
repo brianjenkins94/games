@@ -2,7 +2,7 @@
 import type { Referee } from "../net/index.ts";
 import type { AttachMessage, InitMessage, RefereeControl, RefereeInspection } from "./bootstrap.ts";
 import { channelTransport, createHub, portTransport, serve } from "@brianjenkins94/hub";
-import { observe } from "@brianjenkins94/observability";
+import { observe, scopedTransport } from "@brianjenkins94/observability";
 import { createReferee, lobbyPermissions } from "../net/index.ts";
 import { encodeUnit, nextInt, spawnUnit, tiles, visibleUnits } from "../sim/index.ts";
 import { MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
@@ -122,7 +122,10 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 
 		// A player in another tab links over a BroadcastChannel (closed with its link); ours over a MessageChannel.
 		const channel = message.channel === undefined ? undefined : channelTransport(message.channel);
-		const unlink = hub.link(channel ?? portTransport(message.port!), { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer, { "debugHost": debugHost, "observed": observed(message.peer) }) });
+		// The referee names its clients: what a client reports is filed under the id it was given here — its own hub as
+		// that id, anything behind it (its instance page) under it.
+		const transport = scopedTransport(channel ?? portTransport(message.port!), message.peer, { "keep": (id) => id === hub.id });
+		const unlink = hub.link(transport, { "peer": message.peer, "permissions": lobbyPermissions(MATCH, message.peer, { "debugHost": debugHost, "observed": observed(message.peer) }) });
 
 		links.set(message.peer, () => {
 			unlink();

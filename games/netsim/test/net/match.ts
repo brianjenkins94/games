@@ -3,6 +3,7 @@ import type { Hub } from "@brianjenkins94/hub";
 import type { Client, Faults, JoinReply, Network, Referee } from "../../src/net/index.ts";
 import type { WorldConfig } from "../../src/sim/index.ts";
 import { createHub } from "@brianjenkins94/hub";
+import { scopedTransport } from "@brianjenkins94/observability";
 import { createClient, createNetwork, createReferee, lobbyPermissions } from "../../src/net/index.ts";
 import { createRng, hashUnits, nextInt, spawnUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
 
@@ -104,7 +105,7 @@ export async function startMatch({ "clients": count = 2, config = {}, faults = {
 				onTick?.();
 			}
 		},
-		"linkHub": (hub, linkFaults = {}, peer = hub.id) => network.link(refereeHub, hub, linkFaults, { "left": { "peer": peer, "permissions": lobbyPermissions(MATCH, peer, { "debugHost": debugHost, "observed": observed(peer) }) }, "right": { "uplink": true } }),
+		"linkHub": (hub, linkFaults = {}, peer = hub.id) => network.link(refereeHub, hub, linkFaults, { "left": { "peer": peer, "permissions": lobbyPermissions(MATCH, peer, { "debugHost": debugHost, "observed": observed(peer) }) }, "right": { "uplink": true }, "through": { "left": (transport) => scopedTransport(transport, peer, { "keep": (id) => id === refereeHub.id }) } }),
 		"addClient": (linkFaults = {}, id = `client-${match.hubs.length}`) => {
 			const hub = createHub({ "id": id });
 

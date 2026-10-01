@@ -7,7 +7,7 @@
  * traffic (`netsim.*.commands`, `netsim.*.state.*`). Hub control frames and RPC stay reliable, as they would on a
  * reliable signalling channel beside an unreliable data channel.
  */
-import type { Hub, LinkOptions } from "@brianjenkins94/hub";
+import type { Hub, LinkOptions, Transport } from "@brianjenkins94/hub";
 import { frameOf, matches, pipe } from "@brianjenkins94/hub";
 import { createRng, nextU32 } from "../sim/index.ts";
 
@@ -31,8 +31,9 @@ export interface NetworkStats {
 
 export interface Network {
 	/** Link two hubs over a fresh pair of in-memory transports, with each end's hub link options (e.g. the id and
-	 *  permissions `left` assigns `right`). Returns an unlink for both ends. */
-	"link": (left: Hub, right: Hub, faults?: Faults, options?: { "left"?: LinkOptions; "right"?: LinkOptions }) => () => void;
+	 *  permissions `left` assigns `right`) and, in `through`, what each end's transport passes through first (e.g. the
+	 *  edge naming what arrives: observability's scopedTransport). Returns an unlink for both ends. */
+	"link": (left: Hub, right: Hub, faults?: Faults, options?: { "left"?: LinkOptions; "right"?: LinkOptions; "through"?: { "left"?: (transport: Transport) => Transport; "right"?: (transport: Transport) => Transport } }) => () => void;
 	/** Advance the clock by `ms`, delivering every frame due by then (in time order; frames sent during delivery
 	 *  that fall due within the window are delivered too). */
 	"advance": (ms: number) => void;
@@ -119,8 +120,8 @@ export function createNetwork({ seed = 1, faulty = (subject: string) => GAME_TRA
 	return {
 		"link": (left, right, faults = {}, options = {}) => {
 			const [leftEnd, rightEnd] = pipe({ "schedule": travel(faults) });
-			const unlinkLeft = left.link(leftEnd, options.left);
-			const unlinkRight = right.link(rightEnd, options.right);
+			const unlinkLeft = left.link(options.through?.left?.(leftEnd) ?? leftEnd, options.left);
+			const unlinkRight = right.link(options.through?.right?.(rightEnd) ?? rightEnd, options.right);
 
 			return () => {
 				unlinkLeft();

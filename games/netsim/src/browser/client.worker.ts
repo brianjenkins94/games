@@ -1,7 +1,8 @@
 /**
  * One client, in its instance's worker: links to its instance page (for drawing and input) and, over the channel the
  * page brokered, to the referee. Nobody tells it who it is: the referee's hub assigns its id (LinkOptions.peer) and
- * says so in its hello (hub's knownAs) — the id it's stamped with, permitted as, and names its subjects and logs by.
+ * says so in its hello (hub's knownAs) — the id it's stamped with, permitted as, and names its subjects by. Its logs and
+ * reports go out under its hub's own id, and the edge names them: the referee (or, in a player's tab, its instance).
  *
  * A remote client (its referee in the host's tab) belongs to two trees — its own tab's and the host's — and joins
  * neither to the other: both links are non-transit, and it confines the host's link to the game (hostPermissions).
@@ -43,7 +44,7 @@ async function start({ port, channel, bots = true, token, remote = false, debugH
 	const rng = createRng([...id].reduce((sum, char) => sum + char.charCodeAt(0), 7));
 	let selected: number | undefined;
 
-	const { log } = observe(hub, { "source": id });
+	const { log } = observe(hub);
 	const reported = { "gaps": 0, "desyncs": 0, "snaps": 0 };
 
 	// Debugging (reachable only from the debug host — the referee's hub permits nothing else to call these).

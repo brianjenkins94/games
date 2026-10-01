@@ -52,7 +52,7 @@ export interface PeerOptions {
 /** Everything but the seat itself: diagnostics, observability (when observed), and debugging (with a `debugHost`). */
 function common(match: string, peer: string, { debugHost, observed = true }: PeerOptions): Required<LinkPermissions> {
 	const none = { "publish": [], "subscribe": [] };
-	const observability = observed ? observabilityPermissions(peer) : none;
+	const observability = observed ? observabilityPermissions() : none;
 	const debug = debugHost === undefined ? none : debugPermissions(match, peer, debugHost);
 
 	return { "publish": [subjects(match).diag(peer), ...observability.publish, ...debug.publish], "subscribe": [rpcReplySubject(peer), ...observability.subscribe, ...debug.subscribe] };

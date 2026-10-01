@@ -73,7 +73,7 @@ test("three instances, three workers, one referee: every client stays in sync wi
 
 test("every context reports to the page: logs, and its place in the hub tree", async () => {
 	const page = await session.open({ "clients": 2 });
-	const expected = ["page", "referee", "client-0", "client-1", "client-0.ui", "client-1.ui"];
+	const expected = ["page", "referee", "client-0", "client-1", "client-0/ui", "client-1/ui"];
 
 	await until(page, "every hub in the architecture", (ids: string[]) => {
 		const nodes = (globalThis as unknown as { "__netsim": { "architecture": () => { "nodes": { "id": string }[] } } }).__netsim.architecture().nodes;
@@ -90,7 +90,7 @@ test("every context reports to the page: logs, and its place in the hub tree", a
 	// The tree: page ─ referee ─ client-i ─ client-i.ui.
 	assert.ok(linked("page", "referee"), JSON.stringify(snapshot.channels));
 	assert.ok(linked("referee", "client-0") && linked("referee", "client-1"), JSON.stringify(snapshot.channels));
-	assert.ok(linked("client-0", "client-0.ui") && linked("client-1", "client-1.ui"), JSON.stringify(snapshot.channels));
+	assert.ok(linked("client-0", "client-0/ui") && linked("client-1", "client-1/ui"), JSON.stringify(snapshot.channels));
 
 	const sources = await page.evaluate(() => [...new Set((globalThis as unknown as { "__netsim": { "logs": () => { "context"?: { "source"?: string } }[] } }).__netsim.logs().map((record) => record.context?.source))]);
 

@@ -379,7 +379,7 @@ test("a client may report diagnostics on its own subject only", async () => {
 	assert.deepEqual(heard, [names.diag(match.hubs[0].id)]);
 });
 
-test("a client's observability rides its link under its own id only", async () => {
+test("the referee names a client's observability: whatever it publishes is filed under its seat's id", async () => {
 	const match = await startMatch({ "clients": 2 });
 	const [first] = match.hubs;
 	const heard: string[] = [];
@@ -392,14 +392,15 @@ test("a client's observability rides its link under its own id only", async () =
 	});
 	match.network.settle();
 
-	for (const subject of [`$sys.log.${first.id}`, `$sys.log.${first.id}.ui`, `$sys.arch.${first.id}`, `$sys.arch.${first.id}.ui`, "$sys.log.referee", `$sys.log.${match.hubs[1].id}`, "$sys.arch.sync"]) {
+	for (const subject of [`$sys.log.${first.id}`, `$sys.log.${first.id}/ui`, `$sys.arch.${first.id}`, `$sys.arch.${first.id}/ui`, "$sys.log.referee", `$sys.log.${match.hubs[1].id}`, "$sys.arch.sync"]) {
 		first.publish(subject, {});
 	}
 
 	match.refereeHub.publish("$sys.arch.sync");
 	match.network.settle();
 	// (The referee's own sync request is heard locally too; set it aside.)
-	assert.deepEqual(heard.filter((subject) => subject !== "$sys.arch.sync"), [`$sys.log.${first.id}`, `$sys.log.${first.id}.ui`, `$sys.arch.${first.id}`, `$sys.arch.${first.id}.ui`], "its own and its instance page's, never another's");
+	// Its own, and its instance page's (named under it); another's — the referee's, another client's — under it too.
+	assert.deepEqual(heard.filter((subject) => subject !== "$sys.arch.sync"), [`$sys.log.${first.id}`, `$sys.log.${first.id}/ui`, `$sys.arch.${first.id}`, `$sys.arch.${first.id}/ui`, `$sys.log.${first.id}/referee`, `$sys.log.${first.id}/${match.hubs[1].id}`], "never as another");
 	assert.equal(synced, 1, "and it hears the viewers' sync requests");
 });
 
@@ -444,7 +445,7 @@ test("a client in another tab plays through a host it confines: neither tab's tr
 	// The remote player's tab: its client hub, and its instance page behind it — linked non-transit on both sides, so
 	// the client belongs to both trees while joining neither to the other.
 	const hub = createHub({ "id": "remote" });
-	const ui = createHub({ "id": "remote.ui" });
+	const ui = createHub({ "id": "remote/ui" });
 	const heard = { "referee": [] as string[], "ui": [] as string[], "client": [] as string[] };
 
 	match.network.link(match.refereeHub, hub, {}, {
@@ -468,11 +469,11 @@ test("a client in another tab plays through a host it confines: neither tab's tr
 	match.refereeHub.publish("remote.input", { "x": 0 });
 	// …and the player's tab reports to its own tree.
 	hub.publish("$sys.log.remote", {});
-	ui.publish("$sys.log.remote.ui", {});
+	ui.publish("$sys.log.remote/ui", {});
 	match.run(5);
 
 	assert.deepEqual(heard.referee.filter((subject) => subject !== "$sys.arch.sync"), [], "the host hears none of the player's observability");
-	assert.deepEqual(heard.ui.sort(), ["$sys.log.remote", "$sys.log.remote.ui"], "the player's page hears itself and its client, and nothing of the host's — not even the game");
+	assert.deepEqual(heard.ui.sort(), ["$sys.log.remote", "$sys.log.remote/ui"], "the player's page hears itself and its client, and nothing of the host's — not even the game");
 	assert.deepEqual(heard.client, [], "the host can't send the client its page's input");
 	assert.ok(client.inSync() && client.viewTick() === match.referee.world.tick, "while the game itself flows");
 });

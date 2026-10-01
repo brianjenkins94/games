@@ -63,6 +63,18 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ## Fixed
 
+- **Identity was guessed downstream** (the simplification audit, step 3). One naming rule now: the edge names. The hub
+  where an app joins a tree (the editor's shell per preview window, netsim's referee per client, a player tab's
+  instance) renames what comes across (observability's `scopedTransport`): the hub across the link IS the scope
+  (`preview:5173`, `client-0`), the rest under it (`client-0/ui`) — so nothing self-names (the reporter's `self` and
+  observe's `source` options are gone) and nothing can pass as another (`observabilityPermissions()` no longer encodes
+  ids). Where a context runs is reported, not inferred: the editor's preview tap tags each worker with the page that
+  started it and its window (`#realm-parent=…&preview-window=…`), so the view places it and the shell routes its logs
+  and capability requests to its window (not the port's last used one). Lifetime: reporters heartbeat while anyone
+  listens, and a viewer ends one silent for 15s — with the shell ending a closed window's reporters, that retired the
+  view's alias, cross-window and ended inference (`appEnded`). It turned up a real bug: scoping renamed interest frames
+  too, so a collector's interest never crossed a scoped edge from the app's side.
+
 - **Observing a context took four calls, and a tab exposed tools three ways** (the simplification audit, step 2).
   observability's `observe(hub, { source, network })` wires a context's logger, uncaught errors and architecture in one
   call, and `observeApp(hub, { tools })` an app's root (collect, then the editor's tree or debug-mcp) — netsim's own
@@ -107,8 +119,8 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   `hello` now tells the peer the id it assigned (`you`; `Hub.knownAs()`), taken only from the peer's uplink
   (`LinkOptions.uplink`: a child can't rename its parent), and a responder replies to the call's `from` — the id the
   caller's edge stamped — so a hub its uplink named still calls down its own tree. editor `90dfd6a`, `f7c18fd`; netsim's client
-  workers no longer get their id at all — they take it from the referee's hello (observability's reporter can name
-  itself by it: `createArchReporter(hub, { self })`).
+  workers no longer get their id at all — they take it from the referee's hello (for their subjects; their observability
+  is named by the edge — see the identity entry above).
 - **An app in a preview shared its editor tab's log stream in debug-mcp** — a preview app's tab now names its scope (its
   window, the id the shell assigned its page), and `query_logs` / `query_spans` for that tab return only that window's
   records. editor `181d005`. Both reach apps once hub and observability are published.
@@ -149,8 +161,8 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   but were checked against the editor's model ("needs review"). Contexts beyond a `preview:*` link are now the app's:
   drawn in an "App" group inside Previews, the page hub merged into its `preview:<port>` node, each frame under the
   window that loaded it and each worker under its window, and left out of the editor's conformance check. Hubs report
-  their realm (window/frame/worker, URL, parent URL) so the view can place them. A worker's nesting is inferred (its
-  one linked window); observing `new Worker` directly would make it certain. editor `bc86c8a`, `6f3e6fe`.
+  their realm (window/frame/worker, URL, parent URL) so the view can place them (a worker's parent is now reported too —
+  the identity entry above). editor `bc86c8a`, `6f3e6fe`.
 - **netsim's hubs couldn't join the editor's hub tree** (M3c) — no link accepted a preview frame, so its logs,
   architecture and `netsim_*` tools stayed out of the editor, and its own debug-mcp socket tripped the editor's
   capability prompt. Now the shell links each preview's page (non-transit, confined to observability, tab discovery
