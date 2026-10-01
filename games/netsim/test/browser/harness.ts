@@ -24,13 +24,6 @@ const APP_ROOT = path.resolve(import.meta.dirname, "../..");
 const BASE = "/games/netsim/";
 const TYPES: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".map": "application/json" };
 
-/**
- * How every test launches Chromium. Its WebRTC hides local addresses behind mDNS names (`<uuid>.local`), which only
- * resolve where an mDNS responder runs — not on CI runners, where the first connections then wait out a fallback for
- * seconds. Tests use real local addresses instead (a real player's browser resolves the names as usual).
- */
-export const LAUNCH: Parameters<typeof launchChromium>[0] = { "args": ["--disable-features=WebRtcHideLocalIpsWithMdns"] };
-
 export interface ServeOptions {
 	/** Extra vite config for the build (a `resolve.alias`). */
 	"overrides"?: InlineConfig;
@@ -89,7 +82,7 @@ export interface Session {
 export async function startSession({ debugMcpPort }: { "debugMcpPort"?: number } = {}): Promise<Session> {
 	const served = process.env["NETSIM_URL"] === undefined ? await serveBuild() : { "url": process.env["NETSIM_URL"], "stop": async () => {} };
 	// CHROME_PATH, else Playwright's own, else the system Chrome (GitHub's runners), else the newest cached one.
-	const browser = await launchChromium(LAUNCH);
+	const browser = await launchChromium();
 	const context = await browser.newContext({ "viewport": { "width": 1200, "height": 900 } });
 
 	if (debugMcpPort === undefined) {

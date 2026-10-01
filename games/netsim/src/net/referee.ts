@@ -64,6 +64,9 @@ export interface Referee {
 	"stats": RefereeStats;
 	/** Apply the commands that arrived, step the world, and send every seated team its view. */
 	"tick": () => void;
+	/** Send the keyframes owed — a client just (re)seated, or asking to resync — without stepping the world: what a
+	 *  paused match does instead of ticking, so a client that joins while it's paused still gets its view. */
+	"sync": () => void;
 	/** Seated teams, for diagnostics. */
 	"seats": () => { "team": number; "peer": string; "lastSeq": number }[];
 	"close": () => void;
@@ -236,6 +239,13 @@ export function createReferee({ hub, match, config, setup, keyframeEvery = 10 }:
 
 			if (hub.interested(names.refereeTick)) {
 				hub.publish(names.refereeTick, { "tick": world.tick, "viewHashes": viewHashes, "seats": seatList(), "stats": { ...stats } } satisfies RefereeTick);
+			}
+		},
+		"sync": () => {
+			for (const seat of seats.values()) {
+				if (seat.needKeyframe || seat.lastTick === null) {
+					send(seat);
+				}
 			}
 		},
 		"seats": seatList,

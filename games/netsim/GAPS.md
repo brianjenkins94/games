@@ -145,6 +145,15 @@ missing. What's left:
 
 ## Fixed
 
+- **Three races WebRTC's timing exposed** (CI flaked twice in three runs; each now has a test that fails without its
+  fix). A client that joined or rejoined while the match was paused got no view until it resumed — the referee sends
+  only when it ticks; now a paused referee's timer calls `sync()`, which sends the keyframes owed without stepping the
+  world. debug-mcp read a tab's page tools once per trigger with a 1s/2s deadline, so a page busy starting up was
+  missed for good; it now reads again (up to 10 times, a second apart) while a linked tab hasn't answered. And a
+  context's records logged before its link's interest arrived were dropped (a worker's first "joined" line);
+  observability's relay now holds them until someone listens. netsim's debug-mcp and reload tests say what they saw
+  when they time out.
+
 - **Players across tabs linked over a BroadcastChannel, not WebRTC** — fine in one browser, impossible across
   machines. Every client now links the referee over a WebRTC data channel (`src/browser/rtc.ts`), the host's own
   instances too (both ends in one page), so every browser test runs over WebRTC. Each page makes its end's peer

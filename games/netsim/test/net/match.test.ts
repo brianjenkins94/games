@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { createHub, createRpcClient, serve } from "@brianjenkins94/hub";
 import { createClient, createNetwork, hostPermissions, lobbyPermissions, subjects } from "../../src/net/index.ts";
 import { decodeUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
-import { isConverged, MATCH, pump, randomOrders, startMatch } from "./match.ts";
+import { isConverged, MATCH, pump, randomOrders, startMatch, TICK_MS } from "./match.ts";
 
 test("each client gets its own seat, and a full match turns the next one away", async () => {
 	const match = await startMatch({ "clients": 3, "config": { "teams": 3 } });
@@ -498,6 +498,34 @@ test("a client's first keyframe waits for its subscription, so joining never cos
 	assert.equal(late.stats.keyframes, 1);
 	assert.ok(isConverged(match, late));
 	assert.ok(match.referee.stats.held > 0, "its first update was held until it was listening");
+});
+
+test("a client that joins while the match is paused gets its view anyway — sync sends keyframes without a tick", async () => {
+	const match = await startMatch({ "clients": 1 });
+
+	match.run(5);
+
+	const tick = match.referee.world.tick;
+	const late = match.addClient();
+
+	// Paused: the referee doesn't tick. Its timer calls sync instead.
+	await pump(match.network, late.join());
+
+	for (let round = 0; round < 10 && late.viewTick() !== tick; round += 1) {
+		match.referee.sync();
+		match.network.advance(TICK_MS);
+		await new Promise((resolve) => { setImmediate(resolve); });
+	}
+
+	assert.equal(match.referee.world.tick, tick, "the world didn't move");
+	assert.equal(late.viewTick(), tick, "the late client sees the paused tick");
+	assert.ok(isConverged(match, late));
+
+	// And nothing more while it has what it needs: sync sends only what's owed.
+	const keyframes = match.referee.stats.keyframes;
+
+	match.referee.sync();
+	assert.equal(match.referee.stats.keyframes, keyframes);
 });
 
 test("nobody can reach a client's debug RPCs across the referee — the page included (a client is debugged in its own tab)", async () => {

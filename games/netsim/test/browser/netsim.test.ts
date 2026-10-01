@@ -301,7 +301,16 @@ test("a player who reloads their instance mid-match rejoins their seat, catches 
 	// It has played before the reload (so its seat's command sequence isn't at the start).
 	assert.equal((await tool<{ "received": boolean }>(page, "netsim_command", { "client": "client-1", "type": "move", "units": [mine.id], "x": 2, "y": 2 })).received, true);
 	await page.evaluate(() => { document.querySelector<HTMLIFrameElement>("iframe[title=\"client-1\"]")!.contentWindow!.location.reload(); });
-	await until(page, "client-1 rejoined", () => (globalThis as unknown as { "__netsim": { "logs": () => { "message"?: string; "context"?: { "source"?: string } }[] } }).__netsim.logs().some((record) => record.context?.source === "client-1" && record.message === "rejoined"));
+	await until(page, "client-1 rejoined", () => (globalThis as unknown as { "__netsim": { "logs": () => { "message"?: string; "context"?: { "source"?: string } }[] } }).__netsim.logs().some((record) => record.context?.source === "client-1" && record.message === "rejoined")).catch(async (error: unknown) => {
+		// What the page saw instead (a CI failure can't be watched).
+		const seen = await page.evaluate(() => {
+			const netsim = (globalThis as unknown as { "__netsim": { "logs": () => { "message"?: string; "time"?: number; "attrs"?: unknown; "context"?: { "source"?: string } }[]; "status": () => unknown } }).__netsim;
+
+			return { "status": netsim.status(), "logs": netsim.logs().filter((record) => ["client-1", "referee"].includes(record.context?.source ?? "")).map((record) => `${record.context?.source} ${record.message} ${JSON.stringify(record.attrs ?? {})}`) };
+		});
+
+		throw new Error(`${(error as Error).message}\nseen: ${JSON.stringify(seen).slice(0, 4000)}`, { "cause": error });
+	});
 
 	// Caught up with authority: pause, and its view is exactly what the referee says its team sees.
 	await tool(page, "netsim_control", { "action": "pause" });
@@ -311,6 +320,15 @@ test("a player who reloads their instance mid-match rejoins their seat, catches 
 		const answer = await netsim.tool("netsim_divergence", { "client": "client-1" });
 
 		return answer.clients[0].comparable ? answer : undefined;
+	}).catch(async (error: unknown) => {
+		// Why it isn't (a CI failure can't be watched): the tool's own answer, and the page's status.
+		const seen = await page.evaluate(async () => {
+			const netsim = (globalThis as unknown as { "__netsim": { "tool": (name: string, args: unknown) => Promise<unknown>; "status": () => unknown; "logs": () => { "message"?: string; "attrs"?: unknown; "context"?: { "source"?: string } }[] } }).__netsim;
+
+			return { "divergence": await netsim.tool("netsim_divergence", { "client": "client-1" }), "status": netsim.status(), "logs": netsim.logs().filter((record) => ["client-1", "referee"].includes(record.context?.source ?? "")).map((record) => `${record.context?.source} ${record.message} ${JSON.stringify(record.attrs ?? {})}`) };
+		});
+
+		throw new Error(`${(error as Error).message}\nseen: ${JSON.stringify(seen).slice(0, 4000)}`, { "cause": error });
 	});
 
 	assert.equal(divergence.clients[0].identical, true, JSON.stringify(divergence));

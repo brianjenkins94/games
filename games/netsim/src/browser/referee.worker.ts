@@ -90,7 +90,10 @@ globalThis.addEventListener("message", (event: MessageEvent<InitMessage | Attach
 
 		log.info("referee started", { "teams": message.config.teams, "units": referee.world.units.size });
 		setInterval(() => {
+			// Paused, the world stands still — but a client that (re)joins, or asks to resync, still gets its view.
 			if (paused) {
+				referee.sync();
+
 				return;
 			}
 

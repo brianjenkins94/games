@@ -34,6 +34,36 @@ async function call<T = unknown>(name: string, args: Record<string, unknown> = {
 	return value as T;
 }
 
+/** What debug-mcp and the page each see right now — attached to a wait that times out, so a failure (on CI, where it
+ *  can't be watched) says why. */
+async function diagnose(): Promise<string> {
+	const safely = async (what: () => Promise<unknown>): Promise<unknown> => what().catch((error: unknown) => String(error));
+	const seen = {
+		"tabs": await safely(async () => call("list_tabs")),
+		"logSources": await safely(async () => {
+			const records = await call<{ "source"?: string }[]>("query_logs", { "limit": 1000 });
+
+			return Object.fromEntries([...new Set(records.map((record) => record.source))].map((source) => [source, records.filter((record) => record.source === source).length]));
+		}),
+		"debugMcpLinks": debugMcp.hub.inspect().links.map((link) => link.peerId ?? link.id),
+		"page": await safely(async () => page.evaluate(() => {
+			const netsim = (globalThis as unknown as { "__netsim": { "logs": () => { "context"?: { "source"?: string } }[]; "status": () => unknown; "hub": { "inspect": () => { "links": { "peerId"?: string }[] } } } }).__netsim;
+
+			return { "logSources": [...new Set(netsim.logs().map((record) => record.context?.source))], "status": netsim.status(), "links": netsim.hub.inspect().links.map((link) => link.peerId) };
+		}))
+	};
+
+	return JSON.stringify(seen).slice(0, 4000);
+}
+
+/** `until`, explained when it times out (see diagnose). */
+async function waitFor<T>(what: string, probe: () => Promise<T | undefined>): Promise<T> {
+	try {
+		return await until(what, probe);
+	} catch (error) {
+		throw new Error(`${(error as Error).message}\nseen: ${await diagnose()}`, { "cause": error });
+	}
+}
 
 before(async () => {
 	debugMcp = createDebugMcp({ "port": 0 });
@@ -53,7 +83,7 @@ after(async () => {
 });
 
 test("a connected match's tools become debug-mcp tools, announced live", async () => {
-	const tools = await until("netsim's tools registered", async () => {
+	const tools = await waitFor("netsim's tools registered", async () => {
 		const { "tools": listed } = await mcp.client.listTools();
 
 		return NETSIM_TOOLS.every((name) => listed.some((tool) => tool.name === name)) ? listed : undefined;
@@ -65,10 +95,10 @@ test("a connected match's tools become debug-mcp tools, announced live", async (
 });
 
 test("an agent pauses the match, checks every view against authority, and plays a move — all over MCP", async () => {
-	await until("netsim_status callable", async () => call("netsim_status"));
+	await waitFor("netsim_status callable", async () => call("netsim_status"));
 	assert.deepEqual(await call("netsim_control", { "action": "pause" }), { "tick": (await call<{ "tick": number }>("netsim_status")).tick, "paused": true });
 
-	const divergence = await until("every client at the paused tick", async () => {
+	const divergence = await waitFor("every client at the paused tick", async () => {
 		const answer = await call<{ "clients": { "peer": string; "comparable": boolean; "identical": boolean }[] }>("netsim_divergence");
 
 		return answer.clients.every((entry) => entry.comparable) ? answer : undefined;
@@ -97,7 +127,7 @@ test("debug-mcp's own tools see the match: its tab, every context's logs, the hu
 	assert.match(tabs[0].url, /\/games\/netsim\//u);
 
 	for (const source of ["page", "referee", "client-0", "client-1"]) {
-		const records = await until(`logs from ${source}`, async () => {
+		const records = await waitFor(`logs from ${source}`, async () => {
 			const found = await call<unknown[]>("query_logs", { "source": source });
 
 			return Array.isArray(found) && found.length > 0 ? found : undefined;
@@ -106,7 +136,7 @@ test("debug-mcp's own tools see the match: its tab, every context's logs, the hu
 		assert.ok(records.length > 0);
 	}
 
-	const architecture = await until("the hub tree", async () => {
+	const architecture = await waitFor("the hub tree", async () => {
 		const snapshot = await call<{ "nodes": { "id": string }[]; "channels": { "a": string; "b": string }[] }>("get_architecture");
 
 		return ["page", "referee", "client-0", "client-1"].every((id) => snapshot.nodes.some((node) => node.id === id)) ? snapshot : undefined;
@@ -117,7 +147,7 @@ test("debug-mcp's own tools see the match: its tab, every context's logs, the hu
 
 test("what the page logged before its debug-mcp link was up reaches debug-mcp too — once", async () => {
 	// "match starting" is logged ~50ms before the socket opens: it arrives in the page's backlog.
-	const records = await until("the startup record", async () => {
+	const records = await waitFor("the startup record", async () => {
 		const found = await call<unknown[]>("query_logs", { "source": "page", "textIncludes": "match starting" });
 
 		return found.length > 0 ? found : undefined;
@@ -131,11 +161,11 @@ test("two matches in two tabs, one debug-mcp: each tab's logs, architecture and 
 	const tabOf = async (which: Page): Promise<string> => which.evaluate(() => (globalThis as unknown as { "__netsim": { "tab": string } }).__netsim.tab);
 	const [first, other] = [await tabOf(page), await tabOf(second)];
 
-	await until("both tabs connected", async () => ((await call<unknown[]>("list_tabs")).length === 2 ? true : undefined));
+	await waitFor("both tabs connected", async () => ((await call<unknown[]>("list_tabs")).length === 2 ? true : undefined));
 
 	// Both tabs have a `referee`: each tab's records are its own, and say so.
 	for (const tab of [first, other]) {
-		const records = await until(`${tab}'s referee logs`, async () => {
+		const records = await waitFor(`${tab}'s referee logs`, async () => {
 			const found = await call<{ "tab"?: string }[]>("query_logs", { "source": "referee", "tab": tab });
 
 			return found.length > 0 ? found : undefined;
@@ -148,7 +178,7 @@ test("two matches in two tabs, one debug-mcp: each tab's logs, architecture and 
 	await assert.rejects(call("get_architecture"), /several editor tabs/u);
 
 	for (const tab of [first, other]) {
-		const snapshot = await until(`${tab}'s architecture`, async () => {
+		const snapshot = await waitFor(`${tab}'s architecture`, async () => {
 			const found = await call<{ "nodes": { "id": string }[] }>("get_architecture", { "tab": tab }).catch(() => undefined);
 
 			return found?.nodes.some((node) => node.id === "referee") === true ? found : undefined;
@@ -166,13 +196,13 @@ test("two matches in two tabs, one debug-mcp: each tab's logs, architecture and 
 
 	// One tab going leaves the tools (the other still serves them).
 	await second.close();
-	await until("one tab left", async () => ((await call<unknown[]>("list_tabs")).length === 1 ? true : undefined));
+	await waitFor("one tab left", async () => ((await call<unknown[]>("list_tabs")).length === 1 ? true : undefined));
 	assert.ok((await mcp.client.listTools()).tools.some((tool) => tool.name === "netsim_status"));
 });
 
 test("once the last tab serving them is gone, the match's tools are removed", async () => {
 	await page.close();
-	await until("netsim's tools removed", async () => {
+	await waitFor("netsim's tools removed", async () => {
 		const { tools } = await mcp.client.listTools();
 
 		return NETSIM_TOOLS.every((name) => !tools.some((tool) => tool.name === name)) ? true : undefined;
