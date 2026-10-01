@@ -22,28 +22,31 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 - **Loop detection skips confined links.** A loop through a link with permissions isn't detected — a confined peer is
   an untrusted leaf, and letting it carry `$sys.lds.*` would let it echo a hub's subject back to have a link cut.
 
-### the zero-knowledge diagram (`npm run compare:zero-knowledge`)
+### the zero-knowledge diagram (`npm run compare:zero-knowledge`, held by `zero-knowledge.test.ts`)
 
 The goal: the architecture diagram drawn for an app the editor knows nothing about. The comparison builds netsim with
 observability stubbed out, injects a generic probe into every realm from outside (test/browser/zero-knowledge/), and
-lines the result up against today's self-reported diagram. With no help from the app, the probes find every realm (the
-page, 3 instance frames, the referee and 3 client workers) and every connection between them, under names that match
-today's and with the same subjects on the data traffic (see Fixed). What's left:
+lines the result up against today's self-reported diagram — for the host page (3 instance frames) and for a match
+across two tabs (play.html, through the lobby). With no help from the app, the probes draw what today draws: every
+context and connection, named as today names them, the same subjects on the data — and, across tabs, one thing more
+(the two tabs' pages meeting in the lobby, which each tab's own picture can't see). A test fails if any of that goes
+missing. What's left:
 
 - **Control and data look alike.** Today separates `interest (sub)` / `hello` from data; to a probe a hub's `sub` frame
   is a message naming a subject, so it's counted under that subject (and a `hello`, which names nothing, as `message`).
   Telling them apart needs hub's protocol — the one place hub knowledge might be worth having (as a describer for a
   known wire format, like JSON-RPC's), or not shown apart at all.
-- **A medium is drawn as a node.** Each client reaches the referee through its BroadcastChannel (client ⇄
-  `channel:netsim.local.link.client-0.*` ⇄ referee); today draws one hub link. Both are true; the probes' is the
-  physical one. A channel with exactly two participants could be drawn as an edge marked with its medium.
 - **What only the hub knows doesn't show:** each link's interest (who subscribed to what), RPC call/reply pairing,
   and authenticated `from`. Interest is hub-internal state no probe can see; pairing could be done generically
   (correlate a reply to a request by an `id` field, as JSON-RPC already is).
 - **Probes see what today's diagram can't:** the messages the page's hub sends each instance frame while it's still
   `about:blank` (lost; hub's handshake recovers them) — counted on the frame, though no page was there to hear them.
-- **Not exercised yet:** play.html (separate tabs: the lobby's BroadcastChannel and Web Locks), WebRTC, storage, and
-  the probe gaps already listed under observability (raw MessagePorts, storage events).
+- **Two tabs at one URL are one name** to `windowName`. The comparison's probe adds a per-tab id (`~<tab>`, from the
+  tab's sessionStorage); in the editor, the editor names its preview windows itself.
+- **Hub's own control traffic shows** — interest frames, now including every hub's loop-detection subject
+  (`$sys.lds.*`) — as messages on its links, counted under the subjects they name.
+- **Not exercised yet:** WebRTC, storage, and the probe gaps already listed under observability (raw MessagePorts,
+  storage events).
 
 ### observability / debug-mcp (`editor/packages/observability`, `editor/packages/debug-mcp`)
 
@@ -123,6 +126,12 @@ today's and with the same subjects on the data traffic (see Fixed). What's left:
 - **util's Vite is a peer dependency**: an app using `util/vite/*` must declare `vite` itself (pnpm won't hoist it).
 
 ## Fixed
+
+- **A medium was drawn as a node.** Each client reaches the referee through its BroadcastChannel; the probes drew
+  client ⇄ `channel:…` ⇄ referee where today draws one link. observability's ArchitectureStore now draws a medium only
+  two contexts use as one edge between them, marked with it (`medium`; `store.media()`), counted from the senders' side
+  so a message both ends saw counts once; with one context on it, or three, it stays a node. The editor's architecture
+  view draws it so, and judges it by the medium's declaration (`declaredOn`); debug-mcp's `get_architecture` reports it.
 
 - **The zero-knowledge diagram couldn't name anything.** Every probed message was `message` / `object`, and a window was
   its URL, query and all (`window:/games/netsim/instance.html?id=client-0&match=1600cfd7&bots=1` — new every match).

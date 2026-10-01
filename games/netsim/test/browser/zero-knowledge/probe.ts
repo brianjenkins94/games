@@ -7,8 +7,10 @@
  * Each realm names itself from what the platform says it is — a window as the page embedding it calls its frame, else by
  * its URL (observability's windowName), a worker by its `name` option or its script; read each time, since a frame's first window (about:blank) is the one its page goes on
  * in — and records what its probes see (every channel, hub frames included: to the probe a hub
- * is just an app) on a BroadcastChannel of the observer's own, opened before the probes wrap BroadcastChannel. The top
- * window collects every realm's reports into an ArchitectureStore: `globalThis.__zk()` is its snapshot.
+ * is just an app) on a BroadcastChannel of the observer's own, opened before the probes wrap BroadcastChannel. A tab's
+ * top window also carries a per-tab id (two tabs can be at one URL): `window:<url>~<tab>`. Every top window collects
+ * every realm's reports — every tab's, the channel being the origin's — into an ArchitectureStore: `globalThis.__zk()`
+ * is its snapshot, `globalThis.__zkSelf()` the window's own name.
  */
 import type { ArchNodeSpec, ArchReport, ArchSink, NodeOp, TrafficCount, TrafficKind } from "@brianjenkins94/observability";
 import { ArchitectureStore, installNetworkProbes, installWindowMessageProbe, installWorkerProbe, windowName } from "@brianjenkins94/observability";
@@ -16,7 +18,39 @@ import { ArchitectureStore, installNetworkProbes, installWindowMessageProbe, ins
 const CHANNEL = "\0zero-knowledge-probe";
 const FLUSH_MS = 250;
 
-type ProbeScope = typeof globalThis & { "__zkProbe"?: true; "__zk"?: () => unknown };
+type ProbeScope = typeof globalThis & { "__zkProbe"?: true; "__zk"?: () => unknown; "__zkSelf"?: () => string };
+
+/** A tab's id, from the tab's own storage: kept for the tab's life (a reload included), new in every tab — the same
+ *  whichever of its windows asks. */
+function tabId(storage: Storage): string {
+	const key = "\0zero-knowledge-tab";
+
+	try {
+		const kept = storage.getItem(key);
+
+		if (kept !== null) {
+			return kept;
+		}
+
+		const id = crypto.randomUUID().slice(0, 4);
+
+		storage.setItem(key, id);
+
+		return id;
+	} catch {
+		return "tab";
+	}
+}
+
+/** A window's name: windowName, and a tab's top window by its tab too — the same whether it names itself or another
+ *  window names it. */
+function nameOf(target: Window): string {
+	try {
+		return windowName(target) + (target.top === target ? "~" + tabId(target.sessionStorage) : "");
+	} catch {
+		return windowName(target);
+	}
+}
 
 function workerId(): string {
 	const scope = globalThis as unknown as { "name"?: string; "location": Location };
@@ -34,21 +68,19 @@ function install(): void {
 	scope.__zkProbe = true;
 
 	const isWindow = typeof window !== "undefined";
-	const selfId = (): string => (isWindow ? windowName(window) : workerId());
+	const top = isWindow && window.top === window;
+	const selfId = (): string => (isWindow ? nameOf(window) : workerId());
 	let named: string | undefined;
 	// Ours, before the probes wrap the constructor: the observer's channel is the one thing it doesn't observe.
 	const channel = new BroadcastChannel(CHANNEL);
 	const counts = new Map<string, TrafficCount>();
 	let nodes: NodeOp[] = [];
 	let timer: ReturnType<typeof setTimeout> | undefined;
-	let top: ArchitectureStore | undefined;
+	const store = top ? new ArchitectureStore() : undefined;
 
 	const deliver = (report: ArchReport): void => {
-		if (top === undefined) {
-			channel.postMessage(report);
-		} else {
-			top.apply(report);
-		}
+		store?.apply(report);
+		channel.postMessage(report);
 	};
 	const flush = (): void => {
 		const self = selfId();
@@ -85,15 +117,15 @@ function install(): void {
 		}
 	};
 
-	if (isWindow && window.top === window) {
-		top = new ArchitectureStore();
-		channel.addEventListener("message", (event) => { top!.apply(event.data as ArchReport); });
-		scope.__zk = () => top!.snapshot();
+	if (store !== undefined) {
+		channel.addEventListener("message", (event) => { store.apply(event.data as ArchReport); });
+		scope.__zk = () => store.snapshot();
+		scope.__zkSelf = selfId;
 	}
 
 	installNetworkProbes(sink, { "hubFrames": "record" });
 	installWorkerProbe(sink, undefined, { "hubFrames": "record" });
-	installWindowMessageProbe(sink, undefined, { "hubFrames": "record" });
+	installWindowMessageProbe(sink, nameOf, { "hubFrames": "record" });
 	schedule();
 }
 
