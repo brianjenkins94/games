@@ -15,6 +15,8 @@ import { createServer } from "node:http";
 import * as path from "node:path";
 import * as fs from "@brianjenkins94/util/fs";
 import { launchChromium } from "@brianjenkins94/util/playwright/chromium";
+import { relayWebSocket } from "@brianjenkins94/util/playwright/relay";
+import { until as untilTruthy } from "@brianjenkins94/util/until";
 import { buildApp } from "@brianjenkins94/util/vite/build";
 
 const APP_ROOT = path.resolve(import.meta.dirname, "../..");
@@ -64,31 +66,6 @@ export interface Session {
 	"close": () => Promise<void>;
 }
 
-/** Relay the page's debug-mcp socket (:7378) to a debug-mcp on `port`. */
-async function bridgeDebugMcp(context: BrowserContext, port: number): Promise<void> {
-	await context.routeWebSocket(/:7378/u, (route) => {
-		const upstream = new WebSocket(`ws://localhost:${port}`);
-		// Text frames: the hub speaks JSON.
-		const queued: string[] = [];
-
-		upstream.addEventListener("open", () => {
-			for (const message of queued.splice(0)) {
-				upstream.send(message);
-			}
-		});
-		upstream.addEventListener("message", (event) => { route.send(event.data as string); });
-		upstream.addEventListener("close", () => { void route.close(); });
-		route.onMessage((message) => {
-			if (upstream.readyState === WebSocket.OPEN) {
-				upstream.send(String(message));
-			} else {
-				queued.push(String(message));
-			}
-		});
-		route.onClose(() => { upstream.close(); });
-	});
-}
-
 export async function startSession({ debugMcpPort }: { "debugMcpPort"?: number } = {}): Promise<Session> {
 	const served = process.env["NETSIM_URL"] === undefined ? await serveBuild() : { "url": process.env["NETSIM_URL"], "stop": async () => {} };
 	// CHROME_PATH, else Playwright's own, else the system Chrome (GitHub's runners), else the newest cached one.
@@ -98,7 +75,7 @@ export async function startSession({ debugMcpPort }: { "debugMcpPort"?: number }
 	if (debugMcpPort === undefined) {
 		await context.routeWebSocket(/:7378/u, (route) => { void route.close(); });
 	} else {
-		await bridgeDebugMcp(context, debugMcpPort);
+		await relayWebSocket(context, /:7378/u, `ws://localhost:${debugMcpPort}`);
 	}
 
 	return {
@@ -124,26 +101,7 @@ export async function startSession({ debugMcpPort }: { "debugMcpPort"?: number }
 /** Poll `probe(arg)` in the page until it's truthy; resolves to its value. The probe may be async (polled from here
  *  with `evaluate`, which awaits it — `waitForFunction` would take the pending Promise itself as truthy). */
 export async function until<T, A = undefined>(page: Page, what: string, probe: (arg: A) => T | Promise<T>, { arg, timeoutMs = 15_000 }: { "arg"?: A; "timeoutMs"?: number } = {}): Promise<T> {
-	const deadline = Date.now() + timeoutMs;
-	let last: unknown;
-
-	for (;;) {
-		try {
-			const value = await page.evaluate(probe as (arg: unknown) => Promise<unknown>, arg) as T;
-
-			if (value) {
-				return value;
-			}
-		} catch (error) {
-			last = error;
-		}
-
-		if (Date.now() > deadline) {
-			throw new Error(`timed out waiting for ${what}`, { "cause": last });
-		}
-
-		await page.waitForTimeout(100);
-	}
+	return untilTruthy(what, async () => page.evaluate(probe as (arg: unknown) => Promise<unknown>, arg) as Promise<T>, { "timeoutMs": timeoutMs, "sleep": async (ms) => page.waitForTimeout(ms) });
 }
 
 interface Status {

@@ -3,97 +3,58 @@
  * owns), debug-mcp registers the page's tools live, and an MCP client — standing in for an agent — drives the match
  * with them and reads its logs and architecture with debug-mcp's own tools.
  */
-import type { AddressInfo } from "node:net";
 import type { Page } from "playwright";
 import type { Session } from "./harness.ts";
 import assert from "node:assert/strict";
-import { createServer } from "node:net";
 import { after, before, test } from "node:test";
 import { createDebugMcp } from "@brianjenkins94/debug-mcp";
-import { createMcpServer } from "@brianjenkins94/debug-mcp/mcp";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import type { TestClient } from "@brianjenkins94/debug-mcp/testing";
+import { connectTestClient } from "@brianjenkins94/debug-mcp/testing";
 import { ToolListChangedNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
+import { until } from "@brianjenkins94/util/until";
 import { FP } from "../../src/sim/index.ts";
 import { startSession } from "./harness.ts";
 
 const NETSIM_TOOLS = ["netsim_command", "netsim_control", "netsim_divergence", "netsim_state", "netsim_status"];
 
 let session: Session;
-let debugMcp: { "whenListening": Promise<void>; "close": () => Promise<void> };
-let client: Client;
+let debugMcp: ReturnType<typeof createDebugMcp>;
+let mcp: TestClient;
 let page: Page;
 let listChanged = 0;
 
-function freePort(): Promise<number> {
-	return new Promise((resolve) => {
-		const probe = createServer().listen(0, () => {
-			const { port } = probe.address() as AddressInfo;
-
-			probe.close(() => { resolve(port); });
-		});
-	});
-}
-
 /** Call an MCP tool; its answer, parsed. Throws with the tool's message when it answers an error. */
 async function call<T = unknown>(name: string, args: Record<string, unknown> = {}): Promise<T> {
-	const result = await client.callTool({ "name": name, "arguments": args }) as { "isError"?: boolean; "content": { "text": string }[] };
-	const text = result.content[0]?.text ?? "";
+	const { isError, value } = await mcp.call(name, args);
 
-	if (result.isError === true) {
-		throw new Error(text);
+	if (isError === true) {
+		throw new Error(String(value));
 	}
 
-	try {
-		return JSON.parse(text) as T;
-	} catch {
-		return text as T;
-	}
+	return value as T;
 }
 
-async function eventually<T>(what: string, probe: () => Promise<T | undefined>, timeoutMs = 15_000): Promise<T> {
-	const deadline = Date.now() + timeoutMs;
-
-	for (;;) {
-		const value = await probe().catch(() => undefined);
-
-		if (value) {
-			return value;
-		}
-
-		if (Date.now() > deadline) {
-			throw new Error("timed out waiting for " + what);
-		}
-
-		await new Promise((resolve) => { setTimeout(resolve, 100); });
-	}
-}
 
 before(async () => {
-	const port = await freePort();
+	debugMcp = createDebugMcp({ "port": 0 });
 
-	debugMcp = createDebugMcp({ "port": port });
-	await debugMcp.whenListening;
+	const port = await debugMcp.whenListening;
 
-	const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-
-	await createMcpServer(debugMcp).connect(serverSide);
-	client = new Client({ "name": "netsim-test", "version": "0.0.0" });
-	client.setNotificationHandler(ToolListChangedNotificationSchema, () => { listChanged += 1; });
-	await client.connect(clientSide);
+	mcp = await connectTestClient(debugMcp);
+	mcp.client.setNotificationHandler(ToolListChangedNotificationSchema, () => { listChanged += 1; });
 	session = await startSession({ "debugMcpPort": port });
 	page = await session.open({ "clients": 2, "bots": 0 });
 });
 
 after(async () => {
 	await session?.close();
-	await client?.close();
+	await mcp?.close();
 	await debugMcp?.close();
 });
 
 test("a connected match's tools become debug-mcp tools, announced live", async () => {
-	const tools = await eventually("netsim's tools registered", async () => {
-		const { "tools": listed } = await client.listTools();
+	const tools = await until("netsim's tools registered", async () => {
+		const { "tools": listed } = await mcp.client.listTools();
 
 		return NETSIM_TOOLS.every((name) => listed.some((tool) => tool.name === name)) ? listed : undefined;
 	});
@@ -104,10 +65,10 @@ test("a connected match's tools become debug-mcp tools, announced live", async (
 });
 
 test("an agent pauses the match, checks every view against authority, and plays a move — all over MCP", async () => {
-	await eventually("netsim_status callable", async () => call("netsim_status"));
+	await until("netsim_status callable", async () => call("netsim_status"));
 	assert.deepEqual(await call("netsim_control", { "action": "pause" }), { "tick": (await call<{ "tick": number }>("netsim_status")).tick, "paused": true });
 
-	const divergence = await eventually("every client at the paused tick", async () => {
+	const divergence = await until("every client at the paused tick", async () => {
 		const answer = await call<{ "clients": { "peer": string; "comparable": boolean; "identical": boolean }[] }>("netsim_divergence");
 
 		return answer.clients.every((entry) => entry.comparable) ? answer : undefined;
@@ -136,7 +97,7 @@ test("debug-mcp's own tools see the match: its tab, every context's logs, the hu
 	assert.match(tabs[0].url, /\/games\/netsim\//u);
 
 	for (const source of ["page", "referee", "client-0", "client-1"]) {
-		const records = await eventually(`logs from ${source}`, async () => {
+		const records = await until(`logs from ${source}`, async () => {
 			const found = await call<unknown[]>("query_logs", { "source": source });
 
 			return Array.isArray(found) && found.length > 0 ? found : undefined;
@@ -145,7 +106,7 @@ test("debug-mcp's own tools see the match: its tab, every context's logs, the hu
 		assert.ok(records.length > 0);
 	}
 
-	const architecture = await eventually("the hub tree", async () => {
+	const architecture = await until("the hub tree", async () => {
 		const snapshot = await call<{ "nodes": { "id": string }[]; "channels": { "a": string; "b": string }[] }>("get_architecture");
 
 		return ["page", "referee", "client-0", "client-1"].every((id) => snapshot.nodes.some((node) => node.id === id)) ? snapshot : undefined;
@@ -156,7 +117,7 @@ test("debug-mcp's own tools see the match: its tab, every context's logs, the hu
 
 test("what the page logged before its debug-mcp link was up reaches debug-mcp too — once", async () => {
 	// "match starting" is logged ~50ms before the socket opens: it arrives in the page's backlog.
-	const records = await eventually("the startup record", async () => {
+	const records = await until("the startup record", async () => {
 		const found = await call<unknown[]>("query_logs", { "source": "page", "textIncludes": "match starting" });
 
 		return found.length > 0 ? found : undefined;
@@ -170,11 +131,11 @@ test("two matches in two tabs, one debug-mcp: each tab's logs, architecture and 
 	const tabOf = async (which: Page): Promise<string> => which.evaluate(() => (globalThis as unknown as { "__netsim": { "tab": string } }).__netsim.tab);
 	const [first, other] = [await tabOf(page), await tabOf(second)];
 
-	await eventually("both tabs connected", async () => ((await call<unknown[]>("list_tabs")).length === 2 ? true : undefined));
+	await until("both tabs connected", async () => ((await call<unknown[]>("list_tabs")).length === 2 ? true : undefined));
 
 	// Both tabs have a `referee`: each tab's records are its own, and say so.
 	for (const tab of [first, other]) {
-		const records = await eventually(`${tab}'s referee logs`, async () => {
+		const records = await until(`${tab}'s referee logs`, async () => {
 			const found = await call<{ "tab"?: string }[]>("query_logs", { "source": "referee", "tab": tab });
 
 			return found.length > 0 ? found : undefined;
@@ -187,7 +148,7 @@ test("two matches in two tabs, one debug-mcp: each tab's logs, architecture and 
 	await assert.rejects(call("get_architecture"), /several editor tabs/u);
 
 	for (const tab of [first, other]) {
-		const snapshot = await eventually(`${tab}'s architecture`, async () => {
+		const snapshot = await until(`${tab}'s architecture`, async () => {
 			const found = await call<{ "nodes": { "id": string }[] }>("get_architecture", { "tab": tab }).catch(() => undefined);
 
 			return found?.nodes.some((node) => node.id === "referee") === true ? found : undefined;
@@ -205,14 +166,14 @@ test("two matches in two tabs, one debug-mcp: each tab's logs, architecture and 
 
 	// One tab going leaves the tools (the other still serves them).
 	await second.close();
-	await eventually("one tab left", async () => ((await call<unknown[]>("list_tabs")).length === 1 ? true : undefined));
-	assert.ok((await client.listTools()).tools.some((tool) => tool.name === "netsim_status"));
+	await until("one tab left", async () => ((await call<unknown[]>("list_tabs")).length === 1 ? true : undefined));
+	assert.ok((await mcp.client.listTools()).tools.some((tool) => tool.name === "netsim_status"));
 });
 
 test("once the last tab serving them is gone, the match's tools are removed", async () => {
 	await page.close();
-	await eventually("netsim's tools removed", async () => {
-		const { tools } = await client.listTools();
+	await until("netsim's tools removed", async () => {
+		const { tools } = await mcp.client.listTools();
 
 		return NETSIM_TOOLS.every((name) => !tools.some((tool) => tool.name === name)) ? true : undefined;
 	});

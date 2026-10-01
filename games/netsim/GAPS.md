@@ -57,6 +57,17 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 
 ## Fixed
 
+- **Test helpers were copied file to file, and wire formats lived as scattered regexes** (the reuse audit). Now: util's
+  `until()` (lib, browser-safe) replaces the polling loops — debug-mcp's tests, the editor's architecture harness and
+  fixture, netsim's harness and debug-mcp test; util/playwright's `relayWebSocket` replaces the two copies of the
+  :7378 relay; the editor's harness launches with `launchChromium`; debug-mcp binds port 0 and says which
+  (`whenListening`), and its `testing` export (`connectTestClient`) replaces each test's own MCP client setup and
+  `freePort`; hub exports `rpcCallSubject` / `rpcReplySubject` (netsim's permissions use them, and a preview app may
+  now reply only to debug-mcp, not `$rpc.reply.>`); the editor's `virtual-path.ts` alone builds and parses
+  `/__virtual__/<tab>/<port>/` and `preview:<port>~<n>` (the service worker, the shell, the injected taps, the
+  architecture view and fixture). Dead code went with it: hub's `publishWhenInterested`, the pod's unheard
+  `editor.ready`, almostnode's tab-less `getServerUrl` / `createFetchHandler`.
+
 - **What the independent review of the multi-window work found** (editor `f7c18fd`, `d066e84`, `20d5b18`, `ef4d7e7`): the RPC client answered
   to its assigned id everywhere, so in the editor a preview page's calls down its own tree (netsim's debug tools) got
   no reply — responders now reply to the call's `from`; any linked hub's `hello` could rename it — only an uplink's

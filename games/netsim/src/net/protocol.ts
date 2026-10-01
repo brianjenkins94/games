@@ -14,6 +14,7 @@
  * team's state, nothing else) — so fog of war holds even against a client that subscribes to everything.
  */
 import type { LinkPermissions } from "@brianjenkins94/hub";
+import { rpcCallSubject, rpcReplySubject } from "@brianjenkins94/hub";
 import { observabilityPermissions } from "@brianjenkins94/observability";
 import type { WorldConfig } from "../sim/index.ts";
 
@@ -31,17 +32,13 @@ export function subjects(match: string) {
 	};
 }
 
-// hub's RPC subjects: a call to `name` is published on `$rpc.call.<name>`, its reply on `$rpc.reply.<caller id>`.
-const rpcCall = (name: string) => `$rpc.call.${name}`;
-const rpcReply = (peer: string) => `$rpc.reply.${peer}`;
-
 /**
  * Letting the debug host (hub id `host` — the page) debug a client: the client may receive calls to its own
  * `debug.<peer>.*` and answer the host. Opt-in (a host passes it only when debugging is on); another client can't call
  * them, since no client may publish a debug call.
  */
 export function debugPermissions(match: string, peer: string, host: string): Required<LinkPermissions> {
-	return { "publish": [rpcReply(host)], "subscribe": [rpcCall(subjects(match).debug(peer, "*"))] };
+	return { "publish": [rpcReplySubject(host)], "subscribe": [rpcCallSubject(subjects(match).debug(peer, "*"))] };
 }
 
 export interface PeerOptions {
@@ -58,7 +55,7 @@ function common(match: string, peer: string, { debugHost, observed = true }: Pee
 	const observability = observed ? observabilityPermissions(peer) : none;
 	const debug = debugHost === undefined ? none : debugPermissions(match, peer, debugHost);
 
-	return { "publish": [subjects(match).diag(peer), ...observability.publish, ...debug.publish], "subscribe": [rpcReply(peer), ...observability.subscribe, ...debug.subscribe] };
+	return { "publish": [subjects(match).diag(peer), ...observability.publish, ...debug.publish], "subscribe": [rpcReplySubject(peer), ...observability.subscribe, ...debug.subscribe] };
 }
 
 /** What a not-yet-seated client (hub id `peer`) may do: ask to join, hear its own replies, report its own diagnostics
@@ -67,7 +64,7 @@ export function lobbyPermissions(match: string, peer: string, options: PeerOptio
 	const names = subjects(match);
 	const shared = common(match, peer, options);
 
-	return { "publish": [rpcCall(names.join), ...shared.publish], "subscribe": shared.subscribe };
+	return { "publish": [rpcCallSubject(names.join), ...shared.publish], "subscribe": shared.subscribe };
 }
 
 /** What a client seated on `team` may do: everything in the lobby, plus send commands and receive its own team's
@@ -76,7 +73,7 @@ export function seatPermissions(match: string, peer: string, team: number, optio
 	const names = subjects(match);
 	const shared = common(match, peer, options);
 
-	return { "publish": [rpcCall(names.join), names.commands, ...shared.publish], "subscribe": [names.state(team), ...shared.subscribe] };
+	return { "publish": [rpcCallSubject(names.join), names.commands, ...shared.publish], "subscribe": [names.state(team), ...shared.subscribe] };
 }
 
 /**
@@ -90,8 +87,8 @@ export function hostPermissions(match: string, peer: string, { debugHost }: Pick
 	const names = subjects(match);
 
 	return {
-		"publish": [`netsim.${match}.state.*`, rpcReply(peer), ...debugHost === undefined ? [] : [rpcCall(names.debug(peer, "*"))]],
-		"subscribe": [rpcCall(names.join), names.commands, names.diag(peer), ...debugHost === undefined ? [] : [rpcReply(debugHost)]]
+		"publish": [`netsim.${match}.state.*`, rpcReplySubject(peer), ...debugHost === undefined ? [] : [rpcCallSubject(names.debug(peer, "*"))]],
+		"subscribe": [rpcCallSubject(names.join), names.commands, names.diag(peer), ...debugHost === undefined ? [] : [rpcReplySubject(debugHost)]]
 	};
 }
 
