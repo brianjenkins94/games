@@ -13,7 +13,6 @@ import { observeApp } from "@brianjenkins94/observability";
 import { instanceSubjects, readSettings } from "./bootstrap.ts";
 import { createInstanceFrame, startHost } from "./host.ts";
 import { joinLobby } from "./lobby.ts";
-import { joinPeerLobby } from "./peerLobby.ts";
 
 const params = new URLSearchParams(location.search);
 const grid = document.querySelector<HTMLElement>("#instances")!;
@@ -36,7 +35,9 @@ const telemetry = observeApp(hub, { "network": true, "messages": true });
 // Tabs of one browser meet through the local lobby; `?lobby=peerjs` meets players on other machines through PeerJS
 // (`&broker=host:port` for a broker of our own, `&ice=none` for no STUN/TURN — two ends on one machine).
 const online = params.get("lobby") === "peerjs";
-const lobby = online ? await joinPeerLobby(match, { ...params.has("broker") ? { "broker": params.get("broker")! } : {}, ...params.get("ice") === "none" ? { "iceServers": [] } : {} }) : await joinLobby(match);
+// (PeerJS is imported only then: it opens a test peer connection the moment it loads — the zero-knowledge probes saw
+// it in every tab.)
+const lobby = online ? await (await import("./peerLobby.ts")).joinPeerLobby(match, { ...params.has("broker") ? { "broker": params.get("broker")! } : {}, ...params.get("ice") === "none" ? { "iceServers": [] } : {} }) : await joinLobby(match);
 
 role.textContent = `match ${match} · you are ${lobby.peer} (${lobby.role === "host" ? "hosting" : "joined"}${online ? ", online — send the link to another machine" : ""})`;
 document.body.dataset["role"] = lobby.role;

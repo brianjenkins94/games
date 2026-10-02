@@ -428,7 +428,7 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
   - Browser tests on netsim's harness, with the pathology guard running in CI.
   - The zero-knowledge comparison extended to war2.
 
-    *Done, bar the zero-knowledge comparison:*
+    *Done (2026-10-02).*
     - **The pathology detector** (`src/diag/pathology.ts`), carried from the old referee as an instance: give-up,
       stuck, settled-short, oscillating — and a new kind, **stalled** (moving, but no closer to its target for 5 s).
       W0's stuck pairs in pinch-corridor and production-rally turned out to be jittering a few pixels to and fro every
@@ -464,6 +464,12 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
       round-tripping through replay), the corpus, the map loader (a stubbed mirror); in the browser, an incident flagged
       in a live match and saved through the tool replays in node to the captured hash, and a live replay rewinds and
       steps back to the flagged moment exactly.
+    - **The zero-knowledge comparison** (`test/browser/zero-knowledge*`, `npm run compare:zero-knowledge`): netsim's,
+      carried over. Probes injected from outside (observability stubbed out of the build) draw war2's architecture
+      unaided, and must account for every context, connection and steady subject war2's self-reported picture has, on
+      the host page and across two play tabs. They do: matching every node and channel, the instances' fetches from
+      the assets mirror included. They also caught PeerJS opening a test peer connection the moment it loads, in every
+      play tab whichever lobby it used; it's now imported only for `?lobby=peerjs`.
     - **On the way:** the order-sensitive systems (movement, production) walk units in stable-id order, not bitecs's
       entity order, so a world restored in place plays as one restored fresh (a safeguard: no trace moved). The HUD's
       status strip and portrait update in place, rather than rebuilding under the pointer 20 times a second (CI caught
