@@ -18,6 +18,7 @@ import * as fs from "@brianjenkins94/util/fs";
 import { launchChromium } from "@brianjenkins94/util/playwright/chromium";
 import { buildApp } from "@brianjenkins94/util/vite/build";
 import { startBroker } from "./broker.ts";
+import { CHROMIUM } from "./harness.ts";
 
 const FIXTURE = path.resolve(import.meta.dirname, "peerjs");
 const TYPES: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".map": "application/json" };
@@ -64,7 +65,7 @@ before(async () => {
 	}));
 
 	site = `http://localhost:${port}/peerjs/`;
-	browser = await launchChromium();
+	browser = await launchChromium(CHROMIUM);
 });
 
 after(async () => {
