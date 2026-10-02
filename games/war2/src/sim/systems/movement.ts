@@ -238,6 +238,48 @@ function formationAim(world: SimWorld, eid: number, self: Shape, field: FlowFiel
 	return null;
 }
 
+/** How near its slot a unit must be for a parked unit on it to send it to another (2 tiles): far off, the slot may
+ *  well be free by the time it gets there. */
+const RESLOT_NEAR_FP = 2 * TILE_PX * FP;
+
+/** Give a unit another slot if its own is one it can't have: unreachable by the group's flow field (cost to go
+ *  infinite — not its own goal tile, which is 0), or, within RESLOT_NEAR_FP, held by a parked unit.  The new slot is the
+ *  nearest tile to the old, ring by ring out to SETTLE_R, that the field reaches and a unit of its shape can stand on;
+ *  its straight-line best starts over (its route's doesn't: the field is the same).  False if it keeps its slot. */
+function reslot(world: SimWorld, eid: number, self: Shape, x: number, y: number): boolean {
+	const { MoveTarget, Path, Unit } = world.components;
+	const { w: mapW, h: mapH } = world.terrain;
+	const field = getOrComputeFlowField(world, Unit.team[eid], Path.goalTx[eid], Path.goalTy[eid]);
+
+	if (!field) { return false; }
+	const gx = MoveTarget.tx[eid]; const
+		gy = MoveTarget.ty[eid];
+	const stx = clampTile(fpToTile(gx), mapW); const
+		sty = clampTile(fpToTile(gy), mapH);
+	const unreachable = field.cost[sty * mapW + stx] === INF;
+	const taken = !unreachable && distance(gx - x, gy - y) <= RESLOT_NEAR_FP && !footprintSoftFreeAt(world, gx, gy, self, eid);
+
+	if (!unreachable && !taken) { return false; }
+
+	for (let ring = 1; ring <= SETTLE_R; ring++) {
+		for (let dy = -ring; dy <= ring; dy++) {
+			for (let dx = -ring; dx <= ring; dx++) {
+				const tx = stx + dx; const
+					ty = sty + dy;
+
+				if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring || tx < 0 || ty < 0 || tx >= mapW || ty >= mapH || field.cost[ty * mapW + tx] === INF) { continue; }
+				if (!footprintSoftFreeAt(world, tileCenterFP(tx), tileCenterFP(ty), self, eid)) { continue; }
+				MoveTarget.tx[eid] = tileCenterFP(tx); MoveTarget.ty[eid] = tileCenterFP(ty);
+				Path.bestDist[eid] = INF;
+
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 /** Halt a unit: clear movement, path and animation state in one place.
  *  The unit keeps its current walk-cell reservation (it just stops on it). */
 export function stopUnit(world: SimWorld, eid: number): void {
@@ -344,7 +386,7 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 	const { MoveTarget, Path, Position, Unit, UnitAnim } = world.components;
 	const x = Position.x[eid]; const
 		y = Position.y[eid];
-	const goalX = MoveTarget.tx[eid]; const
+	let goalX = MoveTarget.tx[eid]; let
 		goalY = MoveTarget.ty[eid];
 	const self = unitShape(Unit.type[eid]);   // its collision shape (collide.ts)
 
@@ -371,6 +413,13 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 		noProgress(world, eid, self);   // pushed out, not closer: a unit jittering in and out of a parked one gets nowhere
 
 		return;
+	}
+
+	// A slot it can't have — one the group's field can't reach (walled off, often found so in the fog), or, close by, one
+	// a parked unit holds (three sent to one point; a rally point already taken): the nearest the field reaches that's
+	// free, walked to like any slot (W6 step 7).
+	if (reslot(world, eid, self, x, y)) {
+		goalX = MoveTarget.tx[eid]; goalY = MoveTarget.ty[eid];
 	}
 
 	const prevDist = distance(goalX - x, goalY - y);

@@ -13,42 +13,19 @@
 	"diagonal-gap-NW": {},
 	"group-open": {},
 	"pinch-corridor": {
-		"oscillating:6": 413,
-		"stuck:1": 737,
-		"stuck:2": 780
+		"oscillating:6": 413
 	},
 	"around-building": {},
-	"production-rally": {
-		"stuck:6": 237,
-		"stuck:5": 279
-	},
+	"production-rally": {},
 	"build-farm": {},
 	"random-plains-1": {
-		"oscillating:5": 1864,
-		"oscillating:2": 2055,
-		"oscillating:1": 2088,
-		"stuck:1": 2105,
-		"settled-short:1": 2117,
-		"stuck:2": 2139,
-		"settled-short:2": 2151
+		"oscillating:5": 1864
 	},
 	"random-plains-2": {
 		"oscillating:10": 117,
-		"stuck:12": 623,
-		"stuck:11": 698,
 		"oscillating:5": 1064,
-		"oscillating:11": 1071,
 		"oscillating:6": 1274,
-		"settled-short:5": 2176,
-		"stuck:3": 2426,
-		"stuck:6": 2499,
-		"settled-short:6": 2511,
-		"stuck:2": 2611,
-		"stuck:1": 2658
+		"settled-short:5": 2176
 	},
-	"random-plains-3": {
-		"stuck:9": 1182,
-		"oscillating:4": 2680,
-		"stuck:4": 2696
-	}
+	"random-plains-3": {}
 }

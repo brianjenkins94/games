@@ -35,9 +35,11 @@ test("quiet on the old suite's clean scenarios; W0's stuck pairs in pinch-corrid
 	// what blocks a mover): production-rally's two, whose rally point is taken, settle beside it (within a tile: not
 	// short). Step 5 (local planning round parked units): pinch-corridor's two go round the teammate parked in their way
 	// and arrive — slowed, so flagged stuck on the way, but not giving up.
-	// Step 6: unit 6 queues at the gap behind 3 and 5, shuffling across a tile edge while it waits its turn.
-	assert.deepEqual(faults("pinch-corridor"), ["oscillating:6", "stuck:1", "stuck:2"]);
-	assert.deepEqual(faults("production-rally"), ["stuck:5", "stuck:6"]);
+	// Step 6: unit 6 queues at the gap behind 3 and 5, shuffling across a tile edge while it waits its turn. Step 7: a
+	// slot taken when a unit gets near it is swapped for the nearest free one — pinch-corridor's three sent to one point,
+	// production-rally's two at a rally point already taken — so nobody grinds against a parked unit any more.
+	assert.deepEqual(faults("pinch-corridor"), ["oscillating:6"]);
+	assert.deepEqual(faults("production-rally"), []);
 	assert.ok(Object.values(recorded).every((faults) => Object.keys(faults).every((key) => !key.startsWith("stalled:"))), "nothing stalls any more");
 	// Every group moving together stacked (W6 step 0); travelling as a block and queueing where it narrows, none does now
 	// (step 6).

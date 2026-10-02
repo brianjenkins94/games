@@ -21,12 +21,14 @@ export const DEVIATIONS: Record<string, string> = {
 	// unit inside a building placed on it ejected. Same arrivals; slightly different lines where units pass close.
 	// W6 step 6: groups travel as a block (each unit follows the shared field from its place in the formation) and
 	// queue where the route narrows (a unit yields to a moving teammate further along), so no group travels stacked.
+	// W6 step 7: a slot the group's field can't reach, or one a parked unit holds when the unit's near it, is swapped
+	// for the nearest free one the field reaches — three sent to one point, a taken rally point, a slot walled off in fog.
 	"group-open": "units 2 px slack against each other (W6 step 5); groups travel as a block (step 6)",
 	"build-farm": "units 2 px slack against each other (W6 step 5); groups travel as a block and queue (step 6)",
 	"around-building": "one rule for what blocks a mover; slides instead of the slip (W6 step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6)",
-	"pinch-corridor": "progress means beating the best so far: units 1 and 2 settle instead of jittering (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6)",
-	"production-rally": "progress means beating the best so far: units 5 and 6 settle instead of jittering (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6)",
-	"random-plains-1": "walk grid repainted from positions each tick (W1); progress means beating the best so far (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6)",
-	"random-plains-2": "walk grid repainted from positions each tick (W1); progress means beating the best so far (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6)",
-	"random-plains-3": "walk grid repainted from positions each tick (W1); progress means beating the best so far (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6)"
+	"pinch-corridor": "progress means beating the best so far: units 1 and 2 settle instead of jittering (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6); taken or unreachable slots reassigned (step 7)",
+	"production-rally": "progress means beating the best so far: units 5 and 6 settle instead of jittering (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6); taken or unreachable slots reassigned (step 7)",
+	"random-plains-1": "walk grid repainted from positions each tick (W1); progress means beating the best so far (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6); taken or unreachable slots reassigned (step 7)",
+	"random-plains-2": "walk grid repainted from positions each tick (W1); progress means beating the best so far (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6); taken or unreachable slots reassigned (step 7)",
+	"random-plains-3": "walk grid repainted from positions each tick (W1); progress means beating the best so far (W6 step 3); one rule for what blocks a mover (step 4); local planning round parked units (step 5); groups travel as a block and queue (step 6); taken or unreachable slots reassigned (step 7)"
 };

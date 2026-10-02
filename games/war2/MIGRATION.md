@@ -667,7 +667,15 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
        waits its turn past the site (172, from 149), group-open's front row 3 ticks slower (89). Traces: group-open,
        build-farm, around-building and pinch-corridor deviate, with the random maps; the pinch-corridor fixture
        re-captured; the detector's stacked test no longer leans on the sim stacking (it can't now).
-    7. Taken goals reassigned; rally points spread.
+    7. ~~Taken goals reassigned; rally points spread.~~ Done (2026-10-02). Each tick a unit's slot is checked against
+       the group's flow field (`reslot`): if the field can't reach it (walled off — often found so in fog), or the unit's
+       within two tiles and a parked unit holds it, the unit takes the nearest tile, ring by ring, that the field reaches
+       and it can stand on, and walks there like any slot. One rule covers the three cases: three units sent to one point
+       (pinch-corridor), units trained to a rally point already taken (production-rally — so rally points spread), and a
+       slot found unreachable. The census 27 → 6: stuck 14 → 0, settled-short 4 → 1, oscillating 9 → 5. Pinch-corridor's
+       units 1 and 2 land on a slot (ticks 349 and 336, from 397 and 440 a tile off); production-rally is clean; every
+       other arrival unchanged. Left: pinch-corridor's unit 6 and four random-map units shuffling while they wait a turn
+       (oscillating), and one random-map unit settling short.
     8. Per-unit speed.
     9. The ring-search helper and what's left of `orders.ts`.
   - **Done when:** the census has no stalls, oscillations, stacks or jams, or each one left is listed with its reason (as
