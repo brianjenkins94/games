@@ -79,16 +79,10 @@ export interface Session {
 	"close": () => Promise<void>;
 }
 
-/** How the tests launch Chromium: with local IPs as WebRTC host candidates, not the mDNS names Chromium hides them
- *  behind. Every link here is WebRTC between contexts on one machine with no ICE servers, so host candidates are all
- *  there is — and a CI runner (Linux, no mDNS responder) can't resolve those names: links took seconds to tens of
- *  seconds there, under one locally, and timed out often enough to fail a push. */
-export const CHROMIUM = { "args": ["--disable-features=WebRtcHideLocalIpsWithMdns"] };
-
 export async function startSession({ debugMcpPort }: { "debugMcpPort"?: number } = {}): Promise<Session> {
 	const served = process.env["NETSIM_URL"] === undefined ? await serveBuild() : { "url": process.env["NETSIM_URL"], "stop": async () => {} };
 	// CHROME_PATH, else Playwright's own, else the system Chrome (GitHub's runners), else the newest cached one.
-	const browser = await launchChromium(CHROMIUM);
+	const browser = await launchChromium();
 	const context = await browser.newContext({ "viewport": { "width": 1200, "height": 900 } });
 
 	if (debugMcpPort === undefined) {

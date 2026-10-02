@@ -15,7 +15,7 @@ import { build } from "vite";
 import * as fs from "@brianjenkins94/util/fs";
 import { isEntry } from "@brianjenkins94/util/env";
 import { launchChromium } from "@brianjenkins94/util/playwright/chromium";
-import { CHROMIUM, serveBuild, until, untilInSync } from "../harness.ts";
+import { serveBuild, until, untilInSync } from "../harness.ts";
 
 interface Channel { "a": string; "b": string; "count": number; "linked": boolean; "medium"?: string; "labels": Record<string, { "count": number; "hub": number }> }
 
@@ -62,7 +62,7 @@ interface Tab { "page": Page; "name": string }
 /** One run of a scenario: serve a build, open its tabs, let the match settle, `read` the result from them. */
 async function run<T>(scenario: Scenario, clients: number, settleMs: number, options: ServeOptions, initScript: string | undefined, read: (tabs: Tab[]) => Promise<T>): Promise<T> {
 	const served = await serveBuild(options);
-	const browser = await launchChromium(CHROMIUM);
+	const browser = await launchChromium();
 
 	try {
 		const context = await browser.newContext({ "viewport": { "width": 1200, "height": 900 } });
