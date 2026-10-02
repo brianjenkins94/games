@@ -21,6 +21,12 @@ export function ownWorker(_worker: unknown, _onLoadFailure?: () => void): () => 
 	return () => undefined;
 }
 
+export type Gauge = unknown;
+
+export function reportMetrics(_hub: unknown, _options?: unknown) {
+	return { "gauge": (_name: string, _gauge: unknown) => undefined };
+}
+
 export function scopedTransport(transport: Transport, _scope: string, _options?: unknown): Transport {
 	return transport;
 }
