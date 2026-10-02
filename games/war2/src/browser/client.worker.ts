@@ -113,7 +113,25 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 		}
 	});
 
-	void client.join({ "timeoutMs": 10_000, ...token === undefined ? {} : { "token": token } }).then(async (seat) => {
+	// The referee answers once its map is loaded, and that can take a while — a capability prompt in the editor waits
+	// on the user — so no responder yet means try again, not give up. Any other failure (a refusal) is final.
+	const joinWhenServed = async (): Promise<Awaited<ReturnType<Client["join"]>>> => {
+		for (let waited = false; ; waited = true) {
+			try {
+				return await client.join({ "timeoutMs": 10_000, ...token === undefined ? {} : { "token": token } });
+			} catch (error) {
+				if (!(error instanceof Error && error.message.includes("no responder"))) {
+					throw error;
+				}
+
+				if (!waited) {
+					log.info("waiting for the referee");
+				}
+			}
+		}
+	};
+
+	void joinWhenServed().then(async (seat) => {
 		const map = await loadMap(seat.map);
 
 		log.info(token === seat.token ? "rejoined" : "joined", { "team": seat.team, "map": seat.map });
