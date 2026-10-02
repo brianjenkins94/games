@@ -17,16 +17,12 @@ import { observe } from "@brianjenkins94/observability";
 import { createClient, hostPermissions, subjects } from "../net/index.ts";
 import { CmdType } from "../sim/command.ts";
 import { tileCenterFP } from "../sim/components.ts";
-import { distance } from "../sim/distance.ts";
 import { snapshotUnit } from "../sim/snapshot.ts";
 import { validateCommand } from "../sim/validate.ts";
 import { exploredRuns } from "../sim/vision.ts";
 import { unitEids } from "../sim/world.ts";
 import { describe, instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
 import { loadMap } from "./maps.ts";
-
-/** A click this close to an own unit (fixed-point) selects it. */
-const PICK_FP = 24_000;
 
 async function start({ channel, bots = true, token }: PortMessage): Promise<void> {
 	// Its own name is a placeholder that nobody sees (both its links name it): who it is comes from the referee.
@@ -100,18 +96,25 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 
 	hub.subscribe(local.input, (data) => {
 		const input = data as InstanceInput;
+		const world = client.predicted();
+		const team = client.team();
 
 		if (input.action === "select") {
-			const [nearest] = own().filter((unit) => unit.building === undefined).sort((left, right) => distance(left.x - input.x, left.y - input.y) - distance(right.x - input.x, right.y - input.y));
+			selected = Array.isArray(input.uids) ? input.uids.filter((uid) => Number.isSafeInteger(uid)) : [];
+		} else if (world !== undefined && team !== undefined) {
+			// The referee checks it again; checked here, a bad one isn't predicted or sent at all.
+			const validation = validateCommand(world, team, input.command);
 
-			selected = nearest !== undefined && distance(nearest.x - input.x, nearest.y - input.y) <= PICK_FP ? [nearest.uid] : [];
-		} else if (selected.length > 0) {
-			client.command({ "type": CmdType.MOVE, "unitIds": selected, "txFP": Math.trunc(input.x), "tyFP": Math.trunc(input.y) });
+			if (validation.ok) {
+				client.command(validation.command);
+			} else {
+				log.info("command refused", { "reason": "reason" in validation ? validation.reason : undefined });
+			}
 		}
 	});
 
-	void client.join({ "timeoutMs": 10_000, ...token === undefined ? {} : { "token": token } }).then((seat) => {
-		const map = loadMap(seat.map);
+	void client.join({ "timeoutMs": 10_000, ...token === undefined ? {} : { "token": token } }).then(async (seat) => {
+		const map = await loadMap(seat.map);
 
 		log.info(token === seat.token ? "rejoined" : "joined", { "team": seat.team, "map": seat.map });
 		setInterval(() => {

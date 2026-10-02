@@ -376,6 +376,32 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
   - The renderer fed `RenderState` over the hub.
   - HUD and command card.
   - Assets: the ones war2 used, from the same source, loaded on demand.
+
+    *Renderer done (W3c-1)* (`src/render`): the old renderer carried into the instance page, in place of the debug
+    canvas.
+    - **What's carried:** terrain streamed in 16×16-tile chunks with Stratagus-style fog edges (`ChunkRenderer`, nearly
+      verbatim), the data-driven sprite registry, unit animation and facing, interpolation between views, building
+      and construction-site sprites, and the minimap.
+    - **What it draws from:** the client worker's view, which the hub carries as the instance's `view` subject. Its
+      own units come from the prediction, so they turn and walk the moment a command is given; the old
+      prediction-overlay map is gone. Fog comes from the view's explored map and its units' sight, by the sim's
+      metric, computed once per view rather than over the whole map three times a frame.
+    - **Input:** selection hit-tests where units are drawn, and a drag box rings only your own (two of the audit's
+      rendering findings). Right-click moves the selection, or sets a selected building's rally point. The instance
+      sends these as intents to its worker, which validates each command against its prediction before predicting
+      and sending it.
+    - **Phaser 4.2.1**, pinned and bundled; its minified build via war2's `vite.config.ts` (war2's own code stays
+      unminified, util's default): `instance.js` is 1.9 MB rather than 7.2.
+    - **Assets on demand** from the mirror (`browser/assets.ts`): the map when a match starts on it, the tileset, and
+      each unit type's sheet the first time one is drawn. The metadata it reads (sprites, constructions, icons,
+      terrain classes) is committed in `src/assets`, as before. Maps are the built-in two or the mirror's by path; the
+      default is `ladder/Plains of snow BNE`, the map the old war2 booted on, with each team placed at its start (map
+      properties). Humans and orcs alternate by team.
+    - **Tests:** the click test now selects a unit where the renderer draws it and right-clicks a tile beside it,
+      through Phaser; a new test checks Plains of snow renders its tileset and every unit's sprite. (The browser tests
+      reach the mirror, as CI already reaches Pages for its tarballs.)
+    - **Next (W3c-2):** the DOM HUD (resources, portrait, status) and the command card (abilities, building
+      placement, production and cancel), carried with `commandCardController`.
 - **W4: tools and the browser safety net.**
   - war2's page tools: `war2_state`/`unit`/`map`/`trace`/`summarize_move`/`control`/`command`/incidents.
   - The pathology detector, and incident capture → fixture JSON.

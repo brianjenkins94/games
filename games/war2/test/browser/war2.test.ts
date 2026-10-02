@@ -44,7 +44,7 @@ async function pauseAndSettle(page: Page): Promise<Divergence> {
 }
 
 test("two instances, two workers, one referee: every client stays in sync, and paused, every view is exactly authority's", async () => {
-	const page = await session.open({ "clients": 2 });
+	const page = await session.open({ "clients": 2, "map": "arena" });
 
 	await page.waitForTimeout(1500);
 
@@ -60,7 +60,7 @@ test("two instances, two workers, one referee: every client stays in sync, and p
 });
 
 test("pause and step are exact: N steps are N ticks, and every client follows each one", async () => {
-	const page = await session.open({ "clients": 2 });
+	const page = await session.open({ "clients": 2, "map": "arena" });
 	const paused = await pauseAndSettle(page);
 	const stepped = await tool<{ "tick": number; "paused": boolean }>(page, "war2_control", { "action": "step", "ticks": 7 });
 
@@ -77,7 +77,7 @@ test("pause and step are exact: N steps are N ticks, and every client follows ea
 });
 
 test("speed is the host's: the referee ticks faster at 4×, and its clients keep up", async () => {
-	const page = await session.open({ "clients": 2, "bots": 0 });
+	const page = await session.open({ "clients": 2, "bots": 0, "map": "arena" });
 	const rate = async (): Promise<number> => {
 		const from = (await tool<Status>(page, "war2_status")).tick;
 
@@ -96,29 +96,48 @@ test("speed is the host's: the referee ticks faster at 4×, and its clients keep
 	await page.close();
 });
 
-test("a player's clicks move a unit, end to end: canvas → instance → client worker → referee → every view", async () => {
-	const page = await session.open({ "clients": 2, "bots": 0 });
+test("a player's clicks move a unit, end to end: renderer → instance → client worker → referee → every view", async () => {
+	const page = await session.open({ "clients": 2, "bots": 0, "map": "arena" });
 
 	await pauseAndSettle(page);
 
 	const state = await tool<State>(page, "war2_state", { "client": "client-0" });
 	const [client] = state.clients;
 	const unit = client.view.find((candidate) => candidate.team === client.team)!;
-	const frame = page.locator("iframe[title=\"client-0\"]");
-	const box = (await frame.boundingBox())!;
-	const width = 32 * TILE;
-	const toScreen = (x: number, y: number) => ({ "x": box.x + (x / width) * box.width, "y": box.y + (y / width) * box.height });
-	// The middle of tile (16, 2): open ground, between the arena's walls.
-	const target = { "x": 16.5 * TILE, "y": 2.5 * TILE };
+	const frame = page.frameLocator("iframe[title=\"client-0\"]");
+	const box = (await page.locator("iframe[title=\"client-0\"]").boundingBox())!;
+	const instance = page.frames().find((candidate) => candidate.url().includes("id=client-0"))!;
+	// A tile two away from the unit, on open ground (the arena's walls are columns 10 and 21, and part of row 8).
+	const [tx, ty] = [Math.floor(unit.x / TILE), Math.floor(unit.y / TILE)];
+	const open = (x: number, y: number) => x >= 0 && x < 32 && y >= 0 && y < 32 && !(x === 10 && y > 4 && y < 27 && y !== 15) && !(x === 21 && y > 4 && y < 27 && y !== 16) && !(y === 8 && x > 13 && x < 18);
+	const [gx, gy] = [[2, -2], [2, 0], [0, -2], [-2, -2], [2, 2], [-2, 0]].map(([dx, dy]) => [tx + dx, ty + dy]).find(([x, y]) => open(x, y) && open(Math.round((x + tx) / 2), Math.round((y + ty) / 2)))!;
+	const target = { "x": (gx + 0.5) * TILE, "y": (gy + 0.5) * TILE };
+	const onScreen = async (x: number, y: number) => {
+		const at = await instance.evaluate(([px, py]) => (globalThis as unknown as { "__war2Instance": { "toScreen": (x: number, y: number) => { "x": number; "y": number } } }).__war2Instance.toScreen(px, py), [x, y] as const);
+
+		return { "x": box.x + at.x, "y": box.y + at.y };
+	};
 	const seq = (await tool<Status>(page, "war2_status")).seats.find((seat) => seat.peer === "client-0")!.lastSeq;
 
-	await page.mouse.click(toScreen(unit.x, unit.y).x, toScreen(unit.x, unit.y).y);
-	await until(page, "the unit selected", (uid: number) => {
-		const instance = document.querySelector<HTMLIFrameElement>("iframe[title=\"client-0\"]")!.contentWindow as unknown as { "__war2Instance": { "latest": () => { "selected": number[] } | undefined } };
+	await frame.locator("canvas").waitFor();
+	await until(instance as unknown as Page, "the renderer ready", () => (globalThis as unknown as { "__war2Instance": { "ready": () => boolean } }).__war2Instance.ready());
 
-		return instance.__war2Instance.latest()?.selected.includes(uid);
+	// Look at the unit (the minimap covers the panel's bottom-left), and keep the clicks clear of the minimap.
+	await instance.evaluate(([x, y]) => { (globalThis as unknown as { "__war2Instance": { "lookAt": (x: number, y: number) => void } }).__war2Instance.lookAt(x, y); }, [unit.x, unit.y] as const);
+	await page.waitForTimeout(100);
+
+	const unitAt = await onScreen(unit.x, unit.y);
+
+	await page.mouse.click(unitAt.x, unitAt.y);
+	await until(page, "the unit selected", (uid: number) => {
+		const latest = (document.querySelector<HTMLIFrameElement>("iframe[title=\"client-0\"]")!.contentWindow as unknown as { "__war2Instance": { "latest": () => { "selected": number[] } | undefined } }).__war2Instance.latest();
+
+		return latest?.selected.includes(uid);
 	}, { "arg": unit.uid });
-	await page.mouse.click(toScreen(target.x, target.y).x, toScreen(target.x, target.y).y, { "button": "right" });
+
+	const targetAt = await onScreen(target.x, target.y);
+
+	await page.mouse.click(targetAt.x, targetAt.y, { "button": "right" });
 
 	// Predicted at once (the referee is still paused)…
 	const predicted = await until(page, "the move predicted", async (uid: number) => {
@@ -140,14 +159,30 @@ test("a player's clicks move a unit, end to end: canvas → instance → client 
 	const authority = (await tool<State>(page, "war2_state")).units.find((candidate) => candidate.uid === unit.uid)!;
 
 	assert.deepEqual(authority.target, predicted.target, "authority took the move the client predicted");
-	// The sim rests units on its 8px grid, and a pixel here is a few hundred FP: the target is within a cell of the click.
+	// The sim rests units on its 8px grid: the target is within a cell of the click.
 	assert.ok(Math.abs(authority.target![0] - target.x) <= 8000 && Math.abs(authority.target![1] - target.y) <= 8000, JSON.stringify({ authority, target }));
 	assert.ok(settled.clients.every((entry) => entry.identical), JSON.stringify(settled));
 	await page.close();
 });
 
+test("the renderer draws the game's own map: its terrain from the assets mirror, and every unit with its sprite", async () => {
+	const page = await session.open({ "clients": 2, "bots": 0, "perTeam": 4 });
+	const instance = page.frames().find((candidate) => candidate.url().includes("id=client-0"))!;
+	const drawn = await until(instance as unknown as Page, "the units drawn", () => {
+		const war2 = (globalThis as unknown as { "__war2Instance": { "drawn": () => { "units": number; "tileset": boolean } | undefined } }).__war2Instance;
+		const now = war2.drawn();
+
+		return now !== undefined && now.tileset && now.units >= 4 ? now : undefined;
+	}, { "timeoutMs": 20_000 });
+
+	assert.equal(drawn.tileset, true, "Plains of snow's tileset");
+	assert.ok(drawn.units >= 4, `${drawn.units} unit sprites`);
+	assert.equal((await instance.evaluate(() => (globalThis as unknown as { "__war2Instance": { "latest": () => { "map": string } } }).__war2Instance.latest().map)), "ladder/Plains of snow BNE");
+	await page.close();
+});
+
 test("war2_command acts as a client, and the client's own check refuses another team's unit", async () => {
-	const page = await session.open({ "clients": 2, "bots": 0 });
+	const page = await session.open({ "clients": 2, "bots": 0, "map": "arena" });
 
 	await pauseAndSettle(page);
 
@@ -176,7 +211,7 @@ test("war2_command acts as a client, and the client's own check refuses another 
 });
 
 test("a player who reloads their instance mid-match rejoins their seat, catches up, and plays on", async () => {
-	const page = await session.open({ "clients": 2, "bots": 0 });
+	const page = await session.open({ "clients": 2, "bots": 0, "map": "arena" });
 	const before = await tool<Status>(page, "war2_status");
 	const team = before.seats.find((seat) => seat.peer === "client-1")!.team;
 	const mine = (await tool<State>(page, "war2_state")).units.find((candidate) => candidate.team === team)!;

@@ -1,18 +1,19 @@
 /**
  * An instance page (one iframe per client): starts its client worker, hands it the channel to the referee the page
- * sends, draws what the worker reports, and turns clicks into input (left: select your unit, right: move it).
- *
- * The drawing is a plain debug canvas — terrain, fog, units — until the Phaser renderer lands (W3, see MIGRATION.md).
- * Fog comes from the worker: what its team has explored, and what it can see now (within sight of its own units).
+ * sends, draws what the worker reports with war2's Phaser renderer (render/renderer.ts), and turns input into intents
+ * for the worker — a selection, and commands: right-click moves the selection, or sets a selected building's rally
+ * point. The worker checks each command against its prediction before predicting and sending it (W3, see
+ * MIGRATION.md).
  */
+import type { RendererState } from "../render/renderer.ts";
 import type { InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { observe, ownWorker, scopedTransport } from "@brianjenkins94/observability";
-import { FP, TILE_PX } from "../sim/components.ts";
-import { inRange } from "../sim/distance.ts";
-import { unitSight, unitTypeId } from "../sim/unitTypes.ts";
+import productionJson from "../assets/production.json" with { "type": "json" };
+import { lookAt, setView, startRenderer, worldToScreen } from "../render/renderer.ts";
+import { CmdType } from "../sim/command.ts";
 import { instanceSubjects, seatKey } from "./bootstrap.ts";
-import { loadMap } from "./maps.ts";
+import { loadGameMap } from "./maps.ts";
 
 const params = new URLSearchParams(location.search);
 const id = params.get("id") ?? "client";
@@ -22,10 +23,8 @@ const local = instanceSubjects(id);
 const hub = createHub({ "id": id + "/ui" });
 const { log } = observe(hub, { "network": true, "messages": { "window": (source) => (source === parent ? "page" : undefined) } });
 const worker = new Worker(new URL("client.worker.ts", import.meta.url), { "type": "module", "name": id });
-const canvas = document.querySelector("canvas")!;
-const context = canvas.getContext("2d")!;
-const TEAM_COLORS = ["#4f8cff", "#ff5f56", "#3ecf6e", "#f5b83d", "#b76cff", "#39c6d6"];
-const TILE_FP = TILE_PX * FP;
+const badge = document.querySelector<HTMLElement>("#badge")!;
+const PRODUCTION = productionJson as Record<string, { "trains"?: string[] }>;
 let latest: InstanceView | undefined;
 
 ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); });
@@ -61,8 +60,48 @@ function storedToken(): { "token"?: string } {
 	}
 }
 
+let renderer: RendererState | undefined;
+let starting = false;
+
+function send(input: InstanceInput): void {
+	hub.publish(local.input, input);
+}
+
+/** The renderer, once the first view names the map (loaded from the assets mirror if it isn't built in). */
+async function start(view: InstanceView): Promise<void> {
+	starting = true;
+
+	const map = await loadGameMap(view.map!);
+
+	renderer = await startRenderer(document.querySelector<HTMLElement>("#game")!, map, {
+		"onSelect": (uids) => { send({ "action": "select", "uids": uids }); },
+		"onSecondaryClick": (xFP, yFP, shift) => {
+			const own = latest?.units.filter((unit) => unit.team === latest?.team) ?? [];
+			const selected = own.filter((unit) => renderer.selected.has(unit.uid));
+			const [building] = selected.length === 1 && selected[0].building !== undefined ? selected : [];
+
+			if (building !== undefined) {
+				if (PRODUCTION[building.type]?.trains !== undefined) {
+					send({ "action": "command", "command": { "type": CmdType.SET_RALLY, "buildingUid": building.uid, "txFP": xFP, "tyFP": yFP } });
+				}
+			} else if (selected.length > 0) {
+				send({ "action": "command", "command": { "type": CmdType.MOVE, "unitIds": selected.map((unit) => unit.uid), "txFP": xFP, "tyFP": yFP, ...shift ? { "queue": true } : {} } });
+			}
+		}
+	});
+	log.info("renderer started", { "map": map.name });
+}
+
 hub.subscribe(local.view, (data) => {
 	latest = data as InstanceView;
+	badge.textContent = `${id} · team ${latest.team} · tick ${latest.viewTick} · ${latest.inSync ? "in sync" : "out of sync"}`;
+	badge.dataset["sync"] = String(latest.inSync);
+
+	if (renderer !== undefined) {
+		setView(renderer, latest);
+	} else if (!starting && latest.map !== undefined) {
+		void start(latest).catch((error: unknown) => { log.error("renderer failed", { "error": error instanceof Error ? error.message : String(error) }); });
+	}
 
 	if (latest.token !== undefined && latest.token !== storedToken().token) {
 		try {
@@ -71,133 +110,14 @@ hub.subscribe(local.view, (data) => {
 	}
 });
 
-/** The map's size in tiles (from its name; loaded once). */
-let map: { "name": string; "w": number; "h": number; "pass": number[] } | undefined;
-
-function mapOf(view: InstanceView): typeof map {
-	if (view.map !== undefined && map?.name !== view.map) {
-		const info = loadMap(view.map);
-
-		map = { "name": view.map, "w": info.mapW, "h": info.mapH, "pass": info.gids.map((gid) => (gid === 0 ? 1 : 0)) };
-	}
-
-	return map;
-}
-
-function toWorld(event: MouseEvent): { "x": number; "y": number } | undefined {
-	const current = latest === undefined ? undefined : mapOf(latest);
-
-	if (current === undefined) {
-		return undefined;
-	}
-
-	const box = canvas.getBoundingClientRect();
-
-	return { "x": ((event.clientX - box.left) / box.width) * current.w * TILE_FP, "y": ((event.clientY - box.top) / box.height) * current.h * TILE_FP };
-}
-
-canvas.addEventListener("mousedown", (event) => {
-	const point = toWorld(event);
-
-	if (point !== undefined) {
-		hub.publish(local.input, { "action": event.button === 2 ? "move" : "select", ...point } satisfies InstanceInput);
-	}
-});
-canvas.addEventListener("contextmenu", (event) => { event.preventDefault(); });
-
-function draw(): void {
-	const { width, height } = canvas.getBoundingClientRect();
-
-	if (canvas.width !== Math.round(width * devicePixelRatio)) {
-		canvas.width = Math.round(width * devicePixelRatio);
-		canvas.height = Math.round(height * devicePixelRatio);
-	}
-
-	context.setTransform(1, 0, 0, 1, 0, 0);
-	context.fillStyle = "#05070a";
-	context.fillRect(0, 0, canvas.width, canvas.height);
-
-	const view = latest;
-	const current = view === undefined ? undefined : mapOf(view);
-
-	if (view !== undefined && current !== undefined) {
-		const scale = canvas.width / (current.w * TILE_FP);
-		const explored = new Uint8Array(current.w * current.h);
-
-		for (let index = 0; index < view.explored.length; index += 2) {
-			explored.fill(1, view.explored[index], view.explored[index] + view.explored[index + 1]);
-		}
-
-		const sight = (tx: number, ty: number): boolean => view.predicted.some((unit) => inRange(Math.floor(unit.x / TILE_FP) - tx, Math.floor(unit.y / TILE_FP) - ty, unitSight(unitTypeId(unit.type))));
-
-		context.setTransform(scale, 0, 0, scale, 0, 0);
-
-		// Terrain, under fog: unexplored is black; explored is drawn, dimmed where nothing of ours sees it now.
-		for (let ty = 0; ty < current.h; ty += 1) {
-			for (let tx = 0; tx < current.w; tx += 1) {
-				if (explored[ty * current.w + tx] === 0) {
-					continue;
-				}
-
-				const lit = sight(tx, ty);
-
-				context.fillStyle = current.pass[ty * current.w + tx] === 1 ? (lit ? "#4a3b2c" : "#2a2219") : (lit ? "#1f3324" : "#141f17");
-				context.fillRect(tx * TILE_FP, ty * TILE_FP, TILE_FP, TILE_FP);
-			}
-		}
-
-		for (const unit of view.units) {
-			const color = TEAM_COLORS[unit.team % TEAM_COLORS.length];
-
-			context.strokeStyle = color;
-			context.lineWidth = TILE_FP * 0.06;
-
-			if (unit.team === view.team) {
-				// Own unit: authority as an outline (the prediction, filled, is drawn over it).
-				context.beginPath();
-				context.arc(unit.x, unit.y, TILE_FP * 0.4, 0, Math.PI * 2);
-				context.stroke();
-			} else {
-				context.fillStyle = color;
-				context.beginPath();
-				context.arc(unit.x, unit.y, TILE_FP * 0.35, 0, Math.PI * 2);
-				context.fill();
-			}
-		}
-
-		for (const unit of view.predicted) {
-			context.fillStyle = TEAM_COLORS[unit.team % TEAM_COLORS.length];
-			context.beginPath();
-			context.arc(unit.x, unit.y, TILE_FP * 0.3, 0, Math.PI * 2);
-			context.fill();
-
-			if (unit.target !== undefined) {
-				context.strokeStyle = "rgba(255, 255, 255, 0.25)";
-				context.lineWidth = TILE_FP * 0.04;
-				context.beginPath();
-				context.moveTo(unit.x, unit.y);
-				context.lineTo(unit.target[0], unit.target[1]);
-				context.stroke();
-			}
-
-			if (view.selected.includes(unit.uid)) {
-				context.strokeStyle = "#ffffff";
-				context.lineWidth = TILE_FP * 0.05;
-				context.beginPath();
-				context.arc(unit.x, unit.y, TILE_FP * 0.5, 0, Math.PI * 2);
-				context.stroke();
-			}
-		}
-	}
-
-	context.setTransform(1, 0, 0, 1, 0, 0);
-	context.font = `${12 * devicePixelRatio}px ui-monospace, monospace`;
-	context.fillStyle = view?.inSync === true ? "#9fe6b8" : "#ffb4a8";
-	context.fillText(view === undefined ? `${id} · connecting` : `${id} · team ${view.team} · tick ${view.viewTick} · ${view.inSync ? "in sync" : "out of sync"}`, 8 * devicePixelRatio, 18 * devicePixelRatio);
-	requestAnimationFrame(draw);
-}
-
-requestAnimationFrame(draw);
-
-/** For scripts and debugging: what this instance last drew, as data. */
-(globalThis as unknown as { "__war2Instance": unknown }).__war2Instance = { "id": id, "latest": () => latest };
+/** For scripts and debugging: what this instance last drew, and where a world point is on screen. */
+(globalThis as unknown as { "__war2Instance": unknown }).__war2Instance = {
+	"id": id,
+	"latest": () => latest,
+	"ready": () => renderer !== undefined && latest !== undefined,
+	"selected": () => [...renderer?.selected ?? []],
+	/** What the renderer has up: unit and building sprites, and whether the map's tileset loaded. */
+	"drawn": () => (renderer === undefined ? undefined : { "units": renderer.unitSprites.size, "buildings": renderer.buildingSprites.size, "tileset": renderer.scene.textures.exists(renderer.tileset) }),
+	"toScreen": (xFP: number, yFP: number) => (renderer === undefined ? undefined : worldToScreen(renderer, xFP, yFP)),
+	"lookAt": (xFP: number, yFP: number) => { if (renderer !== undefined) { lookAt(renderer, xFP, yFP); } }
+};

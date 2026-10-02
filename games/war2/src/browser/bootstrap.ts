@@ -43,9 +43,16 @@ export interface UnitInfo {
 	"x": number;
 	"y": number;
 	"moving": boolean;
+	/** Facing, 0–7 clockwise from north. */
+	"dir": number;
 	/** Its move target, while it has one (absent for an enemy: the view doesn't carry it). */
 	"target"?: [number, number];
 	"building"?: { "w": number; "h": number; "buildLeft": number };
+	/** An own unit's queue state (an enemy's isn't in the view): shift-queued orders, a building's production
+	 *  (product type names) and rally point. */
+	"orders"?: UnitSnapshot["orders"];
+	"production"?: { "queue": string[]; "ticksLeft": number; "ticksTotal": number };
+	"rally"?: [number, number];
 }
 
 /** The sim's field names, in order (every world's are the same): how a UnitSnapshot's values are read. */
@@ -58,7 +65,7 @@ export function valueOf(unit: UnitSnapshot, name: string): number {
 }
 
 export function describe(unit: UnitSnapshot): UnitInfo {
-	const info: UnitInfo = { "uid": unit.uid, "team": valueOf(unit, "Unit.team"), "type": unitTypeName(valueOf(unit, "Unit.type")), "x": valueOf(unit, "Position.x"), "y": valueOf(unit, "Position.y"), "moving": valueOf(unit, "UnitAnim.moving") === 1 };
+	const info: UnitInfo = { "uid": unit.uid, "team": valueOf(unit, "Unit.team"), "type": unitTypeName(valueOf(unit, "Unit.type")), "x": valueOf(unit, "Position.x"), "y": valueOf(unit, "Position.y"), "moving": valueOf(unit, "UnitAnim.moving") === 1, "dir": valueOf(unit, "UnitAnim.dir") };
 
 	if (valueOf(unit, "MoveTarget.active") === 1 && (valueOf(unit, "MoveTarget.tx") !== 0 || valueOf(unit, "MoveTarget.ty") !== 0)) {
 		info.target = [valueOf(unit, "MoveTarget.tx"), valueOf(unit, "MoveTarget.ty")];
@@ -66,6 +73,18 @@ export function describe(unit: UnitSnapshot): UnitInfo {
 
 	if (valueOf(unit, "Building.fw") > 0) {
 		info.building = { "w": valueOf(unit, "Building.fw"), "h": valueOf(unit, "Building.fh"), "buildLeft": valueOf(unit, "Building.buildLeft") };
+	}
+
+	if (unit.orders !== undefined) {
+		info.orders = unit.orders;
+	}
+
+	if (unit.prod !== undefined) {
+		info.production = { "queue": unit.prod.queue.map(unitTypeName), "ticksLeft": unit.prod.ticksLeft, "ticksTotal": unit.prod.ticksTotal };
+	}
+
+	if (unit.rally !== undefined) {
+		info.rally = [unit.rally.txFP, unit.rally.tyFP];
 	}
 
 	return info;
@@ -155,12 +174,11 @@ export interface InstanceView {
 	"token": string | undefined;
 }
 
-export interface InstanceInput {
-	"action": "select" | "move";
-	/** Fixed-point world coordinates. */
-	"x": number;
-	"y": number;
-}
+/** page → its client worker: the player's selection (for the worker's view and tools), or a command to give — which
+ *  the worker checks against its prediction (validate.ts) before predicting and sending it. */
+export type InstanceInput =
+	| { "action": "select"; "uids": number[] }
+	| { "action": "command"; "command": unknown };
 
 export interface Settings {
 	"clients": number;
@@ -168,11 +186,12 @@ export interface Settings {
 	"seed": number;
 	"perTeam": number;
 	"bots": boolean;
+	/** A built-in map (`open`, `arena`) or the mirror's (`ladder/Plains of snow BNE`): maps.ts. */
 	"map": string;
 }
 
 /** Match settings from the page URL (`?clients=2&teams=2&seed=1&perTeam=4&bots=0&map=arena`); `defaults` for what it
- *  omits. */
+ *  omits. The default map is the one the old war2 booted on. */
 export function readSettings(search: string, defaults: { "clients"?: number; "teams"?: number } = {}): Settings {
 	const params = new URLSearchParams(search);
 	const number = (name: string, fallback: number): number => {
@@ -182,5 +201,5 @@ export function readSettings(search: string, defaults: { "clients"?: number; "te
 	};
 	const clients = number("clients", defaults.clients ?? 2);
 
-	return { "clients": clients, "teams": Math.max(number("teams", defaults.teams ?? clients), clients), "seed": number("seed", 1), "perTeam": number("perTeam", 4), "bots": params.get("bots") !== "0", "map": params.get("map") ?? "arena" };
+	return { "clients": clients, "teams": Math.max(number("teams", defaults.teams ?? clients), clients), "seed": number("seed", 1), "perTeam": number("perTeam", 4), "bots": params.get("bots") !== "0", "map": params.get("map") ?? "ladder/Plains of snow BNE" };
 }

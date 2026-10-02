@@ -1,0 +1,6729 @@
+{
+	"unit-footman": {
+		"file": "human/units/footman.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-peasant": {
+		"file": "human/units/peasant.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"states": {
+			"carrying-gold": {
+				"file": "human/units/peasant_with_gold.png"
+			},
+			"carrying-wood": {
+				"file": "human/units/peasant_with_wood.png"
+			}
+		},
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 3
+				},
+				{
+					"frame": 60,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			],
+			"Harvest_wood": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			],
+			"Repair": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-attack-peasant": {
+		"file": "human/units/peasant.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 3
+				},
+				{
+					"frame": 60,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			],
+			"Harvest_wood": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			],
+			"Repair": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-ballista": {
+		"file": "human/units/ballista.png",
+		"frameWidth": 64,
+		"frameHeight": 64,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 10,
+					"duration": 25
+				},
+				{
+					"frame": 15,
+					"duration": 25,
+					"isHit": true
+				},
+				{
+					"frame": 15,
+					"duration": 100
+				},
+				{
+					"frame": 0,
+					"duration": 49
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-ballista-super": {
+		"file": "human/units/ballista.png",
+		"frameWidth": 64,
+		"frameHeight": 64,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 10,
+					"duration": 25
+				},
+				{
+					"frame": 15,
+					"duration": 25,
+					"isHit": true
+				},
+				{
+					"frame": 15,
+					"duration": 100
+				},
+				{
+					"frame": 0,
+					"duration": 49
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-knight": {
+		"file": "human/units/knight.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-archer": {
+		"file": "human/units/elven_archer.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 10
+				},
+				{
+					"frame": 30,
+					"duration": 10,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 44
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 3
+				},
+				{
+					"frame": 45,
+					"duration": 100
+				},
+				{
+					"frame": 45,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-mage": {
+		"file": "human/units/mage.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 5
+				},
+				{
+					"frame": 30,
+					"duration": 5
+				},
+				{
+					"frame": 35,
+					"duration": 7,
+					"isHit": true
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 0,
+					"duration": 17
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 5
+				},
+				{
+					"frame": 50,
+					"duration": 5
+				},
+				{
+					"frame": 55,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 5
+				},
+				{
+					"frame": 65,
+					"duration": 5
+				},
+				{
+					"frame": 70,
+					"duration": 5
+				},
+				{
+					"frame": 75,
+					"duration": 5
+				},
+				{
+					"frame": 75,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-paladin": {
+		"file": "human/units/knight.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-dwarves": {
+		"file": "human/units/dwarven_demolition_squad.png",
+		"frameWidth": 56,
+		"frameHeight": 56,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				},
+				{
+					"frame": 25,
+					"duration": 2
+				},
+				{
+					"frame": 40,
+					"duration": 1
+				},
+				{
+					"frame": 40,
+					"duration": 2
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 15,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 0,
+					"duration": 13
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 3
+				},
+				{
+					"frame": 20,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 60,
+					"duration": 3
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-ranger": {
+		"file": "human/units/elven_archer.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 10
+				},
+				{
+					"frame": 30,
+					"duration": 10,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 44
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 3
+				},
+				{
+					"frame": 45,
+					"duration": 100
+				},
+				{
+					"frame": 45,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-female-hero": {
+		"file": "human/units/elven_archer.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 10
+				},
+				{
+					"frame": 30,
+					"duration": 10,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 44
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 3
+				},
+				{
+					"frame": 45,
+					"duration": 100
+				},
+				{
+					"frame": 45,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-gryphon-rider": {
+		"file": "human/units/gryphon_rider.png",
+		"frameWidth": 80,
+		"frameHeight": 80,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 6
+				},
+				{
+					"frame": 25,
+					"duration": 6
+				},
+				{
+					"frame": 30,
+					"duration": 8,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 35,
+					"duration": 5
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 5
+				},
+				{
+					"frame": 50,
+					"duration": 5
+				},
+				{
+					"frame": 55,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-flying-angel": {
+		"file": "human/units/gryphon_rider.png",
+		"frameWidth": 80,
+		"frameHeight": 80,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 6
+				},
+				{
+					"frame": 25,
+					"duration": 6
+				},
+				{
+					"frame": 30,
+					"duration": 8,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 35,
+					"duration": 5
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 5
+				},
+				{
+					"frame": 50,
+					"duration": 5
+				},
+				{
+					"frame": 55,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-white-mage": {
+		"file": "human/units/mage.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 5
+				},
+				{
+					"frame": 30,
+					"duration": 5
+				},
+				{
+					"frame": 35,
+					"duration": 7,
+					"isHit": true
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 0,
+					"duration": 17
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 5
+				},
+				{
+					"frame": 50,
+					"duration": 5
+				},
+				{
+					"frame": 55,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 5
+				},
+				{
+					"frame": 65,
+					"duration": 5
+				},
+				{
+					"frame": 70,
+					"duration": 5
+				},
+				{
+					"frame": 75,
+					"duration": 5
+				},
+				{
+					"frame": 75,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-human-oil-tanker": {
+		"file": "human/units/oil_tanker_empty.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"states": {
+			"carrying-oil": {
+				"file": "human/units/oil_tanker_full.png"
+			}
+		},
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 30,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 99
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-human-transport": {
+		"file": "human/units/transport.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 119,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-human-destroyer": {
+		"file": "human/units/elven_destroyer.png",
+		"frameWidth": 80,
+		"frameHeight": 88,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 119,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-battleship": {
+		"file": "human/units/battleship.png",
+		"frameWidth": 88,
+		"frameHeight": 88,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 127,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 102
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-balloon": {
+		"file": "human/units/gnomish_flying_machine.png",
+		"frameWidth": 80,
+		"frameHeight": 80,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-knight-rider": {
+		"file": "human/units/knight.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-arthor-literios": {
+		"file": "human/units/footman.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-wise-man": {
+		"file": "human/units/knight.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-man-of-light": {
+		"file": "human/units/knight.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-human-start-location": {
+		"file": "human/x_startpoint.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"numDirections": 1,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Research": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Train": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Upgrade": [
+				{
+					"frame": 1,
+					"duration": 4
+				},
+				{
+					"frame": 1,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-grunt": {
+		"file": "orc/units/grunt.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-peon": {
+		"file": "orc/units/peon.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"states": {
+			"carrying-gold": {
+				"file": "orc/units/peon_with_gold.png"
+			},
+			"carrying-wood": {
+				"file": "orc/units/peon_with_wood.png"
+			}
+		},
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 3
+				},
+				{
+					"frame": 60,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			],
+			"Harvest_wood": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			],
+			"Repair": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-attack-peon": {
+		"file": "orc/units/peon.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"states": {
+			"carrying-gold": {
+				"file": "orc/units/peon_with_gold.png"
+			},
+			"carrying-wood": {
+				"file": "orc/units/peon_with_wood.png"
+			}
+		},
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 3
+				},
+				{
+					"frame": 60,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			],
+			"Harvest_wood": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			],
+			"Repair": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 25,
+					"duration": 7
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-catapult": {
+		"file": "orc/units/catapult.png",
+		"frameWidth": 64,
+		"frameHeight": 64,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 15,
+					"duration": 4,
+					"isHit": true
+				},
+				{
+					"frame": 10,
+					"duration": 4
+				},
+				{
+					"frame": 15,
+					"duration": 3
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 30
+				},
+				{
+					"frame": 15,
+					"duration": 4
+				},
+				{
+					"frame": 15,
+					"duration": 100
+				},
+				{
+					"frame": 0,
+					"duration": 50
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-catapult-super": {
+		"file": "orc/units/catapult.png",
+		"frameWidth": 64,
+		"frameHeight": 64,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 15,
+					"duration": 4,
+					"isHit": true
+				},
+				{
+					"frame": 10,
+					"duration": 4
+				},
+				{
+					"frame": 15,
+					"duration": 3
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 30
+				},
+				{
+					"frame": 15,
+					"duration": 4
+				},
+				{
+					"frame": 15,
+					"duration": 100
+				},
+				{
+					"frame": 0,
+					"duration": 50
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-ogre": {
+		"file": "orc/units/ogre.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-axethrower": {
+		"file": "orc/units/troll_axethrower.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 12,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 52
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-death-knight": {
+		"file": "orc/units/death_knight.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 5
+				},
+				{
+					"frame": 30,
+					"duration": 5
+				},
+				{
+					"frame": 35,
+					"duration": 7,
+					"isHit": true
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 0,
+					"duration": 17
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 5
+				},
+				{
+					"frame": 50,
+					"duration": 5
+				},
+				{
+					"frame": 55,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-ogre-mage": {
+		"file": "orc/units/ogre.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-goblin-sappers": {
+		"file": "orc/units/goblin_sappers.png",
+		"frameWidth": 56,
+		"frameHeight": 56,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 25,
+					"duration": 2
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				},
+				{
+					"frame": 40,
+					"duration": 1
+				},
+				{
+					"frame": 40,
+					"duration": 1
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				},
+				{
+					"frame": 65,
+					"duration": 2
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 15,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 0,
+					"duration": 13
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 3
+				},
+				{
+					"frame": 20,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 60,
+					"duration": 3
+				},
+				{
+					"frame": 70,
+					"duration": 3
+				},
+				{
+					"frame": 70,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-berserker": {
+		"file": "orc/units/troll_axethrower.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 12,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 52
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-evil-knight": {
+		"file": "orc/units/death_knight.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 5
+				},
+				{
+					"frame": 30,
+					"duration": 5
+				},
+				{
+					"frame": 35,
+					"duration": 7,
+					"isHit": true
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 0,
+					"duration": 17
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 5
+				},
+				{
+					"frame": 50,
+					"duration": 5
+				},
+				{
+					"frame": 55,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-fad-man": {
+		"file": "orc/units/ogre.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-beast-cry": {
+		"file": "orc/units/grunt.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-orc-oil-tanker": {
+		"file": "orc/units/oil_tanker_empty.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"states": {
+			"carrying-oil": {
+				"file": "orc/units/oil_tanker_full.png"
+			}
+		},
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 30,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 99
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-orc-transport": {
+		"file": "orc/units/transport.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 119,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-orc-destroyer": {
+		"file": "orc/units/troll_destroyer.png",
+		"frameWidth": 88,
+		"frameHeight": 88,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 119,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-ogre-juggernaught": {
+		"file": "orc/units/ogre_juggernaught.png",
+		"frameWidth": 88,
+		"frameHeight": 88,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 127,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 102
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 50
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-dragon": {
+		"file": "orc/units/dragon.png",
+		"frameWidth": 88,
+		"frameHeight": 80,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 20,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 25,
+					"duration": 5
+				},
+				{
+					"frame": 30,
+					"duration": 5
+				},
+				{
+					"frame": 35,
+					"duration": 5
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-fire-breeze": {
+		"file": "orc/units/dragon.png",
+		"frameWidth": 88,
+		"frameHeight": 80,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 20,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 6
+				},
+				{
+					"frame": 5,
+					"duration": 6
+				},
+				{
+					"frame": 10,
+					"duration": 6
+				},
+				{
+					"frame": 15,
+					"duration": 6
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 25,
+					"duration": 5
+				},
+				{
+					"frame": 30,
+					"duration": 5
+				},
+				{
+					"frame": 35,
+					"duration": 5
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 5
+				},
+				{
+					"frame": 45,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-zeppelin": {
+		"file": "orc/units/goblin_zeppelin.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-eye-of-vision": {
+		"file": "orc/units/eye_of_kilrogg.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-quick-blade": {
+		"file": "orc/units/grunt.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-double-head": {
+		"file": "orc/units/ogre.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 5,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 10
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 60,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 200
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-ice-bringer": {
+		"file": "orc/units/death_knight.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 5
+				},
+				{
+					"frame": 30,
+					"duration": 5
+				},
+				{
+					"frame": 35,
+					"duration": 7,
+					"isHit": true
+				},
+				{
+					"frame": 40,
+					"duration": 5
+				},
+				{
+					"frame": 0,
+					"duration": 17
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 5
+				},
+				{
+					"frame": 50,
+					"duration": 5
+				},
+				{
+					"frame": 55,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-sharp-axe": {
+		"file": "orc/units/troll_axethrower.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 2
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 30,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 40,
+					"duration": 12,
+					"isHit": true
+				},
+				{
+					"frame": 0,
+					"duration": 52
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 45,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 55,
+					"duration": 100
+				},
+				{
+					"frame": 55,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-skeleton": {
+		"file": "neutral/units/skeleton.png",
+		"frameWidth": 56,
+		"frameHeight": 56,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 2
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 25,
+					"duration": 2
+				},
+				{
+					"frame": 25,
+					"duration": 3
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 2
+				},
+				{
+					"frame": 40,
+					"duration": 2
+				},
+				{
+					"frame": 40,
+					"duration": 1
+				},
+				{
+					"frame": 55,
+					"duration": 2
+				},
+				{
+					"frame": 55,
+					"duration": 2
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 15,
+					"duration": 4
+				},
+				{
+					"frame": 30,
+					"duration": 4
+				},
+				{
+					"frame": 45,
+					"duration": 4,
+					"isHit": true
+				},
+				{
+					"frame": 60,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 18
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 3
+				},
+				{
+					"frame": 20,
+					"duration": 3
+				},
+				{
+					"frame": 35,
+					"duration": 3
+				},
+				{
+					"frame": 50,
+					"duration": 3
+				},
+				{
+					"frame": 65,
+					"duration": 3
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-orc-start-location": {
+		"file": "orc/o_startpoint.png",
+		"frameWidth": 32,
+		"frameHeight": 32,
+		"numDirections": 1,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Research": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Train": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Upgrade": [
+				{
+					"frame": 1,
+					"duration": 4
+				},
+				{
+					"frame": 1,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-daemon": {
+		"file": "neutral/units/daemon.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 5,
+					"duration": 4
+				},
+				{
+					"frame": 10,
+					"duration": 4
+				},
+				{
+					"frame": 15,
+					"duration": 4
+				}
+			],
+			"Move": [
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 5,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 10,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 15,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Attack": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 5,
+					"duration": 4
+				},
+				{
+					"frame": 10,
+					"duration": 4
+				},
+				{
+					"frame": 15,
+					"duration": 4
+				},
+				{
+					"frame": 20,
+					"duration": 4
+				},
+				{
+					"frame": 20,
+					"duration": 1
+				},
+				{
+					"frame": 25,
+					"duration": 4
+				},
+				{
+					"frame": 30,
+					"duration": 4
+				},
+				{
+					"frame": 35,
+					"duration": 4
+				},
+				{
+					"frame": 40,
+					"duration": 4,
+					"isHit": true
+				},
+				{
+					"frame": 45,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Death": [
+				{
+					"frame": 50,
+					"duration": 5
+				},
+				{
+					"frame": 55,
+					"duration": 5
+				},
+				{
+					"frame": 60,
+					"duration": 5
+				},
+				{
+					"frame": 65,
+					"duration": 5
+				},
+				{
+					"frame": 65,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-pile-circle": {
+		"file": "neutral/buildings/circle_of_power.png",
+		"frameWidth": 64,
+		"frameHeight": 64,
+		"numDirections": 1,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Research": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Train": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Upgrade": [
+				{
+					"frame": 1,
+					"duration": 4
+				},
+				{
+					"frame": 1,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-circle-of-power": {
+		"file": "neutral/buildings/circle_of_power.png",
+		"frameWidth": 64,
+		"frameHeight": 64,
+		"numDirections": 1,
+		"animations": {
+			"Still": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Research": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Train": [
+				{
+					"frame": 0,
+					"duration": 4
+				},
+				{
+					"frame": 0,
+					"duration": 1
+				}
+			],
+			"Upgrade": [
+				{
+					"frame": 1,
+					"duration": 4
+				},
+				{
+					"frame": 1,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-human-dead-body": {
+		"file": "neutral/units/corpses.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Death": [
+				{
+					"frame": 0,
+					"duration": 200
+				},
+				{
+					"frame": 10,
+					"duration": 200
+				},
+				{
+					"frame": 15,
+					"duration": 200
+				},
+				{
+					"frame": 20,
+					"duration": 200
+				},
+				{
+					"frame": 25,
+					"duration": 200
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-orc-dead-body": {
+		"file": "neutral/units/corpses.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Death": [
+				{
+					"frame": 5,
+					"duration": 200
+				},
+				{
+					"frame": 10,
+					"duration": 200
+				},
+				{
+					"frame": 15,
+					"duration": 200
+				},
+				{
+					"frame": 20,
+					"duration": 200
+				},
+				{
+					"frame": 25,
+					"duration": 200
+				},
+				{
+					"frame": 25,
+					"duration": 1
+				}
+			]
+		}
+	},
+	"unit-dead-sea-body": {
+		"file": "neutral/units/corpses.png",
+		"frameWidth": 72,
+		"frameHeight": 72,
+		"numDirections": 5,
+		"animations": {
+			"Death": [
+				{
+					"frame": 30,
+					"duration": 100
+				},
+				{
+					"frame": 30,
+					"duration": 100
+				},
+				{
+					"frame": 30,
+					"duration": 1
+				}
+			]
+		}
+	}
+}

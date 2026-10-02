@@ -39,7 +39,7 @@ async function openOnline(match: string, extra: Record<string, string> = {}): Pr
 	await context.routeWebSocket(/:7378/u, (route) => { void route.close(); });
 
 	const page = await context.newPage();
-	const query = new URLSearchParams({ "match": match, "lobby": "peerjs", "broker": `localhost:${broker.port}`, "ice": "none", ...extra });
+	const query = new URLSearchParams({ "match": match, "lobby": "peerjs", "broker": `localhost:${broker.port}`, "ice": "none", "map": "arena", ...extra });
 
 	await page.goto(`${session.url}play.html?${query}`);
 	await until(page, "a place in the match", () => (globalThis as unknown as { "__war2Play"?: unknown }).__war2Play !== undefined);

@@ -2,14 +2,18 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8" />
+	<link rel="icon" href="data:," />
 	<title>war2 instance</title>
 	<style>
-		html, body { height: 100%; margin: 0; background: #101418; overflow: hidden; }
-		canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+		html, body { height: 100%; margin: 0; background: #05070a; overflow: hidden; }
+		#game { position: absolute; inset: 0; }
+		#badge { position: absolute; top: 6px; left: 8px; z-index: 1; font: 12px ui-monospace, monospace; color: #ffb4a8; pointer-events: none; text-shadow: 0 0 3px #000; }
+		#badge[data-sync="true"] { color: #9fe6b8; }
 	</style>
 </head>
 <body>
-	<canvas></canvas>
+	<div id="game"></div>
+	<div id="badge">connecting</div>
 	<script type="module" src="./src/browser/instance.ts"></script>
 </body>
 </html>

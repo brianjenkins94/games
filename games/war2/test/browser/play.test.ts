@@ -25,7 +25,7 @@ after(async () => {
 /** Open a tab at match `match`; resolves once it knows whether it's hosting or joined. */
 async function openPlay(match: string, settings: Record<string, number> = {}): Promise<Page> {
 	const page = await session.context.newPage();
-	const query = new URLSearchParams({ "match": match, ...Object.fromEntries(Object.entries(settings).map(([key, value]) => [key, String(value)])) });
+	const query = new URLSearchParams({ "match": match, "map": "arena", ...Object.fromEntries(Object.entries(settings).map(([key, value]) => [key, String(value)])) });
 
 	await page.goto(`${session.url}play.html?${query}`);
 	await until(page, "a place in the match", () => (globalThis as unknown as { "__war2Play"?: unknown }).__war2Play !== undefined);

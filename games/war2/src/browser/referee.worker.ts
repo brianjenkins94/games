@@ -12,7 +12,7 @@ import { snapshotUnit } from "../sim/snapshot.ts";
 import { unitTypeId } from "../sim/unitTypes.ts";
 import { spawnUnit, unitEids } from "../sim/world.ts";
 import { describe, MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
-import { loadMap } from "./maps.ts";
+import { loadGameMap } from "./maps.ts";
 
 const hub = createHub({ "id": "referee" });
 const { log } = observe(hub, { "network": true });
@@ -108,37 +108,44 @@ serve(hub, REFEREE_CONTROL, (args) => {
 	return { "tick": current.world.tick, "paused": paused, "speed": speed };
 });
 
+/** Start the match: load its map (built in, or fetched from the assets mirror), then the referee and its tick loop. */
+async function start(settings: InitMessage["settings"]): Promise<void> {
+	const gameMap = await loadGameMap(settings.map);
+	const map = gameMap.info;
+
+	current = createReferee({
+		"hub": hub,
+		"match": MATCH,
+		"seed": settings.seed,
+		"map": settings.map,
+		"mapInfo": map,
+		"teams": settings.teams,
+		"setup": (world) => {
+			// Each team around its start (the map's, else a band of its own), humans and orcs in turn, on land.
+			for (let team = 0; team < settings.teams; team += 1) {
+				const type = unitTypeId(team % 2 === 0 ? "unit-footman" : "unit-grunt");
+				const [sx, sy] = gameMap.starts[team] ?? [Math.floor(((team + 0.5) / settings.teams) * map.mapW), Math.floor(map.mapH / 2)];
+
+				for (let placed = 0, tries = 0; placed < settings.perTeam && tries < 1000; tries += 1) {
+					const tx = Math.min(map.mapW - 1, Math.max(0, sx + rngRange(world, -4, 5)));
+					const ty = Math.min(map.mapH - 1, Math.max(0, sy + rngRange(world, -4, 5)));
+
+					if (world.terrain.pass[ty * map.mapW + tx] === 0 && spawnUnit(world, tileCenterFP(tx), tileCenterFP(ty), team, undefined, type) !== -1) {
+						placed += 1;
+					}
+				}
+			}
+		}
+	});
+	log.info("referee started", { "teams": settings.teams, "map": settings.map, "units": current.world.eidOf.size });
+	run();
+}
+
 globalThis.addEventListener("message", (event: MessageEvent<InitMessage | AttachMessage | undefined>) => {
 	const message = event.data;
 
 	if (message?.type === "war2-init") {
-		const { settings } = message;
-		const footman = unitTypeId("unit-footman");
-		const map = loadMap(settings.map);
-
-		current = createReferee({
-			"hub": hub,
-			"match": MATCH,
-			"seed": settings.seed,
-			"map": settings.map,
-			"mapInfo": map,
-			"teams": settings.teams,
-			"setup": (world) => {
-				// Each team starts in its own band of the map, its units on land.
-				for (let team = 0; team < settings.teams; team += 1) {
-					for (let placed = 0; placed < settings.perTeam;) {
-						const tx = Math.floor(((team + 0.5) / settings.teams) * map.mapW) + rngRange(world, -3, 4);
-						const ty = rngRange(world, 2, map.mapH - 2);
-
-						if (world.terrain.pass[ty * map.mapW + tx] === 0 && spawnUnit(world, tileCenterFP(tx), tileCenterFP(ty), team, undefined, footman) !== -1) {
-							placed += 1;
-						}
-					}
-				}
-			}
-		});
-		log.info("referee started", { "teams": settings.teams, "map": settings.map, "units": current.world.eidOf.size });
-		run();
+		void start(message.settings);
 	} else if (message?.type === "war2-attach") {
 		const replaced = links.get(message.peer);
 

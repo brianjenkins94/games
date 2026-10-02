@@ -17,7 +17,8 @@
     "@brianjenkins94/hub": "https://brianjenkins94.github.io/editor/packages/hub@latest.tgz",
     "@brianjenkins94/observability": "https://brianjenkins94.github.io/editor/packages/observability@latest.tgz",
     "bitecs": "^0.4.0",
-    "peerjs": "^1.5.5"
+    "peerjs": "^1.5.5",
+    "phaser": "4.2.1"
   },
   "devDependencies": {
     "@brianjenkins94/util": "https://brianjenkins94.github.io/lib/util@latest.tgz",
