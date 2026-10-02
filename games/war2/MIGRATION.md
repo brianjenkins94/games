@@ -506,8 +506,22 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
     This is also why mv-1 was a trade: making the slip respect parked units breaks the loop, but the slip is there
     because the local A* plans through *touching* cells that a solid step refuses — a planner/stepper mismatch, which
     each fix only papers over from one side.
-  - **Not yet explained:** random-plains-1's unit 3 isn't jittering — it walks steadily *away* from its goal, 3 px a
-    tick, beside another mover. Traced first (step 0).
+  - **Step 0, traced (2026-10-02): random-plains-1's unit 3**, the one that seemed to walk away from its goal. Its
+    real stall (ticks 104–167) is the same loop, behind parked unit 6, until 6 is ordered off. The walking away isn't
+    a fault: the flow field plans on what the team *believes*, unexplored tiles counting as passable, so its route runs
+    west and then north through forest it hasn't seen (22 steps against 16 in a straight line) — and the detector, which
+    measures progress in a straight line, takes a detour for a stall. The trace showed two more things:
+    - **The detector needs progress along the route:** the distance still to go by the flow field (its Dijkstra's
+      cost, which it computes and throws away), not as the crow flies — around terrain or through fog, a unit on its
+      route is making progress.
+    - **Moving units travel stacked.** Movers pass through movers, so they pile up: units 3 and 4 travelled 8 px apart
+      for 400 ticks. Counting same-team movers within 12 px of each other for 50 ticks or more, every scenario with a
+      group has it: group-open 7 pairs (~118 ticks each), pinch-corridor 5, around-building 2, build-farm 1, the random
+      maps 3–6 (up to 479 ticks). The census doesn't see it — no kind of fault covers it. In group-open, the 3×3 block
+      starts in three rows (y = 208, 240, 272) and by tick 40 all nine are on *one* row, y = 272, strung out 10 px
+      apart: every unit rides the group's one shared flow field down the same lane (and straight moves centre on it),
+      and nothing keeps them apart. The block travels as a single overlapping file and only spreads back into its
+      formation near the goal, where the local A* takes over.
   - **The collision model: one shape for everything.** Every collider is an axis-aligned box with its corners cut at
     45° — an octagon, given by a half-width `w`, a half-height `h` and a corner bound `d` (`|dx| < w`, `|dy| < h`,
     `|dx| + |dy| < d`). No cut is a square; a full cut (the N/S/E/W sides shrunk to nothing) is a diamond. Two of them
@@ -544,23 +558,46 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
       lanes) derived from it rather than the global `UNIT_SPD`.
     - **One ring search:** `orders.ts`'s six become one helper, as the formation and gather code is rewritten around
       the slot reassignment.
+    - **The detector and the census:** progress measured along the route (the flow field keeps its cost-to-goal per
+      tile), and new kinds: *stacked* — same-team movers overlapping for long — so the census sees what step 0 found,
+      and *jammed* — movers blocking each other past the deadlock limit (below) — so queuing that turns into gridlock
+      shows up too.
+    - **Keeping movers apart — offset-following in the open, queuing where it narrows** (decided 2026-10-02):
+      - *In the open,* each unit follows the group's one shared field from its own place in the formation — it aims at
+        the field's next tile shifted by its offset from the group — so the block keeps its shape for the cost of one
+        Dijkstra, and its units rarely want the same spot.
+      - *Where the route narrows* (a one-tile gap, a doorway, a bridge: wherever the offsets get pulled in), movers are
+        solid to each other and take turns: whoever is further along the route — the same distance-to-go the detector
+        uses — goes first, ties to the lower stable id, and a follower waits behind the unit ahead rather than sliding
+        onto or through it.
+      - *Passing through only breaks deadlocks:* two movers blocking each other past a limit (groups meeting head-on in
+        a corridor) — the lower-priority one passes through, as every convoy does today. The limit is a tunable,
+        checked against the census's *jammed* and the time units spend waiting.
   - **Steps,** each its own commit with its census diff explained:
-    0. Trace random-plains-1's unit 3 and add what it shows to this plan.
-    1. `collide.ts`, with every existing shape re-expressed through it and no change in behaviour — every trace
+    0. ~~Trace random-plains-1's unit 3.~~ Done: above.
+    1. The detector: progress along the route, and the *stacked* kind; the census re-recorded. No sim change, so the
+       traces don't move — the census's diff is the detector's alone (detours no longer stalls; the stacks counted).
+    2. `collide.ts`, with every existing shape re-expressed through it and no change in behaviour — every trace
        identical, the proof that it's a refactor.
-    2. Progress that means progress (the smallest behaviour change): the jitter loops escalate and settle.
-    3. One rule for what blocks a mover: the slip goes; the diagonal-gap scenarios must still thread cleanly.
-    4. Local planning wherever a parked unit blocks the flow.
-    5. Taken goals reassigned; rally points spread.
-    6. Per-unit speed.
-    7. The ring-search helper and what's left of `orders.ts`.
-  - **Done when:** the census has no stalls or oscillations, or each one left is listed with its reason (as
+    3. Progress that means progress (the smallest behaviour change): the jitter loops escalate and settle.
+    4. One rule for what blocks a mover: the slip goes; the diagonal-gap scenarios must still thread cleanly.
+    5. Local planning wherever a parked unit blocks the flow.
+    6. Groups travel as a block, and queue where the route narrows — with the detector's *jammed* kind, since only
+       now can movers block each other.
+    7. Taken goals reassigned; rally points spread.
+    8. Per-unit speed.
+    9. The ring-search helper and what's left of `orders.ts`.
+  - **Done when:** the census has no stalls, oscillations, stacks or jams, or each one left is listed with its reason (as
     `deviations.ts` lists the traces'); every direction and diagonal-gap scenario still arrives as cleanly as now
-    (diagonal-gap-NE in 57 ticks); all six units of `pinch-corridor` cross and come back; the incident corpus's two
-    stalls flip to `reachesGoal`; the restore property and determinism hold; and every trace that moves is re-recorded
-    (`traces/w6/`) with why.
-  - **Not in it:** crowd steering (units yielding to each other in motion), a formation redesign, and pathing for
-    combat (chasing, attack-move) — that's combat's, on top of this.
+    (diagonal-gap-NE in 57 ticks); all six units of `pinch-corridor` cross and come back; group-open's block crosses
+    the field in its three rows; the incident corpus's two stalls flip to `reachesGoal`; the restore property and
+    determinism hold; and every trace that moves is re-recorded (`traces/w6/`) with why.
+  - **Weighed and not taken:** movers solid to each other everywhere (queues instead of stacks, but the jams the old
+    hard-reservation model fought with special cases, all over open ground), and each unit its own flow field to its
+    own slot (a Dijkstra per unit per order — the cost the shared goal was brought in to save).
+  - **Not in it:** crowd steering between units that aren't moving together, beyond the deadlock rule (yielding to let
+    another pass, passing in a corridor), a formation redesign beyond travel, and pathing for combat (chasing,
+    attack-move) — that's combat's, on top of this.
 
 ## Decisions
 
