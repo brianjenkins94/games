@@ -3,28 +3,25 @@
  *
  *   • Avoidance base (while moving): a unit steers toward an aim chosen by the pathing (long-range
  *     terrain flow field + short-range unit-aware local A*), reserving its walk cells so others see
- *     it.  Sub-tile move per tick, via a fallback ladder (see stepUnit):
- *       – full step: terrain + all units clear.  Unit↔unit collision is a DIAMOND, so its slim
- *         diagonals let a unit thread the gap between two diagonally-placed units RIGHT HERE — no
- *         special "squeeze" is needed for that (the diamond geometry does it).
- *       – SLIP (diagonal, unit-collision OFF; terrain still blocks): flow through MOVING traffic and
- *         razor (exactly-touching, L1=32) cells the planner uses but a solid step can't traverse.
- *       – cardinal slide / lane-centre: ride the tile-lane centre so a full-tile unit fits a 1-tile
- *         cardinal gap (off-centre, the perpendicular nudge truncates to 0 and the unit stalls).
- *       – corner-cut (diagonal, terrain checked CENTRE-only): thread a diagonal terrain pinch /
- *         stairstep, grazing the flanking wall corners (centre stays in open terrain — no tunnelling).
- *       – follow movers / after GHOST_AFTER ticks, phase through as a last resort.
- *     CARDINAL steps otherwise stay solid (full unit collision → one-per-lane).
+ *     it.  Sub-tile move per tick, under ONE rule for what blocks it — terrain, buildings and parked units,
+ *     touching allowed (collide.ts shapes; moving traffic is passed through) — the planner's rule too (W6):
+ *       – the aimed step, if clear.  Unit↔unit collision is a DIAMOND, so its slim diagonals let a unit
+ *         thread the gap between two diagonally-placed units — exactly touching both (the razor).
+ *       – else the best slide (stepToward): the step's clear part, or a full-speed slide along an axis or a
+ *         diagonal, whichever gets closest to the aim — stopping exactly at contact, so the next tick
+ *         slides along the touching face (how it threads a razor or a diagonal wall pinch).
+ *       – lane-centre: ride the tile-lane centre so a full-tile unit fits a 1-tile cardinal gap (off-centre,
+ *         the perpendicular nudge truncates to 0 and the unit stalls).
  *
- *   • Tile layer (at rest): when a unit arrives (or is walled past STUCK_LIMIT and can't even phase)
+ *   • Tile layer (at rest): when a unit arrives (or goes STUCK_LIMIT ticks without progress)
  *     it snaps onto the nearest tile centre free of other units and reserves it (see settleOnto).
  *     Because each unit is handed a distinct tile target (formation offset / gather slot — see
  *     world.ts), the group comes to rest one-per-tile: grid-crisp and never stacked.
  *
  * `stuckTicks` drives the escalation and is keyed on *goal progress*: only coming closer than the unit ever has since
  * its order — in a straight line to its slot (by PROGRESS_EPS) or along its route (its flow field's cost to go) —
- * resets it (Path.bestDist / bestCost).  Moving without beating either, waiting, being pushed out of an overlap, or
- * phasing in place do not — so it climbs to GHOST_AFTER (start phasing) and on to STUCK_LIMIT (settle).  Keying on
+ * resets it (Path.bestDist / bestCost).  Moving without beating either, waiting, or being pushed out of an overlap do
+ * not — so it climbs to STUCK_LIMIT (settle).  Keying on
  * the best so far, not on "did this tick's step succeed" or "did it gain on last tick" (W6): a unit stepping into a
  * parked unit and being pushed back out "succeeded" and "gained" every other tick, and jittered there forever.  This
  * replaced an earlier hard-reservation model whose every-tick no-overlap rule needed a pile of special cases
@@ -38,7 +35,7 @@
 import type { Shape } from "../collide.ts";
 import type { SimWorld } from "../world.ts";
 import { hasComponent } from "bitecs";
-import { inset, unitShape } from "../collide.ts";
+import { unitShape } from "../collide.ts";
 import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, UNIT_SPD } from "../components.ts";
 import { distance, octant } from "../distance.ts";
 import { DIR_DX, DIR_DY, getOrComputeFlowField, INF, UNREACHABLE } from "../flowField.ts";
@@ -46,22 +43,16 @@ import { LOCAL_RANGE, localNextAim } from "../localPath.ts";
 import { markIdleDirty } from "../pathObstacles.ts";
 import { getBelievedPassability } from "../vision.ts";
 import { unitEids } from "../world.ts";
-import { footprintFreeAt, footprintSoftFreeAt, footprintStaticFreeAt, freeUnit, reserveUnit, separateFrom, terrainCentreClearAt, unitsSoftFreeAt } from "../walkGrid.ts";
+import { footprintSoftFreeAt, freeUnit, reserveUnit, separateFrom } from "../walkGrid.ts";
 
 // ── Tunables ──────────────────────────────────────────────────────────────────
 const ARRIVE_FP = 2 * FP;          // within this of the goal point → settle.  Small, because the
                                       // collision-off final approach walks the unit ~exactly onto the
                                       // centre, so settle's snap is a ≤2px no-op (no visible grid-pop).
 const PROGRESS_EPS = UNIT_SPD >> 1;   // min straight-line gain on the best so far to count as "progress"
-const GHOST_AFTER = 5;               // ticks boxed in before phasing through units.  Short now that the
-                                      // local A* does the routing-around: phasing is only reached when a
-                                      // unit is genuinely boxed (no way around), so a long wait on
-                                      // stationary blockers that will never move is just dead time.
-const STUCK_LIMIT = 36;              // ticks fully walled (can't even phase) before settling nearby
+const STUCK_LIMIT = 36;              // ticks without progress before settling nearby
 const SETTLE_R = 5;               // tiles: how far to look for a free rest tile when settling
 const NEAR_GOAL_FP = 48 * FP;         // ≤1.5 tiles from goal + blocked → snap onto the (free) goal tile
-const JAM_FP = 8 * FP;          // de-penetration only fires when overlapping by MORE than this
-                                      // (deep jam), so a shallow touch isn't bounced.
 
 const clampTile = (t: number, n: number) => (t < 0 ? 0 : t >= n ? n - 1 : t);
 
@@ -89,6 +80,50 @@ function noProgress(world: SimWorld, eid: number, self: Shape): void {
 	if (Path.stuckTicks[eid] >= STUCK_LIMIT) {
 		settleOnto(world, eid, self);
 	}
+}
+
+/** The furthest a unit of shape `self` at (x,y) can go along (cx,cy) — the whole of it, or the clear part — without
+ *  overlapping terrain, a building or a parked unit: [dx, dy].  Binary search over the integer fraction, so a unit
+ *  blocked short of the full step stops exactly touching (strict overlap: touching is clear) — which is what lets the
+ *  next tick's slide run along the touching face. */
+function advance(world: SimWorld, eid: number, self: Shape, x: number, y: number, cx: number, cy: number): [number, number] {
+	const span = Math.max(Math.abs(cx), Math.abs(cy));
+
+	if (span === 0) { return [0, 0]; }
+	if (footprintSoftFreeAt(world, x + cx, y + cy, self, eid)) { return [cx, cy]; }
+	let lo = 0; let
+		hi = span;   // clear at lo/span of the step, not at hi/span
+
+	while (hi - lo > 1) {
+		const mid = (lo + hi) >> 1;
+
+		if (footprintSoftFreeAt(world, x + Math.trunc(cx * mid / span), y + Math.trunc(cy * mid / span), self, eid)) { lo = mid; } else { hi = mid; }
+	}
+
+	return [Math.trunc(cx * lo / span), Math.trunc(cy * lo / span)];
+}
+
+/** One step for a unit at (x,y) wanting (sx,sy) toward its aim: the step itself if clear; else, of the step's clear
+ *  part and full-speed slides along each axis and diagonal, the one that brings it closest to the aim (none, if none
+ *  gets it closer — it waits, and its stuck count climbs).  Ties go to the first candidate, so it's deterministic. */
+function stepToward(world: SimWorld, eid: number, self: Shape, x: number, y: number, sx: number, sy: number, aimX: number, aimY: number): [number, number] {
+	if ((sx !== 0 || sy !== 0) && footprintSoftFreeAt(world, x + sx, y + sy, self, eid)) { return [x + sx, y + sy]; }
+	const k = Math.trunc(UNIT_SPD * UNIT_SPD / distance(UNIT_SPD, UNIT_SPD));   // a diagonal step's leg, at full speed
+	const toX = aimX > x ? 1 : -1; const
+		toY = aimY > y ? 1 : -1;
+	const candidates: [number, number][] = [[sx, sy], [clampStep(aimX - x, UNIT_SPD), 0], [0, clampStep(aimY - y, UNIT_SPD)], [toX * k, toY * k], [toX * k, -toY * k], [-toX * k, toY * k]];
+	const before = distance(aimX - x, aimY - y);
+	let best: [number, number] = [x, y];
+	let bestGain = 0;
+
+	for (const [cx, cy] of candidates) {
+		const [dx, dy] = advance(world, eid, self, x, y, cx, cy);
+		const gain = before - distance(aimX - x - dx, aimY - y - dy);
+
+		if (gain > bestGain) { [best, bestGain] = [[x + dx, y + dy], gain]; }
+	}
+
+	return best;
 }
 
 /** Halt a unit: clear movement, path and animation state in one place.
@@ -166,9 +201,8 @@ export function movementSystem(world: SimWorld): void {
 	}
 }
 
-/** Steer one active unit one step: prefer a clean move that avoids units + terrain (route around);
- *  if boxed in, wait, then phase through units as a last resort; settle onto a free tile on arrival
- *  or when terrain-walled too long.  See the module header for the stuckTicks escalation. */
+/** Steer one active unit one step toward its planned aim (the aimed step, else the best slide); settle onto a free
+ *  tile on arrival or after too long without progress.  See the module header for the stuckTicks escalation. */
 function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): void {
 	const { MoveTarget, Path, Position, Unit, UnitAnim } = world.components;
 	const x = Position.x[eid]; const
@@ -177,11 +211,10 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 		goalY = MoveTarget.ty[eid];
 	const self = unitShape(Unit.type[eid]);   // its collision shape (collide.ts)
 
-    // De-penetrate first: if we're DEEPLY overlapping a settled unit (we settled-onto / were settled-
-    // onto), push back OUT along the separation normal and spend the tick on that — a unit must never
-    // stay jammed inside a parked one.  Uses r-JAM_FP, so the shallow touch of a 45° slip (below) isn't
-    // treated as a jam and bounced back out.
-	const sep = separateFrom(world, x, y, inset(self, JAM_FP), eid);
+    // De-penetrate first: if we're overlapping a settled unit — which movement itself never does now (it steps only
+    // where the one rule allows), so it came from outside: a spawn on top of another, a unit settling onto us while we
+    // passed through it — push back OUT along the separation normal and spend the tick on that.
+	const sep = separateFrom(world, x, y, self, eid);
 
 	if (sep[0] !== 0 || sep[1] !== 0) {
 		freeUnit(world, eid);
@@ -327,52 +360,13 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 		}
 	}
 
-    // Move ladder (free self first so it isn't its own obstacle).  The sub-tile A* (localPath) already
-    // routed the AIM around settled units' C-space, so the reactive layer just EXECUTES toward that aim:
-    //  • full step (terrain + all units clear) — the common case on a planned path; the DIAMOND footprint
-    //    threads the gap between two diagonally-placed units right here (no special tier for that).
-    //  • SLIP toward the aim with unit-collision OFF (terrain still blocks).  Because the planner routed
-    //    the aim around units, this only ignores collision at a razor (a "touching" L1=32 cell the planner
-    //    legitimately uses but continuous movement can't traverse without dipping under 32) or to flow
-    //    through MOVING traffic — never straight through a unit the planner avoided.
-    //  • cardinal slide X / Y — round a TERRAIN corner (when the aim direction is terrain-blocked).
-    //  • diagonal CORNER-CUT (terrain checked centre-only) — thread a diagonal terrain pinch / stairstep,
-    //    grazing the flanking wall corners; settled units still block.
-    //  • follow movers / phase — convoy flow fallbacks.
-    // When a diagonal is terrain-blocked the unit slides along the free axis — at FULL speed toward the
-    // aim on that axis, not just the diagonal's component (which wastes the blocked axis's budget and
-    // visibly slows a unit threading a gap).  Capped so it can't overshoot the aim.
-	const fullX = clampStep(aimX - x, UNIT_SPD);
-	const fullY = clampStep(aimY - y, UNIT_SPD);
-
+    // Move (free self first so it isn't its own obstacle).  One rule says what blocks a mover — terrain, buildings and
+    // PARKED units (walkGrid.footprintSoftFreeAt; moving traffic is passed through), touching allowed — the same the
+    // planner (localPath) routes by, so the step just EXECUTES toward the planned aim: the aimed step if it's clear, else
+    // the best slide (stepToward).  No slip through parked units, no centre-only corner-cut: exact contact plus a
+    // slide along the touching face threads a razor between two parked units and a diagonal wall pinch alike (W6).
 	freeUnit(world, eid);
-	const canPhase = Path.stuckTicks[eid] >= GHOST_AFTER;
-	let nx = x; let
-		ny = y;
-
-	if (footprintFreeAt(world, x + sx, y + sy, self, eid)) {
-		nx = x + sx; ny = y + sy;
-	} else if (footprintStaticFreeAt(world, x + sx, y + sy, self)) {
-		nx = x + sx; ny = y + sy;                                   // SLIP toward the (planner-routed) aim
-	} else if (fullX !== 0 && footprintFreeAt(world, x + fullX, y, self, eid)) {
-		nx = x + fullX;                                             // slide X around terrain (full speed)
-	} else if (fullY !== 0 && footprintFreeAt(world, x, y + fullY, self, eid)) {
-		ny = y + fullY;                                             // slide Y (full speed)
-	} else if (sx !== 0 && sy !== 0 && terrainCentreClearAt(world, x + sx, y + sy) && unitsSoftFreeAt(world, x + sx, y + sy, self, eid)) {
-		nx = x + sx; ny = y + sy;                                   // diagonal CORNER-CUT: thread a wall
-        // pinch / stairstep.  Terrain is checked centre-only (any box clips the flanking walls at the
-        // exact corner), so the centre stays in open terrain while the footprint grazes the corners;
-        // settled units still block (unitsSoftFreeAt) so it never cuts straight through a parked unit.
-	} else if (sx !== 0 && footprintSoftFreeAt(world, x + sx, y, self, eid)) {
-		nx = x + sx;                                                 // follow moving traffic (cardinal)
-	} else if (sy !== 0 && footprintSoftFreeAt(world, x, y + sy, self, eid)) {
-		ny = y + sy;
-	} else if (canPhase) {
-        // Waited long enough → push through MOVING traffic on either axis (full diagonal too).  Settled
-        // units + terrain still block (footprintSoftFreeAt), so we never phase INTO a parked unit and
-        // jam inside it — being boxed by parked units instead waits and settles (STUCK_LIMIT).
-		if (footprintSoftFreeAt(world, x + sx, y + sy, self, eid)) { nx = x + sx; ny = y + sy; } else if (sx !== 0 && footprintSoftFreeAt(world, x + sx, y, self, eid)) { nx = x + sx; } else if (sy !== 0 && footprintSoftFreeAt(world, x, y + sy, self, eid)) { ny = y + sy; }
-	}
+	const [nx, ny] = stepToward(world, eid, self, x, y, sx, sy, aimX, aimY);
 
 	Position.x[eid] = nx; Position.y[eid] = ny;
 	reserveUnit(world, eid);
@@ -384,7 +378,7 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
     // slot (by PROGRESS_EPS), or a lower cost to go along the route (so going round terrain counts); sliding without
     // gaining, waiting, shuffling through traffic or phasing in place do NOT.  So a group funnelled onto a blocked
     // chokepoint keeps climbing and SETTLES (then spreads via settleOnto) instead of piling there forever.  The same
-    // counter gates phasing (GHOST_AFTER) and the give-up settle (STUCK_LIMIT).
+    // counter gates the give-up settle (STUCK_LIMIT).
 	const newDist = distance(goalX - nx, goalY - ny);
 	const ff = getOrComputeFlowField(world, Unit.team[eid], goalTx, goalTy);
 	const newCost = ff ? ff.cost[clampTile(fpToTile(ny), mapH) * mapW + clampTile(fpToTile(nx), mapW)] : INF;

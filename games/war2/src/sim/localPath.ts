@@ -18,7 +18,7 @@
  */
 import type { Shape } from "./collide.ts";
 import type { SimWorld } from "./world.ts";
-import { inset, POINT } from "./collide.ts";
+import { inset } from "./collide.ts";
 import { DIR_DX, DIR_DY, MinHeap } from "./flowField.ts";
 import { buildingAtIdx } from "./occupancy.ts";
 import { cspaceBlockedCell } from "./pathObstacles.ts";
@@ -165,15 +165,15 @@ export function localNextAim(world: SimWorld, team: number, uxFP: number, uyFP: 
 			const ni = ny * cW + nx;
 
 			if (blocked(ni, nx, ny)) { continue; }
-            // Edge (segment) check: two consecutive "touching"-clear cells can still have a wall poking
-            // BETWEEN them.  CARDINAL edges use the full footprint (catches a mover sweeping into a wall).
-            // DIAGONAL edges use a centre-only test (radius 0) — matching the mover's corner-cut tier,
-            // which grazes wall corners — so a diagonal pinch corridor stays threadable.
+            // Edge (segment) check: two consecutive "touching"-clear cells can still have a wall poking BETWEEN them, so
+            // the edge's midpoint is tested too — with the mover's whole shape, diagonal or not: the stepper takes no
+            // centre-only shortcut any more (W6 step 4), and diamond-on-diamond contact keeps a diagonal pinch
+            // threadable on its own (exactly touching both walls, as collide.test.ts pins).
 			if (idx !== startIdx) {
 				const mx = (4 * (x + nx) + 4) * 1000; const
 					my = (4 * (y + ny) + 4) * 1000;
 
-				if (!terrainClearFP(world, pass, mx, my, DIR_DX[d] !== 0 && DIR_DY[d] !== 0 ? POINT : self)) { continue; }
+				if (!terrainClearFP(world, pass, mx, my, self)) { continue; }
 			}
 
             // Clearance cost: penalise cells the mover can only pass by TOUCHING a wall (clear for its shape but

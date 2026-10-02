@@ -31,10 +31,11 @@ test("quiet on the old suite's clean scenarios but for stacking; W0's stuck pair
 		assert.deepEqual(faults(scenario.name), [], scenario.name);
 	}
 
-	// W6 step 3: progress means beating the best so far, so they escalate and give up rather than jitter on. Unit 6 of
-	// production-rally, whose rally point is taken, settles beside it (within a tile: not short).
+	// W6 step 3: progress means beating the best so far, so they escalate and give up rather than jitter on. Step 4
+	// (one rule for what blocks a mover): production-rally's two, whose rally point is taken, settle beside it (within a
+	// tile: not short); pinch-corridor's, walled behind a parked teammate far from their goal, still give up short.
 	assert.deepEqual(faults("pinch-corridor"), ["settled-short:1", "settled-short:2", "stuck:1", "stuck:2"]);
-	assert.deepEqual(faults("production-rally"), ["settled-short:5", "stuck:5", "stuck:6"]);
+	assert.deepEqual(faults("production-rally"), ["stuck:5", "stuck:6"]);
 	assert.ok(Object.values(recorded).every((faults) => Object.keys(faults).every((key) => !key.startsWith("stalled:"))), "nothing stalls any more");
 	// Every group moving together stacks (W6 step 0), the lone movers don't.
 	assert.ok(Object.keys(recorded["group-open"]).every((key) => key.startsWith("stacked:")) && Object.keys(recorded["group-open"]).length > 0);

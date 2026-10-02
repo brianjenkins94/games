@@ -608,7 +608,22 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
        where before they slid there for good. Stacked 40 → 35 as the random maps play differently. The incident corpus
        re-seeded from the new first incidents: both `settled-short`, pinned until steps 5 and 7 route them home. Also
        fixed: a `.sort()` without a compare in step 1's test, a lint error that failed CI for steps 1 and 2.
-    4. One rule for what blocks a mover: the slip goes; the diagonal-gap scenarios must still thread cleanly.
+    4. ~~One rule for what blocks a mover: the slip goes; the diagonal-gap scenarios must still thread cleanly.~~ Done
+       (2026-10-02). Terrain, buildings and parked units block; touching doesn't; moving traffic is passed through
+       (until step 6). The stepper is now the aimed step if clear, else the best slide (`stepToward`): the step's clear
+       part, or a full-speed slide along an axis or a diagonal, whichever gets closest to the aim — each advanced as far
+       as it stays clear by a binary search, so a blocked unit stops exactly touching and the next tick slides along the
+       face. The slip, the centre-only corner-cut and the phase rung are gone (and the four walk-grid tests only they
+       used); de-penetration fires on any overlap, since movement no longer makes one; the planner's diagonal edges take
+       the whole shape, as the stepper does. Arrivals as clean or cleaner: every direction and diagonal-gap scenario in
+       the same ticks, diagonal-gap-NE one faster (56) — threading the razor by contact and slide, where mv-1 had broken
+       it; group-open, around-building and build-farm unchanged. Traces moved for around-building and diagonal-gap-NE
+       and -SW (same arrivals, a slightly different line), listed in `deviations.ts`. The census: production-rally's
+       last settle short gone (its two settle beside their taken rally point); pinch-corridor's two still give up short,
+       walled behind a parked teammate far from their goal — the flow field can't see it, which is step 5; the random
+       maps shift (stacked 35 → 38). The corpus is down to pinch-corridor's fixture: production-rally no longer has an
+       incident. Still to do from this step's rule: the planner sees only its own team's parked units; enemies in
+       sight join it with combat, when enemies park in each other's way.
     5. Local planning wherever a parked unit blocks the flow.
     6. Groups travel as a block, and queue where the route narrows — with the detector's *jammed* kind, since only
        now can movers block each other.

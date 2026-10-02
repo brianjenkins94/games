@@ -10,9 +10,8 @@
  *     cells around it so a query can gather nearby candidate eids cheaply, then the precise per-pair test runs.  (A
  *     diamond is slim on the diagonals, so two units on diagonally-adjacent tiles leave a gap a third can thread.)
  *
- * Checks: `footprintFreeAt` (terrain + all units), `footprintSoftFreeAt` (terrain + SETTLED units;
- * passes movers), `footprintStaticFreeAt` (terrain only); `separateFrom` de-penetrates a unit jammed
- * inside a settled one.  Mobile units AND display-only enemy units reserve; buildings don't (static layer).
+ * Checks: `footprintSoftFreeAt` (terrain + buildings + SETTLED units; passes movers — the one rule for what blocks a
+ * mover, W6); `separateFrom` de-penetrates a unit jammed inside a settled one.  Mobile units AND display-only enemy units reserve; buildings don't (static layer).
  *
  * Determinism: pure integer; the broad-phase scan + L1 tests are order-independent, and reservation
  * order (referee's stable eid order, reproduced by snapshot/replay) only affects who-claims-a-cell ties.
@@ -141,46 +140,11 @@ function unitOverlapAt(world: SimWorld, xFP: number, yFP: number, self: Shape, s
 	return false;
 }
 
-/** True if a unit of shape `self` could stand at (xFP,yFP): in-bounds, clear of terrain, and not overlapping any
- *  other unit. */
-export function footprintFreeAt(world: SimWorld, xFP: number, yFP: number, self: Shape, selfEid: number): boolean {
-	return terrainClearAt(world, xFP, yFP, self) && !unitOverlapAt(world, xFP, yFP, self, selfEid, false);
-}
-
-/** Clear of terrain only — ignores all units.  (Kept for callers that just need a static check.) */
-export function footprintStaticFreeAt(world: SimWorld, xFP: number, yFP: number, self: Shape): boolean {
-	return terrainClearAt(world, xFP, yFP, self);
-}
-
-/** Like footprintFreeAt but only *settled* (non-moving) units block — a unit flows through moving
- *  traffic (a convoy) while never overlapping a parked one.  Used for settle and for following. */
+/** True if a unit of shape `self` could stand at (xFP,yFP) under the one rule for what blocks a mover (W6): in-bounds,
+ *  clear of terrain and buildings, and not overlapping a *settled* (non-moving) unit — it flows through moving traffic
+ *  (a convoy) while never overlapping a parked one.  The stepper's test, settle's, and an order's goal check. */
 export function footprintSoftFreeAt(world: SimWorld, xFP: number, yFP: number, self: Shape, selfEid: number): boolean {
 	return terrainClearAt(world, xFP, yFP, self) && !unitOverlapAt(world, xFP, yFP, self, selfEid, true);
-}
-
-/** Corner-graze terrain test: passable if just the unit's CENTRE tile is open (in-bounds, not a wall
- *  or building) — the swept-box corners are ignored.  Used ONLY by the diagonal corner-cut step in
- *  movement, where a tile-sized unit threading a diagonal pinch/stairstep must be allowed to clip the
- *  flanking wall corners (WC2 behaviour).  The centre stays in open terrain, so a unit never tunnels
- *  through a wall body — it only grazes corners while passing diagonally.  At the exact tile corner of
- *  a pinch ANY positive-radius box clips the flanking walls, so the corner-cut step can't use one. */
-export function terrainCentreClearAt(world: SimWorld, xFP: number, yFP: number): boolean {
-	const tx = (xFP / FP / TILE_PX) | 0;
-	const ty = (yFP / FP / TILE_PX) | 0;
-	const { pass, w: mapW } = world.terrain;
-
-	if (!pass) { return true; }
-	if (tx < 0 || ty < 0 || tx >= mapW || ty >= (pass.length / mapW)) { return false; }
-	if (pass[ty * mapW + tx] === 1) { return false; }
-
-	return occupant(world, tx, ty) < 0;   // open if no building occupies the centre tile
-}
-
-/** Clear of *settled* units only (terrain ignored) — the unit half of footprintSoftFreeAt.  Pairs
- *  with terrainCentreClearAt for the corner-cut step: terrain is centre-only there, but a unit must
- *  still not cut a corner straight through a parked unit. */
-export function unitsSoftFreeAt(world: SimWorld, xFP: number, yFP: number, self: Shape, selfEid: number): boolean {
-	return !unitOverlapAt(world, xFP, yFP, self, selfEid, true);
 }
 
 /** If a unit of shape `self` at (x,y) is OVERLAPPING any SETTLED unit (penetration — it phased in, or one settled
