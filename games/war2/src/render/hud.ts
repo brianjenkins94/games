@@ -83,6 +83,11 @@ export function createHud(root: ParentNode, tileset: string, callbacks: HudCallb
 	const portrait = root.querySelector<HTMLDivElement>("#hud-portrait")!;
 	const resources = root.querySelector<HTMLDivElement>("#hud-resources")!;
 	const chrome = [...root.querySelectorAll<HTMLDivElement>(".hud-chrome")];
+	// What the status strip and portrait show now. They're refreshed with every view (20 a second): rebuilt only when
+	// that changes — otherwise a click's mousedown and mouseup land on different elements, and the click is lost.
+	let statusShown = "";
+	let portraitShown = "";
+	let progress: HTMLDivElement | undefined;
 
 	// Right-click on the chrome shouldn't pop the browser's context menu.
 	root.querySelector("#hud")?.addEventListener("contextmenu", (event) => { event.preventDefault(); });
@@ -128,6 +133,18 @@ export function createHud(root: ParentNode, tileset: string, callbacks: HudCallb
 			}
 		},
 		"showStatus": (view) => {
+			const shown = JSON.stringify(view === undefined ? null : view.kind === "orders" ? view : [view.kind, view.items]);
+
+			if (shown === statusShown) {
+				if (progress !== undefined && view?.kind === "production" && view.ticksTotal > 0) {
+					progress.style.width = `${Math.round(((view.ticksTotal - view.ticksLeft) / view.ticksTotal) * 100)}%`;
+				}
+
+				return;
+			}
+
+			statusShown = shown;
+			progress = undefined;
 			status.replaceChildren();
 
 			if (view === undefined) {
@@ -159,6 +176,7 @@ export function createHud(root: ParentNode, tileset: string, callbacks: HudCallb
 
 					Object.assign(bar.style, { "position": "absolute", "left": "0", "bottom": "0", "height": "3px", "width": `${Math.round(((view.ticksTotal - view.ticksLeft) / view.ticksTotal) * 100)}%`, "background": "#4f4" });
 					cell.append(bar);
+					progress = bar;
 				}
 
 				cell.addEventListener("click", () => { callbacks.onProductionCancel(index); });
@@ -166,6 +184,13 @@ export function createHud(root: ParentNode, tileset: string, callbacks: HudCallb
 			}
 		},
 		"showPortrait": (type, count) => {
+			const shown = `${type}×${count}`;
+
+			if (shown === portraitShown) {
+				return;
+			}
+
+			portraitShown = shown;
 			portrait.replaceChildren();
 
 			if (type === undefined) {

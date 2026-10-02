@@ -134,6 +134,13 @@ test("a town hall trains a peasant from its card, the queue shows in the status 
 
 	assert.deepEqual(queued.queue, ["unit-peasant"]);
 	await instance.locator(".hud-status [data-production=\"0\"]").waitFor();
+
+	// The strip is refreshed with every view, but its item stays the same element (a click needs its mousedown and
+	// mouseup on one): ten views later, still attached.
+	const item = await instance.locator(".hud-status [data-production=\"0\"]").elementHandle();
+
+	await page.waitForTimeout(500);
+	assert.equal(await item!.evaluate((element) => element.isConnected), true, "the production item wasn't rebuilt under the pointer");
 	await instance.locator(".hud-status [data-production=\"0\"]").click();
 	await until(page, "the training cancelled", async (uid: number) => {
 		const state = await (globalThis as unknown as { "__war2": { "tool": (name: string) => Promise<State> } }).__war2.tool("war2_state");
