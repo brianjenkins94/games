@@ -84,6 +84,15 @@ export async function startSession({ debugMcpPort }: { "debugMcpPort"?: number }
 	// CHROME_PATH, else Playwright's own, else the system Chrome (GitHub's runners), else the newest cached one.
 	const browser = await launchChromium();
 	const context = await browser.newContext({ "viewport": { "width": 1200, "height": 900 } });
+	// WAR2_CPU_THROTTLE=4 slows every page's CPU that many times — CI's runners, on a fast machine — to reproduce what
+	// only fails there.
+	const throttle = Number(process.env["WAR2_CPU_THROTTLE"] ?? 1);
+
+	if (throttle > 1) {
+		context.on("page", (page) => {
+			void context.newCDPSession(page).then(async (cdp) => cdp.send("Emulation.setCPUThrottlingRate", { "rate": throttle }));
+		});
+	}
 
 	if (debugMcpPort === undefined) {
 		await context.routeWebSocket(/:7378/u, (route) => { void route.close(); });
@@ -142,4 +151,14 @@ export async function untilInSync(page: Page, count: number): Promise<void> {
 /** Call one of the page's MCP tools directly (`__war2.tool`) — the same handlers debug-mcp forwards to. */
 export async function tool<T = unknown>(page: Page, name: string, args: Record<string, unknown> = {}): Promise<T> {
 	return page.evaluate(async ([toolName, toolArgs]) => (globalThis as unknown as { "__war2": { "tool": (n: string, a: unknown) => Promise<unknown> } }).__war2.tool(toolName, toolArgs), [name, args] as const) as Promise<T>;
+}
+
+/** The pathology guard: no incident flagged in this match (the referee's detector stayed quiet). For tests that give
+ *  deliberate orders — bots wander into the pathing's known faults. */
+export async function assertQuiet(page: Page): Promise<void> {
+	const incidents = await tool<{ "id": string; "label": string }[]>(page, "war2_incidents");
+
+	if (incidents.length > 0) {
+		throw new Error(`pathing incident(s) flagged: ${incidents.map((incident) => `${incident.id} ${incident.label}`).join("; ")} — war2_replay_incident <id> to look, war2_save_incident_test to pin it`);
+	}
 }

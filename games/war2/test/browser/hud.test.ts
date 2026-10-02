@@ -135,7 +135,21 @@ test("a town hall trains a peasant from its card, the queue shows in the status 
 	assert.deepEqual(queued.queue, ["unit-peasant"]);
 	// Paused, the peasant can't finish training (45 ticks) before we've looked — the view stays, the strip with it.
 	await tool(page, "war2_control", { "action": "pause" });
-	await instance.locator(".hud-status [data-production=\"0\"]").waitFor();
+	await instance.locator(".hud-status [data-production=\"0\"]").waitFor({ "timeout": 15_000 }).catch(async (error: unknown) => {
+		// What the instance and the referee had instead (a CI failure can't be watched).
+		const seen = {
+			"instance": await instance.evaluate((uid) => {
+				const war2 = (globalThis as unknown as { "__war2Instance": { "latest": () => { "team": number; "viewTick": number; "selected": number[]; "units": Unit[] } | undefined; "selected": () => number[] } }).__war2Instance;
+				const latest = war2.latest();
+
+				return { "viewTick": latest?.viewTick, "selectedByWorker": latest?.selected, "selectedByRenderer": war2.selected(), "hall": latest?.units.find((unit) => unit.uid === uid), "strip": document.querySelector(".hud-status")?.outerHTML.slice(0, 300) };
+			}, hall.uid),
+			"referee": (await tool<State>(page, "war2_state")).units.find((unit) => unit.uid === hall.uid),
+			"status": await tool(page, "war2_status")
+		};
+
+		throw new Error(`the production item never showed\nseen: ${JSON.stringify(seen).slice(0, 3000)}`, { "cause": error });
+	});
 
 	// The strip is refreshed with every view, but its item stays the same element (a click needs its mousedown and
 	// mouseup on one): ten views later, still attached.
