@@ -13,7 +13,7 @@ import type { Client } from "../net/index.ts";
 import type { Command } from "../sim/command.ts";
 import type { ClientInspection, InstanceInput, InstanceView, PortMessage, UnitInfo } from "./bootstrap.ts";
 import { createHub, dataChannelTransport, portTransport, rpcCallSubject, serve } from "@brianjenkins94/hub";
-import { observe } from "@brianjenkins94/observability";
+import { observe, reportMetrics } from "@brianjenkins94/observability";
 import { createClient, hostPermissions, subjects } from "../net/index.ts";
 import { CmdType } from "../sim/command.ts";
 import { tileCenterFP } from "../sim/components.ts";
@@ -23,6 +23,7 @@ import { exploredRuns } from "../sim/vision.ts";
 import { unitEids } from "../sim/world.ts";
 import { describe, instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
 import { loadMap } from "./maps.ts";
+import { wireGauge } from "./metrics.ts";
 
 async function start({ channel, bots = true, token }: PortMessage): Promise<void> {
 	// Its own name is a placeholder that nobody sees (both its links name it): who it is comes from the referee.
@@ -49,6 +50,11 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 	const names = subjects(MATCH);
 	const local = instanceSubjects(id);
 	const client: Client = createClient({ "hub": hub, "match": MATCH, "loadMap": loadMap });
+	// Its gauges (metrics.ts): what it sees, and its wire. (How far behind the referee its view is, the host knows: `lag`.)
+	const metrics = reportMetrics(hub, { "source": id });
+
+	metrics.gauge("units", () => client.view().size);
+	metrics.gauge("wire", wireGauge(hub, "referee"));
 	let seed = [...id].reduce((sum, char) => sum + char.charCodeAt(0), 7);
 	const random = (bound: number): number => {
 		seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;

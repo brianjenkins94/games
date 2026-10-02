@@ -10,7 +10,7 @@ import type { AttachMessage, InitMessage, PortMessage, Settings } from "./bootst
 import type { MakeLink, RtcLink } from "./rtc.ts";
 import type { Hub } from "@brianjenkins94/hub";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
-import { observeApp, ownWorker } from "@brianjenkins94/observability";
+import { observeApp, ownWorker, reportMetrics } from "@brianjenkins94/observability";
 import { subjects } from "../net/index.ts";
 import { MATCH } from "./bootstrap.ts";
 import { answerLink, linkLabel, localSignaling, offerLink } from "./rtc.ts";
@@ -56,6 +56,12 @@ export function startHost({ observed, settings, matchId, grid, status, summary }
 	/** Each client's latest report, and when it arrived. */
 	const diags = new Map<string, ClientDiag & { "receivedAt": number }>();
 	let last: RefereeTick | undefined;
+	// Its gauge (metrics.ts): how many ticks each client's view is behind the referee — the clients still reporting.
+	reportMetrics(hub).gauge("lag", () => {
+		const tick = last?.tick;
+
+		return tick === undefined ? undefined : Object.fromEntries([...diags.values()].filter((diag) => diag.viewTick >= 0 && Date.now() - diag.receivedAt <= STALLED_MS).map((diag) => [diag.peer, tick - diag.viewTick]));
+	});
 	/** Each client's connections (both ends, for one of this page's instances): closed when it links again. */
 	const connections = new Map<string, RtcLink[]>();
 

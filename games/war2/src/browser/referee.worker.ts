@@ -5,7 +5,7 @@ import type { Referee } from "../net/index.ts";
 import type { Recorder } from "../diag/recorder.ts";
 import type { AttachMessage, DiagRequest, InitMessage, RefereeControl, RefereeInspection } from "./bootstrap.ts";
 import { createHub, dataChannelTransport, portTransport, serve } from "@brianjenkins94/hub";
-import { observe } from "@brianjenkins94/observability";
+import { observe, reportMetrics } from "@brianjenkins94/observability";
 import { createReferee, lobbyPermissions, teamView } from "../net/index.ts";
 import { tileCenterFP } from "../sim/components.ts";
 import { rngRange } from "../sim/rng.ts";
@@ -15,9 +15,14 @@ import { canPlaceBuilding, spawnBuilding, spawnUnit, unitEids } from "../sim/wor
 import { createRecorder } from "../diag/recorder.ts";
 import { describe, MATCH, REFEREE_CONTROL, REFEREE_DIAG, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
 import { loadGameMap } from "./maps.ts";
+import { durationGauge } from "./metrics.ts";
 
 const hub = createHub({ "id": "referee" });
 const { log } = observe(hub, { "network": true });
+// Its gauge (metrics.ts): how long a sim step takes, against its TICK_MS budget.
+const stepTime = durationGauge();
+
+reportMetrics(hub).gauge("tickMs", stepTime.gauge);
 
 hub.link(portTransport(globalThis));
 
@@ -49,7 +54,10 @@ function tick(): void {
 		return;
 	}
 
+	const started = performance.now();
+
 	current.tick();
+	stepTime.record(performance.now() - started);
 
 	const seats = current.seats().map((seat) => `${seat.peer}=${seat.team}`).join(",");
 

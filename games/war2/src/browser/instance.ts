@@ -13,7 +13,7 @@ import type { CommandCardController } from "../ui/commandCardController.ts";
 import type { GameMap } from "./maps.ts";
 import type { InstanceInput, InstanceView, PortMessage, UnitInfo } from "./bootstrap.ts";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
-import { observe, ownWorker, scopedTransport } from "@brianjenkins94/observability";
+import { observe, ownWorker, reportMetrics, scopedTransport } from "@brianjenkins94/observability";
 import productionJson from "../assets/production.json" with { "type": "json" };
 import { createHud } from "../render/hud.ts";
 import { lookAt, setGhost, setTargetingCursor, setView, startRenderer, worldToScreen } from "../render/renderer.ts";
@@ -23,6 +23,7 @@ import { unitFootprint, unitTypeId } from "../sim/unitTypes.ts";
 import { createCommandCardController } from "../ui/commandCardController.ts";
 import { instanceSubjects, seatKey } from "./bootstrap.ts";
 import { loadGameMap } from "./maps.ts";
+import { frameRateGauge, heapGauge } from "./metrics.ts";
 
 const params = new URLSearchParams(location.search);
 const id = params.get("id") ?? "client";
@@ -32,6 +33,11 @@ const local = instanceSubjects(id);
 const hub = createHub({ "id": id + "/ui" });
 const { log } = observe(hub, { "network": true, "messages": { "window": (source) => (source === parent ? "page" : undefined) } });
 const worker = new Worker(new URL("client.worker.ts", import.meta.url), { "type": "module", "name": id });
+// Its gauges (metrics.ts): the rate it draws at, and its heap.
+const metrics = reportMetrics(hub);
+
+metrics.gauge("fps", frameRateGauge());
+metrics.gauge("heap", heapGauge());
 const badge = document.querySelector<HTMLElement>("#badge")!;
 const PRODUCTION = productionJson as Record<string, { "trains"?: string[] }>;
 let latest: InstanceView | undefined;
