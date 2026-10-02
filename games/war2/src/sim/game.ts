@@ -48,7 +48,7 @@ export type { MapInfo };
 export type { SimWorld, UnitLifecycle };
 
 export interface GameInstance {
-    /** Underlying bitecs world — exposed for schema helpers that need raw access. */
+    /** Underlying bitecs world — all of this game's state, its components included (`world.components`). */
 	readonly "world": SimWorld;
 
     /** Advance the sim one tick (runs all systems, increments world.tick). */
@@ -137,19 +137,19 @@ export function createGame(seed: number, mapInfo?: MapInfo): GameInstance {
 		"applyCommands": (cmds) => { _applyCommands(world, cmds); },
 		"canPlaceBuilding": (tileX, tileY, typeId) => _canPlaceBuilding(world, tileX, tileY, typeId),
 		"registerObservers": (hooks) => { _registerObservers(world, hooks); },
-		"consumeUnitId": () => consumeUnitId(),
-		"eidForUnitId": (uid) => eidForUnitId(uid),
-		"setNextUnitId": (n) => { setNextUnitId(n); },
-		"initUnitIdCounter": (team) => { initUnitIdCounter(team); },
+		"consumeUnitId": () => consumeUnitId(world),
+		"eidForUnitId": (uid) => eidForUnitId(world, uid),
+		"setNextUnitId": (n) => { setNextUnitId(world, n); },
+		"initUnitIdCounter": (team) => { initUnitIdCounter(world, team); },
 		"computeVisibleUids": (observerTeam) => computeVisibleUids(world, observerTeam),
 		"ownSnapshotsVisibleTo": (myTeam) => ownSnapshotsVisibleTo(world, myTeam),
 		"isTileVisible": (observerTeam, tx, ty) => isTileVisible(world, observerTeam, tx, ty),
 		"hashOwn": (t) => worldHashOwn(world, t),
 		"snapshotUnit": (eid) => _snapshotUnit(world, eid),
 		"addKnownUnit": (snap) => { _addKnownUnit(world, snap); },
-		"updateKnownUnit": (eid, snap) => { _updateKnownUnit(eid, snap); },
+		"updateKnownUnit": (eid, snap) => { _updateKnownUnit(world, eid, snap); },
 		"removeKnownUnit": (eid) => { _removeKnownUnit(world, eid); },
 		"addOwnUnit": (snap) => { _addOwnUnit(world, snap); },
-		"reconcileOwnUnit": (eid, snap) => { _reconcileOwnUnit(eid, snap); }
+		"reconcileOwnUnit": (eid, snap) => { _reconcileOwnUnit(world, eid, snap); }
 	};
 }

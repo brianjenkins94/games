@@ -14,9 +14,9 @@
  * movement system.  Enemy units aren't included either (own-team only, to keep fog honest).
  *
  * Determinism: a pure function of (team, start, goal, terrain, settled C-space).  Generation-stamped
- * scratch avoids per-call allocation and full clears.
+ * scratch avoids per-call allocation and full clears; it's the world's (`world.local`).
  */
-
+import type { SimWorld } from "./world.ts";
 import { DIR_DX, DIR_DY, MinHeap } from "./flowField.ts";
 import { buildingAtIdx } from "./occupancy.ts";
 import { cspaceBlockedCell } from "./pathObstacles.ts";
@@ -30,27 +30,28 @@ const DIR_COST = [10, 14, 10, 14, 10, 14, 10, 14] as const;
 const CLEARANCE_MARGIN = 12000;   // FP: a cell clear at rFP but not rFP+this is "touching" (low clearance)
 const CLEARANCE_PENALTY = 40;      // extra A* cost for a low-clearance cell → prefer margin, allow touching
 
-let _cH = 0; let _cW = 0; let
-	_mapW = 0;
-let _g: Int32Array | null = null;   // gScore (valid only where _stamp === _gen)
-let _from: Int32Array | null = null;   // parent cell along the best path
-let _stamp: Int32Array | null = null;   // generation a cell was last touched (0 = never)
-let _path: Int32Array | null = null;   // scratch: path cells walked back from the goal
-let _gen = 0;
-let _heap: MinHeap | null = null;
+/** A world's local-path scratch, over its map's 8px cells. */
+export interface LocalPathScratch {
+	"cW": number;
+	"cH": number;
+	/** gScore (valid only where stamp === gen). */
+	"g": Int32Array;
+	/** Parent cell along the best path. */
+	"from": Int32Array;
+	/** Generation a cell was last touched (0 = never). */
+	"stamp": Int32Array;
+	/** Path cells walked back from the goal. */
+	"path": Int32Array;
+	"gen": number;
+	"heap": MinHeap;
+}
 
-export function initLocalPath(mapW: number, mapH: number): void {
-	_mapW = mapW;
-	_cW = mapW * CELLS_PER_TILE;
-	_cH = mapH * CELLS_PER_TILE;
-	const size = _cW * _cH;
+export function createLocalPath(mapW: number, mapH: number): LocalPathScratch {
+	const cW = mapW * CELLS_PER_TILE;
+	const cH = mapH * CELLS_PER_TILE;
+	const size = cW * cH;
 
-	_g = new Int32Array(size);
-	_from = new Int32Array(size);
-	_stamp = new Int32Array(size);
-	_path = new Int32Array(size);
-	_gen = 0;
-	_heap = new MinHeap(size);
+	return { "cW": cW, "cH": cH, "g": new Int32Array(size), "from": new Int32Array(size), "stamp": new Int32Array(size), "path": new Int32Array(size), "gen": 0, "heap": new MinHeap(size) };
 }
 
 /** Octile distance in cell units (cardinal 10, diagonal 14) → admissible A* heuristic. */
@@ -66,18 +67,18 @@ function octile(dx: number, dy: number): number {
  *  BELIEVED grid.  Delegates to the SAME test the mover uses (walkGrid.terrainClearForPass) so the
  *  planner's route can never permit a path the mover can't walk — walls as diamonds, buildings as
  *  octagons, identically. */
-function terrainClearFP(pass: Uint8Array, xFP: number, yFP: number, rFP: number): boolean {
-	return terrainClearForPass(pass, xFP, yFP, rFP, _mapW, (_cH / 4) | 0);
+function terrainClearFP(world: SimWorld, pass: Uint8Array, xFP: number, yFP: number, rFP: number): boolean {
+	return terrainClearForPass(world, pass, xFP, yFP, rFP);
 }
 
 /** Cell-centre terrain test for the A* grid (true = blocked for a centre sitting in that cell). */
-function terrainCell(pass: Uint8Array, cx: number, cy: number, rFP: number): boolean {
-	return !terrainClearFP(pass, (cx * 8 + 4) * 1000, (cy * 8 + 4) * 1000, rFP);
+function terrainCell(world: SimWorld, pass: Uint8Array, cx: number, cy: number, rFP: number): boolean {
+	return !terrainClearFP(world, pass, (cx * 8 + 4) * 1000, (cy * 8 + 4) * 1000, rFP);
 }
 
 /** True if the straight segment (ax,ay)→(bx,by) is traversable for a mover of radius rFP — clear of
  *  terrain AND this team's settled-unit C-space.  Drives the string-pull. */
-function losClear(pass: Uint8Array, team: number, ax: number, ay: number, bx: number, by: number, rFP: number): boolean {
+function losClear(world: SimWorld, pass: Uint8Array, team: number, ax: number, ay: number, bx: number, by: number, rFP: number): boolean {
 	const dx = bx - ax; const
 		dy = by - ay;
 	const span = Math.abs(dx) > Math.abs(dy) ? Math.abs(dx) : Math.abs(dy);
@@ -87,8 +88,8 @@ function losClear(pass: Uint8Array, team: number, ax: number, ay: number, bx: nu
 		const x = ax + ((dx * i / steps) | 0); const
 			y = ay + ((dy * i / steps) | 0);
 
-		if (!terrainClearFP(pass, x, y, rFP)) { return false; }
-		if (cspaceBlockedCell(team, (x / 8000) | 0, (y / 8000) | 0)) { return false; }
+		if (!terrainClearFP(world, pass, x, y, rFP)) { return false; }
+		if (cspaceBlockedCell(world, team, (x / 8000) | 0, (y / 8000) | 0)) { return false; }
 	}
 
 	return true;
@@ -100,17 +101,19 @@ function losClear(pass: Uint8Array, team: number, ax: number, ay: number, bx: nu
  * (caller falls back to the flow field).  The start cell is C-space-exempt (the mover may currently
  * touch/overlap a parked unit and must be able to path out).
  */
-export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: number, gyFP: number, rFP: number): [number, number] | null {
-	const pass = getBelievedPassability(team);
+export function localNextAim(world: SimWorld, team: number, uxFP: number, uyFP: number, gxFP: number, gyFP: number, rFP: number): [number, number] | null {
+	const pass = getBelievedPassability(world, team);
+	const local = world.local;
 
-	if (!pass || !_g) { return null; }
-	const cW = _cW;
+	if (!pass || !local) { return null; }
+	const { cW, cH, g, from, stamp, path } = local;
+	const mapW = world.terrain.w;
 	const ucx = Math.floor(uxFP / 8000); const
 		ucy = Math.floor(uyFP / 8000);
 	const gcx = Math.floor(gxFP / 8000); const
 		gcy = Math.floor(gyFP / 8000);
 
-	if (ucx < 0 || ucy < 0 || ucx >= cW || ucy >= _cH) { return null; }
+	if (ucx < 0 || ucy < 0 || ucx >= cW || ucy >= cH) { return null; }
 	const startIdx = ucy * cW + ucx;
 	const goalIdx = gcy * cW + gcx;
 
@@ -120,18 +123,18 @@ export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: num
     // standing legitimately close to a wall can still path out (the continuous collision validates the
     // actual first step anyway).  The GOAL tile only needs to be a passable TILE — a tile-centre goal
     // adjacent to a wall is reachable even though its inflated footprint grazes the wall.
-	const blockedTerrain = (cx: number, cy: number): boolean => terrainCell(pass, cx, cy, rFP);
-	const blocked = (idx: number, cx: number, cy: number): boolean => idx !== startIdx && idx !== goalIdx && (blockedTerrain(cx, cy) || cspaceBlockedCell(team, cx, cy));
-	const goalTi = (gcy >> 2) * _mapW + (gcx >> 2);
+	const blockedTerrain = (cx: number, cy: number): boolean => terrainCell(world, pass, cx, cy, rFP);
+	const blocked = (idx: number, cx: number, cy: number): boolean => idx !== startIdx && idx !== goalIdx && (blockedTerrain(cx, cy) || cspaceBlockedCell(world, team, cx, cy));
+	const goalTi = (gcy >> 2) * mapW + (gcx >> 2);
 
-	if (pass[goalTi] === 1 || buildingAtIdx(goalTi)) { return null; }   // goal on terrain → let the flow field decide
+	if (pass[goalTi] === 1 || buildingAtIdx(world, goalTi)) { return null; }   // goal on terrain → let the flow field decide
 
-	_gen += 1;
-	const gen = _gen;
-	const heap = _heap;
+	local.gen += 1;
+	const gen = local.gen;
+	const heap = local.heap;
 
 	heap.clear();
-	_g[startIdx] = 0; _stamp[startIdx] = gen; _from[startIdx] = -1;
+	g[startIdx] = 0; stamp[startIdx] = gen; from[startIdx] = -1;
 	heap.push(octile(gcx - ucx, gcy - ucy), startIdx);
 
 	let found = false;
@@ -142,7 +145,7 @@ export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: num
 		if (idx === goalIdx) { found = true; break; }
 		const x = idx % cW; const
 			y = (idx / cW) | 0;
-		const gcur = _g[idx];
+		const gcur = g[idx];
 
 		if (f - octile(gcx - x, gcy - y) > gcur) { continue; }   // stale heap entry
 
@@ -150,7 +153,7 @@ export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: num
 			const nx = x + DIR_DX[d]; const
 				ny = y + DIR_DY[d];
 
-			if (nx < 0 || nx >= cW || ny < 0 || ny >= _cH) { continue; }
+			if (nx < 0 || nx >= cW || ny < 0 || ny >= cH) { continue; }
             // Keep the search bounded to a window around the goal.
 			const adx = nx > gcx ? nx - gcx : gcx - nx; const
 				ady = ny > gcy ? ny - gcy : gcy - ny;
@@ -168,18 +171,18 @@ export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: num
 				const mx = (4 * (x + nx) + 4) * 1000; const
 					my = (4 * (y + ny) + 4) * 1000;
 
-				if (!terrainClearFP(pass, mx, my, DIR_DX[d] !== 0 && DIR_DY[d] !== 0 ? 0 : rFP)) { continue; }
+				if (!terrainClearFP(world, pass, mx, my, DIR_DX[d] !== 0 && DIR_DY[d] !== 0 ? 0 : rFP)) { continue; }
 			}
 
             // Clearance cost: penalise cells the mover can only pass by TOUCHING a wall (clear at rFP but
             // not at rFP+margin).  The A* then prefers routes with real clearance — so it doesn't skim an
             // obstacle's edge into a touching-boundary freeze — yet still uses touching cells when they're
             // the only way through (a pinch / 1-tile gap), where the uniform penalty doesn't change the route.
-			const wide = terrainClearFP(pass, (nx * 8 + 4) * 1000, (ny * 8 + 4) * 1000, rFP + CLEARANCE_MARGIN);
+			const wide = terrainClearFP(world, pass, (nx * 8 + 4) * 1000, (ny * 8 + 4) * 1000, rFP + CLEARANCE_MARGIN);
 			const ng = gcur + DIR_COST[d] + (wide ? 0 : CLEARANCE_PENALTY);
 
-			if (_stamp[ni] !== gen || ng < _g[ni]) {
-				_g[ni] = ng; _from[ni] = idx; _stamp[ni] = gen;
+			if (stamp[ni] !== gen || ng < g[ni]) {
+				g[ni] = ng; from[ni] = idx; stamp[ni] = gen;
 				heap.push(ng + octile(gcx - nx, gcy - ny), ni);
 			}
 		}
@@ -187,25 +190,25 @@ export function localNextAim(team: number, uxFP: number, uyFP: number, gxFP: num
 
 	if (!found) { return null; }
 
-    // Walk the parent chain back from the goal into _path[0..len) (goal → … → start).
+    // Walk the parent chain back from the goal into path[0..len) (goal → … → start).
 	let len = 0; let
 		cur = goalIdx;
 
-	while (cur !== -1 && len < _path.length) { _path[len] = cur; len += 1; cur = _from[cur]; }
+	while (cur !== -1 && len < path.length) { path[len] = cur; len += 1; cur = from[cur]; }
 
     // String-pull: steer at the FURTHEST path waypoint with clear line-of-sight from the unit — one
     // follower for every case.  It cuts straight across open ground; where terrain/units constrain LOS
     // (gap, pinch, corner) it falls back to the nearest reachable waypoint, funnelling through the
-    // corridor centre.  (_path[0] = goal, [len-1] = start.)  Re-planned each tick, so the aim advances.
+    // corridor centre.  (path[0] = goal, [len-1] = start.)  Re-planned each tick, so the aim advances.
 	for (let i = 0; i < len - 1; i++) {
-		const c = _path[i];
+		const c = path[i];
 		const wx = ((c % cW) * 8 + 4) * 1000; const
 			wy = (((c / cW) | 0) * 8 + 4) * 1000;
 
-		if (losClear(pass, team, uxFP, uyFP, wx, wy, rFP)) { return [wx, wy]; }
+		if (losClear(world, pass, team, uxFP, uyFP, wx, wy, rFP)) { return [wx, wy]; }
 	}
 
-	const aimIdx = _path[len - 2 >= 0 ? len - 2 : 0];   // nothing visible → next cell along the path
+	const aimIdx = path[len - 2 >= 0 ? len - 2 : 0];   // nothing visible → next cell along the path
 
 	return [((aimIdx % cW) * 8 + 4) * 1000, (((aimIdx / cW) | 0) * 8 + 4) * 1000];
 }

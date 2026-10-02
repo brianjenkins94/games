@@ -29,77 +29,88 @@ const CAP = 4096;
  *  bitecs hands out ids from 1, so a world full at `MAX_ENTITIES` live entities never writes past a column's end. */
 export const MAX_ENTITIES = CAP - 1;
 
-export const Position = { "x": new Int32Array(CAP), "y": new Int32Array(CAP) };
-// SC-style movement: tx/ty is the FINAL goal point in FP (not a per-tile waypoint).
-// The movement system steers toward it via the flow field; `active` = 1 while moving.
-export const MoveTarget = { "tx": new Int32Array(CAP), "ty": new Int32Array(CAP), "active": new Uint8Array(CAP) };
-// `type` is an interned unit-type id (see game/unitTypes.ts), 0 = none/unknown.
-// It is authoritative identity but never changes, so it rides in snapshots
-// (survives resync) yet is deliberately excluded from the position hash.
-// `movable` (local-only, not snapshotted): 1 = this peer simulates the unit and may
-// displace it via collision; 0 = display-only obstacle (an enemy known purely from
-// snapshots on the guest) — it still COLLIDES (own units route around it) but is
-// never itself moved by the local movement system.  The referee sims both teams, so
-// all of its units are movable; only the guest holds movable=0 enemies.
-export const Unit = { "team": new Uint8Array(CAP), "selected": new Uint8Array(CAP), "type": new Uint16Array(CAP), "movable": new Uint8Array(CAP) };
-// Stable identity that travels in every SPAWN command so both sims can refer
-// to the same logical unit regardless of which bitecs eid it was assigned.
-export const UnitId = { "id": new Uint32Array(CAP) };
+/**
+ * A world's components: its own typed-array columns, one slot per entity id (bitecs 0.4 components are plain
+ * objects, registered per world). Each world makes its own, so any number of worlds run side by side in one realm —
+ * a referee and its clients' predictions in one test, say — without sharing a byte.
+ */
+export function createComponents() {
+	const Position = { "x": new Int32Array(CAP), "y": new Int32Array(CAP) };
+	// SC-style movement: tx/ty is the FINAL goal point in FP (not a per-tile waypoint).
+	// The movement system steers toward it via the flow field; `active` = 1 while moving.
+	const MoveTarget = { "tx": new Int32Array(CAP), "ty": new Int32Array(CAP), "active": new Uint8Array(CAP) };
+	// `type` is an interned unit-type id (see game/unitTypes.ts), 0 = none/unknown.
+	// It is authoritative identity but never changes, so it rides in snapshots
+	// (survives resync) yet is deliberately excluded from the position hash.
+	// `movable` (local-only, not snapshotted): 1 = this peer simulates the unit and may
+	// displace it via collision; 0 = display-only obstacle (an enemy known purely from
+	// snapshots on the guest) — it still COLLIDES (own units route around it) but is
+	// never itself moved by the local movement system.  The referee sims both teams, so
+	// all of its units are movable; only the guest holds movable=0 enemies.
+	const Unit = { "team": new Uint8Array(CAP), "selected": new Uint8Array(CAP), "type": new Uint16Array(CAP), "movable": new Uint8Array(CAP) };
+	// Stable identity that travels in every SPAWN command so both sims can refer
+	// to the same logical unit regardless of which bitecs eid it was assigned.
+	const UnitId = { "id": new Uint32Array(CAP) };
 
-// ── Flow-field path following ─────────────────────────────────────────────────
-// The movement system samples the flow field for goalTx/goalTy to get a heading,
-// moves continuously toward it (MoveTarget.tx/ty = final goal point), then resolves
-// unit–unit and static collisions.
-// curTx/curTy = the tile the unit currently sits in (recomputed from Position each
-//   tick) — drives flow-field and vision sampling.  For buildings it is the
-//   footprint top-left, used to re-lay occupancy on snapshot restore.
-// goalTx/goalTy = the FLOW-FIELD goal tile (indexes the LRU cache).  For a group move this is the
-//   group's SHARED destination — every unit reads one cached field for long-range navigation — while
-//   each unit's own final slot is its MoveTarget.tx/ty point (the movement system derives the slot tile
-//   from it for the near-goal handoff).  For a standalone move the flow goal IS the unit's own target.
-// stuckTicks = consecutive ticks of ~no progress toward the goal; arrival logic
-//   settles a unit once this passes a threshold (replaces the old occupancy hacks).
+	// ── Flow-field path following ─────────────────────────────────────────────────
+	// The movement system samples the flow field for goalTx/goalTy to get a heading,
+	// moves continuously toward it (MoveTarget.tx/ty = final goal point), then resolves
+	// unit–unit and static collisions.
+	// curTx/curTy = the tile the unit currently sits in (recomputed from Position each
+	//   tick) — drives flow-field and vision sampling.  For buildings it is the
+	//   footprint top-left, used to re-lay occupancy on snapshot restore.
+	// goalTx/goalTy = the FLOW-FIELD goal tile (indexes the LRU cache).  For a group move this is the
+	//   group's SHARED destination — every unit reads one cached field for long-range navigation — while
+	//   each unit's own final slot is its MoveTarget.tx/ty point (the movement system derives the slot tile
+	//   from it for the near-goal handoff).  For a standalone move the flow goal IS the unit's own target.
+	// stuckTicks = consecutive ticks of ~no progress toward the goal; arrival logic
+	//   settles a unit once this passes a threshold (replaces the old occupancy hacks).
 
-export const Path = {
-	"active": new Uint8Array(CAP),   // 1 = following a flow field
-	"goalTx": new Int16Array(CAP),   // destination tile x
-	"goalTy": new Int16Array(CAP),   // destination tile y
-	"curTx": new Int16Array(CAP),   // tile the unit currently sits in
-	"curTy": new Int16Array(CAP),
-	"stuckTicks": new Uint8Array(CAP),   // consecutive low-progress ticks (arrival/settle)
-    // Pinch-corridor commitment (movement.ts): when the flow steers a unit into a diagonal pinch (both
-    // flanks walls), it commits to driving CENTRE-to-CENTRE through the corridor (wpFrom→wp tile centres)
-    // without re-sampling the flow until it arrives — so the tile-boundary direction flip and the 4-tile-
-    // corner sampling singularity that wedge a unit entering a pinch perpendicular can't happen.
-	"wpActive": new Uint8Array(CAP),   // 1 = committed to a pinch corridor
-	"wpFromTx": new Int16Array(CAP),   // corridor source tile (line anchor)
-	"wpFromTy": new Int16Array(CAP),
-	"wpTx": new Int16Array(CAP),   // corridor destination tile
-	"wpTy": new Int16Array(CAP)
-};
+	const Path = {
+		"active": new Uint8Array(CAP),   // 1 = following a flow field
+		"goalTx": new Int16Array(CAP),   // destination tile x
+		"goalTy": new Int16Array(CAP),   // destination tile y
+		"curTx": new Int16Array(CAP),   // tile the unit currently sits in
+		"curTy": new Int16Array(CAP),
+		"stuckTicks": new Uint8Array(CAP),   // consecutive low-progress ticks (arrival/settle)
+		// Pinch-corridor commitment (movement.ts): when the flow steers a unit into a diagonal pinch (both
+		// flanks walls), it commits to driving CENTRE-to-CENTRE through the corridor (wpFrom→wp tile centres)
+		// without re-sampling the flow until it arrives — so the tile-boundary direction flip and the 4-tile-
+		// corner sampling singularity that wedge a unit entering a pinch perpendicular can't happen.
+		"wpActive": new Uint8Array(CAP),   // 1 = committed to a pinch corridor
+		"wpFromTx": new Int16Array(CAP),   // corridor source tile (line anchor)
+		"wpFromTy": new Int16Array(CAP),
+		"wpTx": new Int16Array(CAP),   // corridor destination tile
+		"wpTy": new Int16Array(CAP)
+	};
 
-// ── Buildings ─────────────────────────────────────────────────────────────────
-// Buildings share the unit entity pool (Position + Unit + UnitId, plus inert
-// MoveTarget/Path/UnitAnim so they pass the movement query and are skipped).
-// `fw`/`fh` are the footprint in tiles (0 = not a building); `buildLeft` is
-// construction ticks remaining (0 = complete).  Path.curTx/curTy hold the
-// footprint's top-left tile so occupancy can be re-laid on snapshot restore.
-export const Building = {
-	"fw": new Uint8Array(CAP),
-	"fh": new Uint8Array(CAP),
-	"buildLeft": new Uint16Array(CAP)
-};
+	// ── Buildings ─────────────────────────────────────────────────────────────────
+	// Buildings share the unit entity pool (Position + Unit + UnitId, plus inert
+	// MoveTarget/Path/UnitAnim so they pass the movement query and are skipped).
+	// `fw`/`fh` are the footprint in tiles (0 = not a building); `buildLeft` is
+	// construction ticks remaining (0 = complete).  Path.curTx/curTy hold the
+	// footprint's top-left tile so occupancy can be re-laid on snapshot restore.
+	const Building = {
+		"fw": new Uint8Array(CAP),
+		"fh": new Uint8Array(CAP),
+		"buildLeft": new Uint16Array(CAP)
+	};
 
-// ── Animation state (renderer-only, never reconciled by the schema) ───────────
-// Set exclusively by the movement system so both peers always agree on direction
-// and walk state after running the same deterministic sim tick.  Decoupling this
-// from MoveTarget prevents "walking backwards" when Position is snapped by
-// applyPatchToWorld but MoveTarget is left pointing at a now-stale tile.
+	// ── Animation state (renderer-only, never reconciled by the schema) ───────────
+	// Set exclusively by the movement system so both peers always agree on direction
+	// and walk state after running the same deterministic sim tick.  Decoupling this
+	// from MoveTarget prevents "walking backwards" when Position is snapped by
+	// applyPatchToWorld but MoveTarget is left pointing at a now-stale tile.
 
-export const UnitAnim = {
-	"dir": new Uint8Array(CAP).fill(4),  // last step direction 0-7 (default S=4)
-	"moving": new Uint8Array(CAP)          // 1 = walk cycle, 0 = idle / waiting
-};
+	const UnitAnim = {
+		"dir": new Uint8Array(CAP).fill(4),  // last step direction 0-7 (default S=4)
+		"moving": new Uint8Array(CAP)          // 1 = walk cycle, 0 = idle / waiting
+	};
+
+	return { "Position": Position, "MoveTarget": MoveTarget, "Unit": Unit, "UnitId": UnitId, "Path": Path, "UnitAnim": UnitAnim, "Building": Building };
+}
+
+export type Components = ReturnType<typeof createComponents>;
 
 // ── The field list ───────────────────────────────────────────────────────────────
 
@@ -107,19 +118,27 @@ export const UnitAnim = {
  *  (set by whoever adds it). */
 const LOCAL_FIELDS = new Set(["Unit.selected", "Unit.movable"]);
 
+/** A sim field's column: one of a world's typed arrays. */
+export type Column = Int16Array | Int32Array | Uint8Array | Uint16Array | Uint32Array;
+
+/** A world's sim fields, `Component.field` and its column. */
+export type SimFields = readonly (readonly [string, Column])[];
+
 /**
  * Every per-entity field of the sim, `Component.field` → its column: what a snapshot carries and restores, what a
  * spawn resets, and what the world hash covers. Taken from the components themselves, so a field added to one is in
  * all three without anyone remembering to list it — the old snapshot lost Path's corridor fields, and spawn never
- * cleared them.
+ * cleared them. (A world keeps its own as `world.fields`.)
  */
-export const SIM_FIELDS: readonly (readonly [string, Int16Array | Int32Array | Uint8Array | Uint16Array | Uint32Array])[] = Object.entries({ Position, MoveTarget, Unit, UnitId, Path, UnitAnim, Building })
-	.flatMap(([component, columns]) => Object.entries(columns).map(([field, column]) => [component + "." + field, column] as const))
-	.filter(([name]) => !LOCAL_FIELDS.has(name));
+export function simFields(components: Components): SimFields {
+	return Object.entries(components)
+		.flatMap(([component, columns]) => Object.entries(columns).map(([field, column]) => [component + "." + field, column as Column] as const))
+		.filter(([name]) => !LOCAL_FIELDS.has(name));
+}
 
-/** Clear every sim field of `eid` — a spawn's first step, since bitecs recycles entity ids and the columns are shared. */
-export function resetEntity(eid: number): void {
-	for (const [, column] of SIM_FIELDS) {
+/** Clear every sim field of `eid` — a spawn's first step, since bitecs recycles entity ids. */
+export function resetEntity(fields: SimFields, eid: number): void {
+	for (const [, column] of fields) {
 		column[eid] = 0;
 	}
 }

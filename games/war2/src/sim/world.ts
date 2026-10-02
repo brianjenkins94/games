@@ -1,22 +1,58 @@
+/**
+ * The sim world — an instance: everything the sim knows lives on it (its components, terrain, grids, caches, RNG, id
+ * registry, per-team vision), so any number of worlds run side by side in one realm without touching each other — a
+ * referee and its clients' predictions in one test process, say. Nothing in the sim keeps state of its own between
+ * calls; every function that reads or writes some takes the world.
+ */
+import type { Components, SimFields } from "./components.ts";
+import type { FlowFields } from "./flowField.ts";
+import type { LocalPathScratch } from "./localPath.ts";
+import type { Terrain } from "./passability.ts";
+import type { PathObstacles } from "./pathObstacles.ts";
 import type { Order, ProductionState } from "./types.ts";
+import type { TeamVision } from "./vision.ts";
+import type { WalkGrid } from "./walkGrid.ts";
 import { addComponent, addEntity, createWorld, hasComponent, observe, onAdd, onRemove, query, removeEntity } from "bitecs";
-import { Building, FP, fpToTile, MAX_ENTITIES, MoveTarget, Path, Position, resetEntity, TILE_PX, Unit, UnitAnim, UnitId, WORLD_H, WORLD_W } from "./components.ts";
-import { clearFlowFieldCache } from "./flowField.ts";
-import { initLocalPath } from "./localPath.ts";
-import { freeRect, initOccupancy, occupyRect, rectEmpty } from "./occupancy.ts";
+import { createComponents, FP, fpToTile, MAX_ENTITIES, resetEntity, simFields, TILE_PX, WORLD_H, WORLD_W } from "./components.ts";
+import { clearFlowFieldCache, createFlowFields } from "./flowField.ts";
+import { createLocalPath } from "./localPath.ts";
+import { freeRect, occupyRect, rectEmpty } from "./occupancy.ts";
 import { advanceOrderQueues } from "./orders.ts";
-import { getMapW, getPassability, initPassability } from "./passability.ts";
-import { addIdleCSpace, clearIdleDirty, initPathObstacles, isIdleDirty, markIdleDirty, resetIdleGrids } from "./pathObstacles.ts";
+import { buildTerrain } from "./passability.ts";
+import { addIdleCSpace, createPathObstacles, markIdleDirty, resetIdleGrids } from "./pathObstacles.ts";
 import { productionSystem } from "./production.ts";
-import { rngRange, seedRng } from "./rng.ts";
+import { rngRange, rngState } from "./rng.ts";
 import { movementSystem } from "./systems/movement.ts";
 import { unitBuildTicks, unitFootprint, unitRadiusPx } from "./unitTypes.ts";
-import { initVision, visionSystem } from "./vision.ts";
-import { freeUnit, initWalkGrid, reserveUnit, resetWalkGrid } from "./walkGrid.ts";
+import { createVision, visionSystem } from "./vision.ts";
+import { createWalkGrid, freeUnit, reserveUnit, resetWalkGrid } from "./walkGrid.ts";
 
 export type { UnitSnapshot } from "./types.ts";
 
-export interface SimWorld extends Record<string, unknown> {
+export interface SimWorld {
+	/** Its components (bitecs 0.4: plain objects, registered with this world as entities gain them). */
+	"components": Components;
+	/** Its sim fields (components.ts simFields): what snapshots, spawn resets and the hash enumerate. */
+	"fields": SimFields;
+	/** The xorshift state (rng.ts). */
+	"rng": number;
+	/** The next stable unit id to hand out, and each live entity by its stable id. */
+	"nextUnitId": number;
+	"eidOf": Map<number, number>;
+	/** The map: size, and passability (null pass without one — pre-map dev mode). */
+	"terrain": Terrain;
+	/** Which building holds each tile (occupancy.ts); null without a map. */
+	"occupancy": Int32Array | null;
+	/** The 8px unit-collision broad phase (walkGrid.ts); null without a map. */
+	"walk": WalkGrid | null;
+	/** Each team's settled-unit C-space for the local A* (pathObstacles.ts). */
+	"obstacles": PathObstacles;
+	/** The local A*'s scratch (localPath.ts); null without a map. */
+	"local": LocalPathScratch | null;
+	/** Flow fields: the cache and the Dijkstra's scratch (flowField.ts). */
+	"flow": FlowFields;
+	/** Each team's explored map and believed passability (vision.ts). */
+	"vision": Map<number, TeamVision>;
 	"tick": number;
     /** Last MOVE per team — target tile + a signature of the selected unit set.  A repeat
      *  click by the *same* selection on the *same* tile converges the group on the point
@@ -50,6 +86,8 @@ export interface UnitLifecycle {
 }
 
 export function registerObservers(world: SimWorld, hooks: UnitLifecycle): void {
+	const { MoveTarget, Position, Unit } = world.components;
+
 	if (hooks.onSpawn) { observe(world, onAdd(Position, Unit, MoveTarget), hooks.onSpawn); }
 	if (hooks.onDespawn) { observe(world, onRemove(Position, Unit, MoveTarget), hooks.onDespawn); }
 }
@@ -64,21 +102,18 @@ export function registerObservers(world: SimWorld, hooks: UnitLifecycle): void {
 //   team 0 → IDs 1 … 0x7FFFFFFF   (high bit clear)
 //   team 1 → IDs 0x80000001 … 0xFFFFFFFF  (high bit set)
 //
-// Call initUnitIdCounter(myTeam) once per peer before spawning any units.
-
-let _nextUnitId = 1;
-const _unitIdToEid = new Map<number, number>();
+// Call initUnitIdCounter(world, myTeam) once per peer before spawning any units.
 
 /** Initialise the counter for the local team (call exactly once at game start). */
-export function initUnitIdCounter(team: number): void {
-	_nextUnitId = team === 0 ? 1 : 0x80000001;
+export function initUnitIdCounter(world: SimWorld, team: number): void {
+	world.nextUnitId = team === 0 ? 1 : 0x80000001;
 }
 
 /** Take the next available unit ID for this peer's team. */
-export function consumeUnitId(): number {
-	const id = _nextUnitId;
+export function consumeUnitId(world: SimWorld): number {
+	const id = world.nextUnitId;
 
-	_nextUnitId += 1;
+	world.nextUnitId += 1;
 
 	return id;
 }
@@ -87,28 +122,15 @@ export function consumeUnitId(): number {
  * Advance the counter if a received ID is ahead of us and in our ID space.
  * (Called when we learn about a new own-team unit — e.g. from a snapshot replay.)
  */
-export function setNextUnitId(n: number): void {
-	const myHighBit = _nextUnitId >= 0x80000000;
+export function setNextUnitId(world: SimWorld, n: number): void {
+	const myHighBit = world.nextUnitId >= 0x80000000;
 	const nHighBit = n >= 0x80000000;
 
-	if (myHighBit === nHighBit && n >= _nextUnitId) { _nextUnitId = n + 1; }
+	if (myHighBit === nHighBit && n >= world.nextUnitId) { world.nextUnitId = n + 1; }
 }
 
 /** Returns the local bitecs eid for a given stable unit ID, or undefined. */
-export function eidForUnitId(uid: number): number | undefined { return _unitIdToEid.get(uid); }
-
-// ── Registry accessors (for snapshot.ts, which shares this state) ──────────────
-// The unit-ID counter + uid→eid map are owned here (tied to spawn/despawn); snapshot
-// capture/restore drives them through these so the state stays single-owned.
-
-/** Current next-unit-id — read by snapshot capture. */
-export function getNextUnitId(): number { return _nextUnitId; }
-/** Restore the registry for a snapshot apply: set the counter and clear the uid→eid map. */
-export function resetUnitRegistry(nextUnitId: number): void { _nextUnitId = nextUnitId; _unitIdToEid.clear(); }
-/** Record a uid→eid mapping (spawn-from-snapshot / restore). */
-export function registerUnitId(uid: number, eid: number): void { _unitIdToEid.set(uid, eid); }
-/** Drop a uid→eid mapping (despawn-from-snapshot). */
-export function unregisterUnitId(uid: number): void { _unitIdToEid.delete(uid); }
+export function eidForUnitId(world: SimWorld, uid: number): number | undefined { return world.eidOf.get(uid); }
 
 // ── World factory ─────────────────────────────────────────────────────────────
 
@@ -120,35 +142,33 @@ export interface MapInfo {
 }
 
 export function createSimWorld(seed: number, mapInfo?: MapInfo): SimWorld {
-	_nextUnitId = 1;
-	_unitIdToEid.clear();
-	clearFlowFieldCache();
+	const components = createComponents();
+	const { mapW = 0, mapH = 0 } = mapInfo ?? {};
 
-	if (mapInfo) {
-		initPassability(mapInfo.gids, mapInfo.mapW, mapInfo.mapH, mapInfo.terrainArr);
-		initOccupancy(mapInfo.mapW, mapInfo.mapH);
-		initWalkGrid(mapInfo.mapW, mapInfo.mapH);   // 8px unit-collision reservation grid
-		initPathObstacles(mapInfo.mapW, mapInfo.mapH);   // per-team settled-unit grid for pathing
-		initLocalPath(mapInfo.mapW, mapInfo.mapH);        // scratch for the short-range unit-aware A*
-
-        // Referee holds per-team vision for both teams (each paths on its own knowledge).
-		initVision(mapInfo.mapW, mapInfo.mapH, [0, 1]);
-	}
-
-	const world = createWorld() as SimWorld;
-
-	world.tick = 0;
-	seedRng(seed);
-
-	return world;
+	return createWorld<SimWorld>({
+		"components": components,
+		"fields": simFields(components),
+		"rng": rngState(seed),
+		"nextUnitId": 1,
+		"eidOf": new Map(),
+		"terrain": mapInfo ? buildTerrain(mapInfo.gids, mapW, mapH, mapInfo.terrainArr) : { "w": 0, "h": 0, "pass": null },
+		"occupancy": mapInfo ? new Int32Array(mapW * mapH) : null,
+		"walk": mapInfo ? createWalkGrid(mapW, mapH) : null,          // 8px unit-collision reservation grid
+		"obstacles": createPathObstacles(mapW, mapH),                 // per-team settled-unit grid for pathing
+		"local": mapInfo ? createLocalPath(mapW, mapH) : null,        // scratch for the short-range unit-aware A*
+		"flow": createFlowFields(),
+		// The referee holds per-team vision for both teams (each paths on its own knowledge).
+		"vision": mapInfo ? createVision(mapW, mapH, [0, 1]) : new Map(),
+		"tick": 0
+	});
 }
 
 // ── Entity helpers ────────────────────────────────────────────────────────────
 
 /** True if the world has room for one more entity (see MAX_ENTITIES). Every spawn checks it, and spawns nothing past
  *  it: the commands' validator caps each team well below, so this is the last line, not the rule. */
-export function hasRoom(): boolean {
-	return _unitIdToEid.size < MAX_ENTITIES;
+export function hasRoom(world: SimWorld): boolean {
+	return world.eidOf.size < MAX_ENTITIES;
 }
 
 /**
@@ -157,14 +177,15 @@ export function hasRoom(): boolean {
  * Returns the entity, or -1 if the world is full (hasRoom).
  */
 export function spawnUnit(world: SimWorld, xFP: number, yFP: number, team: number, unitId?: number, typeId = 0): number {
-	if (!hasRoom()) {
+	if (!hasRoom(world)) {
 		return -1;
 	}
 
-	const uid = unitId !== undefined ? unitId : consumeUnitId();
+	const { Building, MoveTarget, Path, Position, Unit, UnitAnim, UnitId } = world.components;
+	const uid = unitId !== undefined ? unitId : consumeUnitId(world);
 	const eid = addEntity(world);
 
-	resetEntity(eid);   // bitecs recycles eids over shared columns: start from nothing (corridor, goal, footprint…)
+	resetEntity(world.fields, eid);   // bitecs recycles eids: start from nothing (corridor, goal, footprint…)
 	addComponent(world, eid, Position);
 	addComponent(world, eid, MoveTarget);
 	addComponent(world, eid, Unit);
@@ -183,31 +204,33 @@ export function spawnUnit(world: SimWorld, xFP: number, yFP: number, team: numbe
 	Path.curTy[eid] = fpToTile(yFP);
 	UnitAnim.dir[eid] = 4;   // default South
 	UnitAnim.moving[eid] = 0;
-    // Clear any stale Building fields: component arrays are module-global and bitecs recycles eids, so an
-    // eid that previously held a building would otherwise leave fw/fh set — making this unit render as a
-    // building (the blue fallback rect) and get skipped by the movement system (Building.fw > 0 guard).
+    // Clear any stale Building fields: bitecs recycles eids, so an eid that previously held a building would
+    // otherwise leave fw/fh set — making this unit render as a building (the blue fallback rect) and get skipped
+    // by the movement system (Building.fw > 0 guard). (resetEntity already did; kept for the reader.)
 	Building.fw[eid] = 0; Building.fh[eid] = 0; Building.buildLeft[eid] = 0;
-	reserveUnit(eid);             // claim the unit's footprint on the 8px collision grid
-	markIdleDirty();              // a new idle unit joins the path-obstacle set
-	_unitIdToEid.set(uid, eid);
-	if (unitId !== undefined) { setNextUnitId(unitId); } // keep counter ahead
+	if (world.walk) { reserveUnit(world, eid); }   // claim the unit's footprint on the 8px collision grid
+	markIdleDirty(world);         // a new idle unit joins the path-obstacle set
+	world.eidOf.set(uid, eid);
+	if (unitId !== undefined) { setNextUnitId(world, unitId); } // keep counter ahead
 
 	return eid;
 }
 
 export function despawnUnit(world: SimWorld, eid: number): void {
+	const { Building, Path, UnitId } = world.components;
+
 	if (hasComponent(world, eid, Building)) {
-		freeRect(Path.curTx[eid], Path.curTy[eid], Building.fw[eid], Building.fh[eid]);
-		clearFlowFieldCache();   // footprint freed → cached fields routed around it are stale
-	} else {
-		freeUnit(eid);           // release the unit's footprint on the collision grid
+		freeRect(world, Path.curTx[eid], Path.curTy[eid], Building.fw[eid], Building.fh[eid]);
+		clearFlowFieldCache(world);   // footprint freed → cached fields routed around it are stale
+	} else if (world.walk) {
+		freeUnit(world, eid);    // release the unit's footprint on the collision grid
 	}
 
 	Path.active[eid] = 0;
-	markIdleDirty();             // a unit left the path-obstacle set
+	markIdleDirty(world);        // a unit left the path-obstacle set
 	const uid = UnitId.id[eid];
 
-	_unitIdToEid.delete(uid);
+	world.eidOf.delete(uid);
     // Drop any queue state this uid held (action queue, production, rally) so a recycled uid starts clean.
 	if (world.orders) { delete world.orders[uid]; }
 	if (world.production) { delete world.production[uid]; }
@@ -217,10 +240,9 @@ export function despawnUnit(world: SimWorld, eid: number): void {
 
 /** True if a building of the given type fits at footprint top-left (tileX,tileY):
  *  every footprint tile in-bounds, passable terrain, and unoccupied. */
-export function canPlaceBuilding(_world: SimWorld, tileX: number, tileY: number, typeId: number): boolean {
+export function canPlaceBuilding(world: SimWorld, tileX: number, tileY: number, typeId: number): boolean {
 	const [fw, fh] = unitFootprint(typeId);
-	const pass = getPassability();
-	const mapW = getMapW();
+	const { pass, w: mapW } = world.terrain;
 
 	if (pass) {
 		for (let y = 0; y < fh; y++) {
@@ -228,21 +250,22 @@ export function canPlaceBuilding(_world: SimWorld, tileX: number, tileY: number,
 		} // terrain-blocked
 	}
 
-	return rectEmpty(tileX, tileY, fw, fh);
+	return rectEmpty(world, tileX, tileY, fw, fh);
 }
 
 /** Spawn a building entity occupying its footprint, with construction in progress.
  *  Shares the unit pool (Position/Unit/UnitId + inert MoveTarget/Path/UnitAnim). Returns -1 if the world is full. */
 export function spawnBuilding(world: SimWorld, tileX: number, tileY: number, team: number, typeId: number, unitId?: number): number {
-	if (!hasRoom()) {
+	if (!hasRoom(world)) {
 		return -1;
 	}
 
-	const uid = unitId !== undefined ? unitId : consumeUnitId();
+	const { Building, MoveTarget, Path, Position, Unit, UnitAnim, UnitId } = world.components;
+	const uid = unitId !== undefined ? unitId : consumeUnitId(world);
 	const [fw, fh] = unitFootprint(typeId);
 	const eid = addEntity(world);
 
-	resetEntity(eid);   // bitecs recycles eids over shared columns: start from nothing (corridor, goal, footprint…)
+	resetEntity(world.fields, eid);   // bitecs recycles eids: start from nothing (corridor, goal, footprint…)
 	addComponent(world, eid, Position);
 	addComponent(world, eid, MoveTarget);
 	addComponent(world, eid, Unit);
@@ -264,10 +287,10 @@ export function spawnBuilding(world: SimWorld, tileX: number, tileY: number, tea
 	Building.fw[eid] = fw;
 	Building.fh[eid] = fh;
 	Building.buildLeft[eid] = unitBuildTicks(typeId);
-	occupyRect(tileX, tileY, fw, fh, eid);
-	clearFlowFieldCache();   // new footprint → units must route around it now
-	_unitIdToEid.set(uid, eid);
-	if (unitId !== undefined) { setNextUnitId(unitId); }
+	occupyRect(world, tileX, tileY, fw, fh, eid);
+	clearFlowFieldCache(world);   // new footprint → units must route around it now
+	world.eidOf.set(uid, eid);
+	if (unitId !== undefined) { setNextUnitId(world, unitId); }
 
 	return eid;
 }
@@ -275,14 +298,16 @@ export function spawnBuilding(world: SimWorld, tileX: number, tileY: number, tea
 export function spawnRandom(world: SimWorld, team: number): number {
 	return spawnUnit(
 		world,
-		rngRange(40 * FP, WORLD_W - 40 * FP),
-		rngRange(40 * FP, WORLD_H - 40 * FP),
+		rngRange(world, 40 * FP, WORLD_W - 40 * FP),
+		rngRange(world, 40 * FP, WORLD_H - 40 * FP),
 		team
 	);
 }
 
 /** Advance construction on all buildings (one tick of progress). */
 function buildingSystem(world: SimWorld): void {
+	const { Building } = world.components;
+
 	for (const eid of query(world, [Building])) {
 		if (Building.buildLeft[eid] > 0) { Building.buildLeft[eid] -= 1; }
 	}
@@ -295,18 +320,19 @@ function buildingSystem(world: SimWorld): void {
  * invalidate it (that separation is what keeps pathing cheap under combat churn).
  */
 export function refreshPathObstacles(world: SimWorld): void {
-	if (!isIdleDirty()) { return; }
-	resetIdleGrids();
+	if (!world.obstacles.dirty) { return; }
+	resetIdleGrids(world);
+	const { Building, MoveTarget, Position, Unit } = world.components;
 	const MOVER_R = TILE_PX >> 1;   // assume a ~tile mover for the shared C-space (land units)
 
 	for (const eid of unitEids(world)) {
 		if (hasComponent(world, eid, Building) || Unit.movable[eid] !== 1) { continue; }   // buildings / display-only
 		if (MoveTarget.active[eid] === 1) { continue; }                       // moving → not an obstacle
         // 8px C-space: a mover's centre may not come within (mover r + this unit's r) of this centre.
-		addIdleCSpace(Unit.team[eid], Position.x[eid] / FP, Position.y[eid] / FP, MOVER_R + unitRadiusPx(Unit.type[eid]));
+		addIdleCSpace(world, Unit.team[eid], Position.x[eid] / FP, Position.y[eid] / FP, MOVER_R + unitRadiusPx(Unit.type[eid]));
 	}
 
-	clearIdleDirty();
+	world.obstacles.dirty = false;
 }
 
 /**
@@ -316,10 +342,13 @@ export function refreshPathObstacles(world: SimWorld): void {
  * of the state alone. Buildings hold tiles in the occupancy grid instead.
  */
 function repaintWalkGrid(world: SimWorld): void {
-	resetWalkGrid();
+	if (!world.walk) { return; }
+	const { Building, UnitId } = world.components;
+
+	resetWalkGrid(world);
 
 	for (const eid of unitEids(world).filter((e) => !hasComponent(world, e, Building)).sort((a, b) => UnitId.id[a] - UnitId.id[b])) {
-		reserveUnit(eid);
+		reserveUnit(world, eid);
 	}
 }
 
@@ -335,5 +364,7 @@ export function stepWorld(world: SimWorld): void {
 }
 
 export function unitEids(world: SimWorld): number[] {
+	const { MoveTarget, Position, Unit } = world.components;
+
 	return [...query(world, [Position, Unit, MoveTarget])];
 }

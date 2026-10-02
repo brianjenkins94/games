@@ -16,55 +16,45 @@
  * re-route once line of sight reveals a real obstacle.  Sight radius exceeds the
  * per-tick step distance, so the obstacle is always revealed before contact.
  *
- * Module-singleton, mirroring passability.ts / occupancy.ts.
+ * The world's (`world.vision`), keyed by team.
  */
 import type { SimWorld } from "./world.ts";
 import { query } from "bitecs";
-import { MoveTarget, Path, Position, Unit, UnitId } from "./components.ts";
 import { inRange } from "./distance.ts";
-import { getPassability } from "./passability.ts";
 import { unitSight } from "./unitTypes.ts";
 
 /** Default/fallback sight radius in tiles (per-unit sight comes from unitSight()).
  *  Canonical source — re-exported by world.ts; the renderer keeps a matching copy. */
 export const FOW_SIGHT_TILES = 4;
 
-interface TeamVision {
+export interface TeamVision {
 	"explored": Uint8Array;   // 0 = unexplored, 1 = explored (persists)
 	"believedPass": Uint8Array;   // 0 = passable, 1 = blocked (only where explored)
 	"dirty": boolean;      // newly-explored terrain proved blocked → flow cache stale
 }
 
-let _mapW = 0;
-let _mapH = 0;
-const _teams = new Map<number, TeamVision>();
-
-export function initVision(mapW: number, mapH: number, teams: number[]): void {
-	_mapW = mapW;
-	_mapH = mapH;
-	_teams.clear();
-	for (const t of teams) {
-		_teams.set(t, {
-			"explored": new Uint8Array(mapW * mapH),   // nothing explored yet
-			"believedPass": new Uint8Array(mapW * mapH),   // all assumed passable
-			"dirty": false
-		});
-	}
+/** Each of `teams`' vision of a mapW×mapH map: nothing explored, everything assumed passable. */
+export function createVision(mapW: number, mapH: number, teams: number[]): Map<number, TeamVision> {
+	return new Map(teams.map((team) => [team, {
+		"explored": new Uint8Array(mapW * mapH),   // nothing explored yet
+		"believedPass": new Uint8Array(mapW * mapH),   // all assumed passable
+		"dirty": false
+	}]));
 }
 
 /** Fold each team's current visibility into its explored map.  Newly-explored tiles
  *  adopt their real passability; if that reveals a blocked tile, mark that team's
  *  flow cache dirty. */
 export function visionSystem(world: SimWorld): void {
-	if (_teams.size === 0) { return; }
-	const realPass = getPassability();
+	if (world.vision.size === 0) { return; }
+	const realPass = world.terrain.pass;
 
 	if (!realPass) { return; }
-	const mapW = _mapW; const
-		mapH = _mapH;
+	const { w: mapW, h: mapH } = world.terrain;
+	const { MoveTarget, Path, Position, Unit } = world.components;
 
 	for (const eid of query(world, [Position, Unit, MoveTarget])) {
-		const tv = _teams.get(Unit.team[eid]);
+		const tv = world.vision.get(Unit.team[eid]);
 
 		if (!tv) { continue; }
 		const sight = unitSight(Unit.type[eid]);
@@ -90,14 +80,14 @@ export function visionSystem(world: SimWorld): void {
 }
 
 /** Believed passability for a team's pathfinding (null in pre-map dev mode). */
-export function getBelievedPassability(team: number): Uint8Array | null {
-	return _teams.get(team)?.believedPass ?? null;
+export function getBelievedPassability(world: SimWorld, team: number): Uint8Array | null {
+	return world.vision.get(team)?.believedPass ?? null;
 }
 
 /** Read-and-clear a team's dirty flag: true once after its newly-explored terrain
  *  proved blocked (so the caller can drop that team's stale flow fields). */
-export function takeBelievedDirty(team: number): boolean {
-	const tv = _teams.get(team);
+export function takeBelievedDirty(world: SimWorld, team: number): boolean {
+	const tv = world.vision.get(team);
 
 	if (!tv?.dirty) { return false; }
 	tv.dirty = false;
@@ -107,10 +97,10 @@ export function takeBelievedDirty(team: number): boolean {
 
 /** Debug/e2e: mark the whole map explored for every team so pathfinding uses the real passability
  *  (no fog). Lets scenarios test obstacle routing directly, without fog-of-war discovery in the loop. */
-export function revealAll(): void {
-	const realPass = getPassability();
+export function revealAll(world: SimWorld): void {
+	const realPass = world.terrain.pass;
 
-	for (const tv of _teams.values()) {
+	for (const tv of world.vision.values()) {
 		tv.explored.fill(1);
 		if (realPass) { tv.believedPass.set(realPass); } else { tv.believedPass.fill(0); }
 		tv.dirty = true;   // force each team's flow cache to rebuild against the now-known terrain
@@ -118,16 +108,16 @@ export function revealAll(): void {
 }
 
 /** Serialize every team's explored state for the deterministic snapshot. */
-export function exportExplored(): [number, number[]][] {
-	return [..._teams].map(([team, tv]) => [team, Array.from(tv.explored)]);
+export function exportExplored(world: SimWorld): [number, number[]][] {
+	return [...world.vision].map(([team, tv]) => [team, Array.from(tv.explored)]);
 }
 
 /** Restore explored state from a snapshot and rebuild each team's believedPass. */
-export function importExplored(entries: [number, number[]][]): void {
-	const realPass = getPassability();
+export function importExplored(world: SimWorld, entries: [number, number[]][]): void {
+	const realPass = world.terrain.pass;
 
 	for (const [team, data] of entries) {
-		const tv = _teams.get(team);
+		const tv = world.vision.get(team);
 
 		if (!tv) { continue; }
 		for (let i = 0; i < tv.explored.length; i++) {
@@ -151,6 +141,7 @@ export function importExplored(entries: [number, number[]][]): void {
  * observing* unit's own sight radius (per-unit, unitSight; dodecagonal metric).
  */
 export function computeVisibleUids(world: SimWorld, observerTeam: number): Set<number> {
+	const { MoveTarget, Path, Position, Unit, UnitId } = world.components;
 	const eids = [...query(world, [Position, Unit, MoveTarget])];
 	const myEids: number[] = [];
 	const visible = new Set<number>();
@@ -180,6 +171,8 @@ export function computeVisibleUids(world: SimWorld, observerTeam: number): Set<n
 /** True if tile (tx, ty) is within sight of any unit owned by observerTeam
  *  (each unit using its own unitSight radius). */
 export function isTileVisible(world: SimWorld, observerTeam: number, tx: number, ty: number): boolean {
+	const { MoveTarget, Path, Position, Unit } = world.components;
+
 	for (const e of query(world, [Position, Unit, MoveTarget])) {
 		if (Unit.team[e] !== observerTeam) { continue; }
 		if (inRange(Path.curTx[e] - tx, Path.curTy[e] - ty, unitSight(Unit.type[e]))) { return true; }

@@ -1,7 +1,7 @@
 import type { Command } from "../command.ts";
 import type { SimWorld } from "../world.ts";
 import { CmdType } from "../command.ts";
-import { Building, FP, fpToTile, Position, TILE_PX, Unit, UnitId } from "../components.ts";
+import { FP, fpToTile, TILE_PX } from "../components.ts";
 import { distance } from "../distance.ts";
 import { clearOrderQueue, enqueueOrder, setFormationTargets, setGatherTargets, setMoveTarget, stopUnit } from "../orders.ts";
 import { buildingTrains, cancelProduction, enqueueProduction, setRally } from "../production.ts";
@@ -18,6 +18,7 @@ const FORMATION_SPREAD_MAX = 8 * TILE_PX * FP;   // max unit-to-centroid distanc
  * → CONVERGE: setGatherTargets packs them into a compact grid-aligned block instead.
  */
 function applyMove(world: SimWorld, eids: number[], txFP: number, tyFP: number): void {
+	const { Position, Unit, UnitId } = world.components;
 	const team = Unit.team[eids[0]];
 	const tileX = fpToTile(txFP); const
 		tileY = fpToTile(tyFP);
@@ -78,12 +79,14 @@ function applyMove(world: SimWorld, eids: number[], txFP: number, tyFP: number):
  * re-checked here as the deterministic source of truth.
  */
 export function applyCommands(world: SimWorld, cmds: Command[]): void {
+	const { Building, Unit } = world.components;
+
 	for (const cmd of cmds) {
 		if (cmd.type === CmdType.MOVE) {
 			const eids: number[] = [];
 
 			for (const uid of cmd.unitIds) {
-				const eid = eidForUnitId(uid);
+				const eid = eidForUnitId(world, uid);
 
 				if (eid !== undefined) { eids.push(eid); }
 			}
@@ -101,7 +104,7 @@ export function applyCommands(world: SimWorld, cmds: Command[]): void {
 			spawnUnit(world, cmd.xFP, cmd.yFP, cmd.team, undefined, cmd.typeId);
 		} else if (cmd.type === CmdType.STOP) {
 			for (const uid of cmd.unitIds) {
-				const eid = eidForUnitId(uid);
+				const eid = eidForUnitId(world, uid);
 
 				if (eid === undefined) { continue; }
 				if (cmd.queue) { enqueueOrder(world, eid, { "kind": "stop" }, true); } else { clearOrderQueue(world, eid); stopUnit(world, eid); }
@@ -113,7 +116,7 @@ export function applyCommands(world: SimWorld, cmds: Command[]): void {
 		} else if (cmd.type === CmdType.PRODUCE) {
             // Re-check legality at apply-time (deterministic source of truth): building exists, finished,
             // and actually trains the product.
-			const beid = eidForUnitId(cmd.buildingUid);
+			const beid = eidForUnitId(world, cmd.buildingUid);
 
 			if (beid !== undefined && Building.buildLeft[beid] === 0 && buildingTrains(Unit.type[beid], cmd.productTypeId)) {
 				enqueueProduction(world, cmd.buildingUid, cmd.productTypeId);
@@ -121,7 +124,7 @@ export function applyCommands(world: SimWorld, cmds: Command[]): void {
 		} else if (cmd.type === CmdType.CANCEL_PRODUCE) {
 			cancelProduction(world, cmd.buildingUid, cmd.index);
 		} else if (cmd.type === CmdType.SET_RALLY) {
-			if (eidForUnitId(cmd.buildingUid) !== undefined) { setRally(world, cmd.buildingUid, cmd.txFP, cmd.tyFP); }
+			if (eidForUnitId(world, cmd.buildingUid) !== undefined) { setRally(world, cmd.buildingUid, cmd.txFP, cmd.tyFP); }
 		}
 	}
 }

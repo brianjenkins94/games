@@ -21,10 +21,11 @@
  * cache.  Long-range navigation around terrain is this layer; routing around *units* is the
  * short-range local search (localPath.ts), and incidental jostling is the continuous collision
  * in the movement system.  (Two-tier pathing: cheap cached terrain field + bounded local search.)
+ *
+ * The cache and the Dijkstra's scratch are the world's (`world.flow`).
  */
-
+import type { SimWorld } from "./world.ts";
 import { buildingAtIdx } from "./occupancy.ts";
-import { getMapH, getMapW } from "./passability.ts";
 import { getBelievedPassability, takeBelievedDirty } from "./vision.ts";
 
 // ── Direction table ───────────────────────────────────────────────────────────
@@ -112,58 +113,51 @@ export class MinHeap {
 
 const INF = 0x7FFFFFFF;
 
-// Count of actual reverse-Dijkstra runs (cache misses) — a shared per-group goal should make a group
-// move cost ONE, not one-per-unit.  Exposed for tests/telemetry; incremented in computeFlowField.
-let _computeCount = 0;
+/** A world's flow fields: the LRU cache, a count of the Dijkstra runs, and the Dijkstra's scratch. */
+export interface FlowFields {
+	/** team-and-goal key → FlowField, least recently used first. */
+	"cache": Map<number, FlowField>;
+	/** Actual reverse-Dijkstra runs (cache misses) — a shared per-group goal should make a group move cost ONE, not
+	 *  one-per-unit. For tests and telemetry. */
+	"computeCount": number;
+	/** Reusable scratch for the Dijkstra (the per-field `dirs` is the only thing allocated per call — it's returned
+	 *  and cached), sized to the map on first use. Avoids ~19×map-size of typed-array garbage — chiefly the size*8
+	 *  heap — on every flow-field computation. */
+	"scratch": { "blocked": Uint8Array; "cost": Int32Array; "visited": Uint8Array; "heap": MinHeap } | null;
+}
 
-export function flowComputeCount(): number { return _computeCount; }
+export function createFlowFields(): FlowFields {
+	return { "cache": new Map(), "computeCount": 0, "scratch": null };
+}
 
-// Reusable scratch for the Dijkstra (the per-field `dirs` is the only thing allocated per call — it's
-// returned and cached).  Sized to the map; grown if the map ever gets larger.  Avoids ~19×map-size of
-// typed-array garbage — chiefly the size*8 heap — on every flow-field computation.
-let _scratchSize = 0;
-let _blocked: Uint8Array | null = null;
-let _cost: Int32Array | null = null;
-let _visited: Uint8Array | null = null;
-let _scratchHeap: MinHeap | null = null;
+function scratchFor(world: SimWorld, size: number): NonNullable<FlowFields["scratch"]> {
+	world.flow.scratch ??= { "blocked": new Uint8Array(size), "cost": new Int32Array(size), "visited": new Uint8Array(size), "heap": new MinHeap(size * 8) };   // each tile can be pushed at most 8 times
 
-function ensureScratch(size: number): void {
-	if (size <= _scratchSize) { return; }
-	_scratchSize = size;
-	_blocked = new Uint8Array(size);
-	_cost = new Int32Array(size);
-	_visited = new Uint8Array(size);
-	_scratchHeap = new MinHeap(size * 8);   // each tile can be pushed at most 8 times
+	return world.flow.scratch;
 }
 
 /**
  * Run reverse-Dijkstra from (goalTx, goalTy) and build a per-tile direction
  * array.  Returns null if the goal tile is terrain-impassable.
  */
-export function computeFlowField(team: number, goalTx: number, goalTy: number): FlowField | null {
+export function computeFlowField(world: SimWorld, team: number, goalTx: number, goalTy: number): FlowField | null {
     // Believed passability for THIS team: unexplored tiles are assumed passable so
     // units path optimistically into fog and re-route on discovery (see vision.ts).
-	const pass = getBelievedPassability(team);
-	const mapW = getMapW();
-	const mapH = getMapH();
+	const pass = getBelievedPassability(world, team);
+	const { w: mapW, h: mapH } = world.terrain;
 
 	if (!pass || mapW === 0) { return null; }
 
 	goalTx = Math.max(0, Math.min(mapW - 1, goalTx));
 	goalTy = Math.max(0, Math.min(mapH - 1, goalTy));
 
-	_computeCount += 1;
+	world.flow.computeCount += 1;
 	const size = mapW * mapH;
-
-	ensureScratch(size);
-	const blocked = _blocked;
-	const cost = _cost;
-	const visited = _visited;
-	const heap = _scratchHeap;
+	const { blocked, cost, visited, heap } = scratchFor(world, size);
 
     // Combined obstacle map (terrain impassable per this team's belief OR a building footprint) plus the
     // cost/visited reset — one pass over the scratch.  Mobile units are NOT here (continuous collision).
-	for (let i = 0; i < size; i++) { blocked[i] = (pass[i] || buildingAtIdx(i)) ? 1 : 0; cost[i] = INF; visited[i] = 0; }
+	for (let i = 0; i < size; i++) { blocked[i] = (pass[i] || buildingAtIdx(world, i)) ? 1 : 0; cost[i] = INF; visited[i] = 0; }
 	heap.clear();
 
 	const goalIdx = goalTy * mapW + goalTx;
@@ -246,52 +240,53 @@ export function computeFlowField(team: number, goalTx: number, goalTy: number): 
 // Formation moves give each unit in a group its own goal tile (one field each), so
 // the cache must hold several groups' worth of distinct goals without thrashing.
 const CACHE_CAP = 64;
-const _cache = new Map<number, FlowField>(); // goalIdx → FlowField
 
-export function getOrComputeFlowField(team: number, goalTx: number, goalTy: number): FlowField | null {
+export function getOrComputeFlowField(world: SimWorld, team: number, goalTx: number, goalTy: number): FlowField | null {
     // Newly-explored terrain that proved blocked invalidates fields computed under the prior optimistic
     // belief — drop THIS team's fields so they recompute against reality.  Per-team (not the whole cache),
     // so one team's constant scouting doesn't keep evicting the other team's fields.
-	if (takeBelievedDirty(team)) { clearFlowFieldCacheForTeam(team); }
+	if (takeBelievedDirty(world, team)) { clearFlowFieldCacheForTeam(world, team); }
 
-	const mapW = getMapW();
+	const { w: mapW, h: mapH } = world.terrain;
+	const cache = world.flow.cache;
     // Cache key includes team so the same goal yields each team's own field.
-	const key = team * (mapW * getMapH()) + goalTy * mapW + goalTx;
+	const key = team * (mapW * mapH) + goalTy * mapW + goalTx;
 
     // LRU hit — move to end
-	const cached = _cache.get(key);
+	const cached = cache.get(key);
 
 	if (cached) {
-		_cache.delete(key);
-		_cache.set(key, cached);
+		cache.delete(key);
+		cache.set(key, cached);
 
 		return cached;
 	}
 
-	const ff = computeFlowField(team, goalTx, goalTy);
+	const ff = computeFlowField(world, team, goalTx, goalTy);
 
 	if (!ff) { return null; }
 
-	if (_cache.size >= CACHE_CAP) {
+	if (cache.size >= CACHE_CAP) {
         // Evict least-recently-used (first entry in insertion-order Map)
-		_cache.delete(_cache.keys().next().value);
+		cache.delete(cache.keys().next().value);
 	}
 
-	_cache.set(key, ff);
+	cache.set(key, ff);
 
 	return ff;
 }
 
-export function clearFlowFieldCache(): void { _cache.clear(); }
+export function clearFlowFieldCache(world: SimWorld): void { world.flow.cache.clear(); }
 
 /** Drop only `team`'s cached fields (its goal keys occupy a contiguous span — see the key formula).
  *  Internal: invoked by getOrComputeFlowField when this team's belief turns dirty. */
-function clearFlowFieldCacheForTeam(team: number): void {
-	const span = getMapW() * getMapH();
+function clearFlowFieldCacheForTeam(world: SimWorld, team: number): void {
+	const cache = world.flow.cache;
+	const span = world.terrain.w * world.terrain.h;
 	const lo = team * span; const
 		hi = lo + span;
 
-	for (const k of _cache.keys()) {
-		if (k >= lo && k < hi) { _cache.delete(k); }
+	for (const k of cache.keys()) {
+		if (k >= lo && k < hi) { cache.delete(k); }
 	}
 }

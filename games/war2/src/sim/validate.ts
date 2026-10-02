@@ -13,8 +13,7 @@
 import type { Command } from "./command.ts";
 import type { SimWorld } from "./world.ts";
 import { CmdType } from "./command.ts";
-import { Building, FP, TILE_PX, Unit, WORLD_H, WORLD_W } from "./components.ts";
-import { getMapH, getMapW } from "./passability.ts";
+import { FP, TILE_PX, WORLD_H, WORLD_W } from "./components.ts";
 import { buildingTrains } from "./production.ts";
 import { isBuildingType, unitFootprint, unitTypeDef } from "./unitTypes.ts";
 import { eidForUnitId, unitEids } from "./world.ts";
@@ -55,31 +54,34 @@ function isInt(value: unknown): value is number {
 }
 
 /** The world's extent in FP: the map's, or the mapless default. */
-function extentFP(): [number, number] {
-	const mapW = getMapW();
-	const mapH = getMapH();
+function extentFP(world: SimWorld): [number, number] {
+	const { w: mapW, h: mapH } = world.terrain;
 
 	return mapW > 0 && mapH > 0 ? [mapW * TILE_PX * FP, mapH * TILE_PX * FP] : [WORLD_W, WORLD_H];
 }
 
-function inBoundsFP(x: number, y: number): boolean {
-	const [w, h] = extentFP();
+function inBoundsFP(world: SimWorld, x: number, y: number): boolean {
+	const [w, h] = extentFP(world);
 
 	return x >= 0 && y >= 0 && x < w && y < h;
 }
 
 function teamUnitCount(world: SimWorld, team: number): number {
+	const { Unit } = world.components;
+
 	return unitEids(world).filter((eid) => Unit.team[eid] === team).length;
 }
 
 /** The issuer's mobile units, by stable id: every one existing, owned, not a building, and listed once. */
-function checkUnits(value: unknown, team: number): Rejection | undefined {
+function checkUnits(world: SimWorld, value: unknown, team: number): Rejection | undefined {
+	const { Building, Unit } = world.components;
+
 	if (!Array.isArray(value) || value.length === 0 || value.length > MAX_LIVE_UNITS || !value.every(isInt) || new Set(value).size !== value.length) {
 		return "malformed";
 	}
 
 	for (const uid of value as number[]) {
-		const eid = eidForUnitId(uid);
+		const eid = eidForUnitId(world, uid);
 
 		if (eid === undefined) {
 			return "unknown-unit";
@@ -98,12 +100,14 @@ function checkUnits(value: unknown, team: number): Rejection | undefined {
 }
 
 /** The issuer's building, by stable id: its entity, or why not. */
-function checkBuilding(value: unknown, team: number): number | Rejection {
+function checkBuilding(world: SimWorld, value: unknown, team: number): number | Rejection {
+	const { Building, Unit } = world.components;
+
 	if (!isInt(value)) {
 		return "malformed";
 	}
 
-	const eid = eidForUnitId(value);
+	const eid = eidForUnitId(world, value);
 
 	if (eid === undefined) {
 		return "unknown-unit";
@@ -117,7 +121,7 @@ function checkBuilding(value: unknown, team: number): number | Rejection {
 }
 
 function validateUnitCommand(world: SimWorld, team: number, value: Record<string, unknown>, queue: boolean): Validation {
-	const rejection = checkUnits(value["unitIds"], team);
+	const rejection = checkUnits(world, value["unitIds"], team);
 
 	if (rejection !== undefined) {
 		return refuse(rejection);
@@ -139,7 +143,7 @@ function validateUnitCommand(world: SimWorld, team: number, value: Record<string
 		return refuse("malformed");
 	}
 
-	if (!inBoundsFP(txFP, tyFP)) {
+	if (!inBoundsFP(world, txFP, tyFP)) {
 		return refuse("out-of-bounds");
 	}
 
@@ -158,7 +162,7 @@ function validateBuild(world: SimWorld, team: number, value: Record<string, unkn
 	}
 
 	const [fw, fh] = unitFootprint(typeId);
-	const [w, h] = extentFP();
+	const [w, h] = extentFP(world);
 
 	if (tileX < 0 || tileY < 0 || (tileX + fw) * TILE_PX * FP > w || (tileY + fh) * TILE_PX * FP > h) {
 		return refuse("out-of-bounds");
@@ -172,7 +176,8 @@ function validateBuild(world: SimWorld, team: number, value: Record<string, unkn
 }
 
 function validateBuildingCommand(world: SimWorld, team: number, value: Record<string, unknown>): Validation {
-	const eid = checkBuilding(value["buildingUid"], team);
+	const { Unit } = world.components;
+	const eid = checkBuilding(world, value["buildingUid"], team);
 
 	if (typeof eid === "string") {
 		return refuse(eid);
@@ -214,7 +219,7 @@ function validateBuildingCommand(world: SimWorld, team: number, value: Record<st
 		return refuse("malformed");
 	}
 
-	if (!inBoundsFP(txFP, tyFP)) {
+	if (!inBoundsFP(world, txFP, tyFP)) {
 		return refuse("out-of-bounds");
 	}
 

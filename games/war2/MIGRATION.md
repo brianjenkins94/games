@@ -133,10 +133,10 @@ Most of them disappear **by construction** in this plan rather than by patching.
 
 | Question | war2 today | Recommendation |
 |---|---|---|
-| Who owns sim state | bitecs components as module-level arrays; recycled entity ids | **Keep bitecs and its component model.** It's integral to the game maker: components are behaviors, systems are rules (see "Shaped for the game maker"). Fix the recycled-id bugs inside bitecs: reset *every* per-entity field on spawn (`wp*` included, from the field registry), and key `lastMove` and every tie-break by the stable `UnitId`, never the eid. Guard the entity cap. One world per realm stays acceptable (the referee and each client are separate workers); bitecs 0.4 can hang components off the world's context if tests ever need two. Declare bitecs in war2's own `package.json`. |
+| Who owns sim state | bitecs components as module-level arrays; recycled entity ids | **Keep bitecs and its component model.** It's integral to the game maker: components are behaviors, systems are rules (see "Shaped for the game maker"). Fix the recycled-id bugs inside bitecs: reset *every* per-entity field on spawn (`wp*` included, from the field registry), and key `lastMove` and every tie-break by the stable `UnitId`, never the eid. Guard the entity cap. **All sim state on the world** (decided in W2, when the match tests needed a referee and its clients' predictions in one process): bitecs 0.4 components hang off each world, as does everything else the sim keeps. Declare bitecs in war2's own `package.json`. |
 | Snapshot, restore, hash | Hand-listed fields, some missing; hash = positions | **One field list per bitecs component** drives all three, plus the spawn reset (netsim's `UNIT_FIELDS`, applied to components). The hash covers every sim field plus tick, RNG and queues, so restore + replay == continuous becomes a cheap property test. |
 | Unit type ids | Sorted `units.json` keys | An explicit, stable table (or names on the wire). Read each unit's own `speed`. |
-| Finding players, connecting | PeerJS (a local broker on :9000 in dev, PeerJS cloud when deployed); the top page relays pairing | **Keep PeerJS** for discovery and the connection across machines, the piece netsim doesn't have yet. It needs no servers of ours: PeerJS cloud brokers signaling, and its defaults (1.5.5) include Google STUN and PeerJS's own TURN relays (`eu-0`/`us-0.turn.peerjs.com`), so testers behind NATs that block direct connections still connect, relayed. It's free and shared, with no uptime guarantee: fine for playtesting; a shipped game would swap in its own signaling and TURN behind the same seam. Two fixes:<br>• open the channel **reliable and ordered** (hub's transport contract; war2 opens it `reliable: false`);<br>• **hand the data channel to the worker as it's created.** On the dialing side, `peer.connect()` creates it synchronously. On the answering side, listen for the peer connection's `datachannel` event from within `peer.on("connection")`. Verify this with PeerJS first: it's the open risk of W2.<br>Pairing comes from the lobby and PeerJS ids, not the top page. netsim's `Signaling` seam could reuse PeerJS for its own cross-machine gap. |
+| Finding players, connecting | PeerJS (a local broker on :9000 in dev, PeerJS cloud when deployed); the top page relays pairing | **Keep PeerJS** for discovery and the connection across machines, the piece netsim doesn't have yet. It needs no servers of ours: PeerJS cloud brokers signaling, and its defaults (1.5.5) include Google STUN and PeerJS's own TURN relays (`eu-0`/`us-0.turn.peerjs.com`), so testers behind NATs that block direct connections still connect, relayed. It's free and shared, with no uptime guarantee: fine for playtesting; a shipped game would swap in its own signaling and TURN behind the same seam. Two fixes:<br>• open the channel **reliable and ordered** (hub's transport contract; war2 opens it `reliable: false`);<br>• **hand the data channel to the worker as it's created.** On the dialing side, `peer.connect()` creates it synchronously. On the answering side, listen for the peer connection's `datachannel` event from within `peer.on("connection")`. Verified in W2 (`test/browser/peerjs.test.ts`).<br>Pairing comes from the lobby and PeerJS ids, not the top page. netsim's `Signaling` seam could reuse PeerJS for its own cross-machine gap. |
 | Protocol over the connection | Unordered, unsequenced, no base tick, no view hash, host in-process | **netsim's protocol and runtime:** sequenced, acked command batches; `baseTick` deltas with view hashes; fog enforced by hub permissions; hub links over `dataChannelTransport`. Fixes the stale-delta, malformed-packet and false-ordering-comment findings by construction. |
 | The host's own player | In-process `LocalRefereeClient` | **A client worker like any other** (netsim's model), linked over a data channel or a MessageChannel. One code path for prediction, interpolation and render state. |
 | Game speed | A guest-sendable command | A **referee RPC only the host may call.** |
@@ -281,10 +281,34 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
     - **The ring-search helper.** The six ring searches are `orders.ts`'s formation and gather logic, which the
       rewrite replaces. Factoring them now would polish code that's about to go.
   - Must pass the W0 oracle (modulo documented deviations) and restore + replay == continuous as a property test.
-- **W2: the net layer.**
+- **W2: the net layer.** *In progress.*
   - First, the PeerJS check: a reliable, ordered PeerJS data channel handed to a worker as it's created, on both the
     dialing and the answering side, in a browser test. If PeerJS won't allow it, decide between relaying through the
     page and owning the peer connection under PeerJS's broker.
+
+    *Done: PeerJS allows it.* `test/browser/peerjs.test.ts` runs two players, each in its own browser context, through
+    a local PeerJS broker (PeerJS's own server, in a child process: it never stops its timers). The dialer hands
+    `peer.connect(…, { reliable: true, serialization: "raw" }).dataChannel` to its worker straight away: `connect()`
+    builds the peer connection and channel synchronously. The answerer, inside `peer.on("connection")`, adds a
+    `datachannel` listener to `connection.peerConnection`. That fires after PeerJS's own handler has set `binaryType`
+    and listeners on the channel, and the transfer still works. The workers link hubs over the channel: a round trip
+    each way, then 2,000 sequenced messages, all delivered in order (`reliable: true` is PeerJS for `ordered`, with no
+    retransmit limit). A second test pins the old client's bug: handed over in PeerJS's `open`, the transfer throws
+    `DataCloneError`. So war2 keeps PeerJS, and the page never carries game traffic. (PeerJS's own `open`/`close`
+    events stop on the page once the channel moves; the worker's hub sees the channel's.)
+  - Then, all sim state onto the world. netsim's match tests run a referee and several predicting clients in one
+    process, stepped tick by tick over a virtual network with fault injection. war2's sim kept one world per realm in
+    module globals (the component arrays, terrain, occupancy, walk grid, flow-field cache, local-path and Dijkstra
+    scratch, path obstacles, vision, RNG, id registry), so a second world trampled the first.
+
+    *Done.* `createSimWorld` builds a bitecs world whose context holds all of it: `components` (each world makes its
+    own typed arrays, `createComponents`), `fields` (its SIM_FIELDS), `rng`, `nextUnitId` and `eidOf`, `terrain`,
+    `occupancy`, `walk`, `obstacles`, `local`, `flow` and `vision`. Every sim function that reads or writes state takes
+    the world; systems take their components from `world.components`, bitecs 0.4's idiom. The oracle drives both sims
+    through a small per-sim driver (the old one still module-global), and the port still matches all its traces tick
+    for tick; old and new run the heaviest scenarios at the same speed. Two tests keep it so: two games interleaved
+    tick by tick play exactly as each does alone, and a scan of `src/sim` fails on any module-level variable or
+    container that isn't one of the constant lookup tables.
   - netsim's referee and client with war2's sim inside, over hub links on that channel.
   - Prediction ported into the client shape. The host's player as a client worker. Speed as a host RPC. Fog in the
     client worker.

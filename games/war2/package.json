@@ -5,17 +5,23 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "test": "node --run test:node && node --run test:oracle",
+    "test": "node --run test:node && node --run test:oracle && node --run test:browser",
     "test:node": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-skip-pattern=\"random-plains\" --test-coverage-lines=90 --test-coverage-branches=85 --test-coverage-functions=80 \"test/sim.test.ts\" \"test/validate.test.ts\" \"test/snapshot.test.ts\"",
     "test:oracle": "tsx --test \"test/oracle.test.ts\" \"test/snapshot.test.ts\"",
+    "test:browser": "node --test \"test/browser/*.test.ts\"",
     "record": "tsx test/oracle/record.ts"
   },
   "dependencies": {
-    "bitecs": "^0.4.0"
+    "@brianjenkins94/hub": "https://brianjenkins94.github.io/editor/packages/hub@latest.tgz",
+    "bitecs": "^0.4.0",
+    "peerjs": "^1.5.5"
   },
   "devDependencies": {
     "@brianjenkins94/util": "https://brianjenkins94.github.io/lib/util@latest.tgz",
-    "tsx": "^4.20.0"
+    "peer": "^1.0.2",
+    "playwright": "^1.63.0",
+    "tsx": "^4.20.0",
+    "vite": "^8.0.0"
   },
   "engines": {
     "node": ">=24.0.0"

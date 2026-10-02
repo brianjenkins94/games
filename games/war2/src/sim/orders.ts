@@ -11,10 +11,9 @@
 import type { Order } from "./types.ts";
 import type { SimWorld } from "./world.ts";
 import { hasComponent } from "bitecs";
-import { Building, FP, fpToTile, MoveTarget, Path, Position, snapWalkFP, TILE_PX, tileCenterFP, Unit, UnitAnim, UnitId, WALK_PX } from "./components.ts";
+import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, WALK_PX } from "./components.ts";
 import { distance, octant } from "./distance.ts";
 import { getOrComputeFlowField, UNREACHABLE } from "./flowField.ts";
-import { getMapH, getMapW } from "./passability.ts";
 import { markIdleDirty } from "./pathObstacles.ts";
 import { stopUnit as _stopUnit } from "./systems/movement.ts";
 import { unitRadiusPx } from "./unitTypes.ts";
@@ -42,10 +41,11 @@ import { unitEids } from "./world.ts";
  * Path.active here would NOT be safe — the deterministic movement system acts on
  * those, which would move the predicting player's units ahead of the host.
  */
-export function previewMoveTarget(_world: SimWorld, eid: number, txFP: number, tyFP: number): void {
+export function previewMoveTarget(world: SimWorld, eid: number, txFP: number, tyFP: number): void {
+	const { Path, Position, Unit, UnitAnim } = world.components;
 	const team = Unit.team[eid];
-	const pass = getBelievedPassability(team);   // fog-aware (matches setMoveTarget)
-	const mapW = getMapW();
+	const pass = getBelievedPassability(world, team);   // fog-aware (matches setMoveTarget)
+	const mapW = world.terrain.w;
 
 	let goalTx = fpToTile(txFP);
 	let goalTy = fpToTile(tyFP);
@@ -60,14 +60,14 @@ export function previewMoveTarget(_world: SimWorld, eid: number, txFP: number, t
 		if (pass[goalTy * mapW + goalTx]) {
             // Blocked terrain — preview toward the nearest walkable tile (matches
             // setMoveTarget so the instant facing agrees with where it'll go).
-			const near = nearestPassableTile(team, goalTx, goalTy);
+			const near = nearestPassableTile(world, team, goalTx, goalTy);
 
 			if (!near) { return; }
 			[goalTx, goalTy] = near;
 			if (curTx === goalTx && curTy === goalTy) { return; }
 		}
 
-		const ff = getOrComputeFlowField(team, goalTx, goalTy);
+		const ff = getOrComputeFlowField(world, team, goalTx, goalTy);
 
 		if (!ff) { return; }
 		const myIdx = curTy * mapW + curTx;
@@ -95,10 +95,10 @@ export function previewMoveTarget(_world: SimWorld, eid: number, txFP: number, t
  * integer dodecagon distance to the click, breaking ties by scan order.  Returns
  * the tile itself if it is already passable, or null if the map has none.
  */
-function nearestPassableTile(team: number, tx: number, ty: number): [number, number] | null {
-	const pass = getBelievedPassability(team);   // fog-aware: unexplored counts as passable
-	const mapW = getMapW();
-	const mapH = getMapH();
+function nearestPassableTile(world: SimWorld, team: number, tx: number, ty: number): [number, number] | null {
+	const pass = getBelievedPassability(world, team);   // fog-aware: unexplored counts as passable
+	const mapW = world.terrain.w;
+	const mapH = world.terrain.h;
 
 	if (!pass) { return [tx, ty]; }
 	const inBounds = (x: number, y: number) => x >= 0 && x < mapW && y >= 0 && y < mapH;
@@ -131,8 +131,8 @@ function nearestPassableTile(team: number, tx: number, ty: number): [number, num
 }
 
 /** Authoritative halt — clears movement/path/anim state (occupancy unchanged). */
-export function stopUnit(_world: SimWorld, eid: number): void {
-	_stopUnit(eid);
+export function stopUnit(world: SimWorld, eid: number): void {
+	_stopUnit(world, eid);
 }
 
 // ── Action queue (shift-queued orders) ────────────────────────────────────────
@@ -149,6 +149,8 @@ function applyOrder(world: SimWorld, eid: number, order: Order): void {
 
 /** Drop a unit's pending action queue (replace semantics — the live order is untouched). */
 export function clearOrderQueue(world: SimWorld, eid: number): void {
+	const { UnitId } = world.components;
+
 	if (world.orders) { delete world.orders[UnitId.id[eid]]; }
 }
 
@@ -158,6 +160,7 @@ export function clearOrderQueue(world: SimWorld, eid: number): void {
  * waits its turn.
  */
 export function enqueueOrder(world: SimWorld, eid: number, order: Order, queue: boolean): void {
+	const { MoveTarget, UnitId } = world.components;
 	const uid = UnitId.id[eid];
 
 	if (!queue) {
@@ -179,6 +182,7 @@ export function enqueueOrder(world: SimWorld, eid: number, order: Order, queue: 
 
 /** Pop and apply the unit's next queued order, if any.  Returns whether one was applied. */
 export function applyNextOrder(world: SimWorld, eid: number): boolean {
+	const { UnitId } = world.components;
 	const uid = UnitId.id[eid];
 	const q = world.orders?.[uid];
 
@@ -193,6 +197,8 @@ export function applyNextOrder(world: SimWorld, eid: number): boolean {
 
 /** Per-tick pass (after movementSystem): hand each settled unit its next queued order. */
 export function advanceOrderQueues(world: SimWorld): void {
+	const { Building, MoveTarget, UnitId } = world.components;
+
 	if (!world.orders) { return; }
 	for (const eid of unitEids(world)) {
 		if (MoveTarget.active[eid] === 1) { continue; }          // still running its current order
@@ -217,7 +223,7 @@ export function advanceOrderQueues(world: SimWorld): void {
  * Unset → the flow goal IS this unit's slot tile (a standalone move navigates straight to its target).
  */
 export function setMoveTarget(
-	_world: SimWorld,
+	world: SimWorld,
 	eid: number,
 	txFP: number,
 	tyFP: number,
@@ -226,11 +232,12 @@ export function setMoveTarget(
 	flowTxOpt = -1,
 	flowTyOpt = -1
 ): boolean {
+	const { MoveTarget, Path, Position, Unit } = world.components;
 	const team = Unit.team[eid];
 
-	markIdleDirty();   // this unit is (un)settling → its tile leaves/joins the path-obstacle set
-	const pass = getBelievedPassability(team);   // fog-aware: may path into assumed-passable fog
-	const mapW = getMapW();
+	markIdleDirty(world);   // this unit is (un)settling → its tile leaves/joins the path-obstacle set
+	const pass = getBelievedPassability(world, team);   // fog-aware: may path into assumed-passable fog
+	const mapW = world.terrain.w;
 
 	if (!pass) {
         // No map loaded — direct movement fallback (pre-map mode)
@@ -255,7 +262,7 @@ export function setMoveTarget(
         // Blocked terrain (tree/water/cliff). For a formation slot, reject so the caller can fall
         // back to the group destination; otherwise aim for the nearest passable tile *centre*.
 		if (!snapBlocked) { return false; }
-		const near = nearestPassableTile(team, goalTx, goalTy);
+		const near = nearestPassableTile(world, team, goalTx, goalTy);
 
 		if (!near) { return false; }
 		[goalTx, goalTy] = near;
@@ -271,9 +278,9 @@ export function setMoveTarget(
 	if (avoidUnits) {
 		const rad = unitRadiusPx(Unit.type[eid]) * FP;
 
-		if (!footprintSoftFreeAt(goalXFP, goalYFP, rad, eid)) {
+		if (!footprintSoftFreeAt(world, goalXFP, goalYFP, rad, eid)) {
 			const STEP = TILE_PX * FP;
-			const mapH = getMapH();
+			const mapH = world.terrain.h;
 
 			let found = false;
 
@@ -288,7 +295,7 @@ export function setMoveTarget(
 
 						if (tx < 0 || ty < 0 || tx >= mapW || ty >= mapH) { continue; }
 						if (pass[ty * mapW + tx]) { continue; }                        // blocked terrain
-						if (footprintSoftFreeAt(fx, fy, rad, eid)) {
+						if (footprintSoftFreeAt(world, fx, fy, rad, eid)) {
 							goalXFP = fx; goalYFP = fy; goalTx = tx; goalTy = ty;
 							found = true;
 						}
@@ -307,7 +314,7 @@ export function setMoveTarget(
 		flowTy = flowTyOpt;
 
 	if (flowTx < 0 || flowTy < 0) { flowTx = goalTx; flowTy = goalTy; } else if (pass[flowTy * mapW + flowTx]) {
-		const nf = nearestPassableTile(team, flowTx, flowTy);
+		const nf = nearestPassableTile(world, team, flowTx, flowTy);
 
 		if (nf) { [flowTx, flowTy] = nf; } else { flowTx = goalTx; flowTy = goalTy; }
 	}
@@ -334,7 +341,7 @@ export function setMoveTarget(
 
     // Pre-warm the shared flow field (all N units of a group share ONE goal → one Dijkstra) and skip the
     // order if this unit can't reach the shared destination at all.
-	const ff = getOrComputeFlowField(team, flowTx, flowTy);
+	const ff = getOrComputeFlowField(world, team, flowTx, flowTy);
 
 	if (!ff) { return false; }
 	if (ff.dirs[curTy * mapW + curTx] === UNREACHABLE) { return false; }
@@ -354,6 +361,7 @@ export function setMoveTarget(
  * Deterministic: a pure scan of Position/MoveTarget in eid order.
  */
 function occupiedTilesOutside(world: SimWorld, group: number[], mapW: number): Set<number> {
+	const { Building, MoveTarget, Position } = world.components;
 	const inGroup = new Set(group);
 	const taken = new Set<number>();
 
@@ -382,6 +390,7 @@ function assignUnitsToSlots(
 	txFP: number,
 	tyFP: number
 ): void {
+	const { Position, UnitId } = world.components;
 	let gcx = 0; let
 		gcy = 0;
 
@@ -443,10 +452,11 @@ function assignUnitsToSlots(
  * built in eid order (claims are order-dependent but reproduced by replay).
  */
 export function setFormationTargets(world: SimWorld, eids: number[], txFP: number, tyFP: number): void {
+	const { Position, Unit } = world.components;
 	const team = Unit.team[eids[0]];
-	const pass = getBelievedPassability(team);
-	const mapW = getMapW(); const
-		mapH = getMapH();
+	const pass = getBelievedPassability(world, team);
+	const mapW = world.terrain.w; const
+		mapH = world.terrain.h;
 
 	if (!pass) {
 		for (const e of eids) { setMoveTarget(world, e, txFP, tyFP); }
@@ -517,10 +527,11 @@ export function setFormationTargets(world: SimWorld, eids: number[], txFP: numbe
  * (eid tie-breaks) are all pure functions of shared state.
  */
 export function setGatherTargets(world: SimWorld, eids: number[], txFP: number, tyFP: number): void {
+	const { Unit } = world.components;
 	const team = Unit.team[eids[0]];
-	const pass = getBelievedPassability(team);
-	const mapW = getMapW(); const
-		mapH = getMapH();
+	const pass = getBelievedPassability(world, team);
+	const mapW = world.terrain.w; const
+		mapH = world.terrain.h;
 
 	if (!pass) {
 		for (const e of eids) { setMoveTarget(world, e, txFP, tyFP); }
@@ -540,7 +551,7 @@ export function setGatherTargets(world: SimWorld, eids: number[], txFP: number, 
 		cty = fpToTile(tyFP);
 
 	if (!passable(ctx, cty)) {
-		const near = nearestPassableTile(team, ctx, cty);
+		const near = nearestPassableTile(world, team, ctx, cty);
 
 		if (near) { [ctx, cty] = near; }
 	}

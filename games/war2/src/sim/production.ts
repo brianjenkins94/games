@@ -14,10 +14,9 @@ import type { ProductionState } from "./types.ts";
 import type { SimWorld } from "./world.ts";
 import { query } from "bitecs";
 import productionJson from "../assets/production.json" with { "type": "json" };
-import { Building, Path, tileCenterFP, Unit, UnitId } from "./components.ts";
+import { tileCenterFP } from "./components.ts";
 import { isEmpty } from "./occupancy.ts";
 import { enqueueOrder } from "./orders.ts";
-import { getMapH, getMapW, getPassability } from "./passability.ts";
 import { unitBuildTicks, unitTypeName } from "./unitTypes.ts";
 import { spawnUnit } from "./world.ts";
 
@@ -67,19 +66,20 @@ export function setRally(world: SimWorld, buildingUid: number, txFP: number, tyF
 }
 
 /** Nearest passable, building-free tile in expanding rings around a building's footprint (or null). */
-function freeSpawnTileAround(eid: number): [number, number] | null {
+function freeSpawnTileAround(world: SimWorld, eid: number): [number, number] | null {
+	const { Building, Path } = world.components;
 	const fx = Path.curTx[eid]; const
 		fy = Path.curTy[eid];       // footprint top-left
 	const fw = Building.fw[eid]; const
 		fh = Building.fh[eid];
-	const pass = getPassability();
-	const mapW = getMapW(); const
-		mapH = getMapH();
+	const pass = world.terrain.pass;
+	const mapW = world.terrain.w; const
+		mapH = world.terrain.h;
 	const free = (x: number, y: number): boolean => {
 		if (x < 0 || y < 0 || x >= mapW || y >= mapH) { return false; }
 		if (pass && pass[y * mapW + x]) { return false; }        // blocked terrain
 
-		return isEmpty(x, y);                                 // no building occupant (units resolve via collision)
+		return isEmpty(world, x, y);                                 // no building occupant (units resolve via collision)
 	};
 
 	for (let r = 1; r <= Math.max(mapW, mapH); r++) {
@@ -95,6 +95,8 @@ function freeSpawnTileAround(eid: number): [number, number] | null {
 
 /** Advance every building's production queue one tick; spawn + rally completed units. */
 export function productionSystem(world: SimWorld): void {
+	const { Building, Unit, UnitId } = world.components;
+
 	if (!world.production) { return; }
 	for (const eid of query(world, [Building])) {
 		if (Building.buildLeft[eid] > 0) { continue; }            // still under construction → can't produce
@@ -104,7 +106,7 @@ export function productionSystem(world: SimWorld): void {
 		if (!p || p.queue.length === 0) { continue; }
 		if (p.ticksLeft > 0) { p.ticksLeft -= 1; continue; }
 
-		const spot = freeSpawnTileAround(eid);
+		const spot = freeSpawnTileAround(world, eid);
 
 		if (!spot) { continue; }                                  // no room this tick — hold at 0, retry next tick
 		const ueid = spawnUnit(world, tileCenterFP(spot[0]), tileCenterFP(spot[1]), Unit.team[eid], undefined, p.queue[0]);

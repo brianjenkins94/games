@@ -2,25 +2,27 @@
  * The oracle's adapter: run a scenario on a sim, and read its canonical state each tick. Commands go through the
  * sim's own command pipeline (`applyCommands`), as its referee applies them, before each step.
  *
- * One adapter for both sims — the old one (legacy.ts) and the new (sim.ts) — given the modules each exports: until W1
- * changes the shape of the sim, both expose the same API.
+ * One adapter for both sims — the old one (legacy.ts) and the new (sim.ts) — given a small driver for each (`Sim`):
+ * the game API is the same, but the old sim keeps its components and vision in module globals, and the new one on
+ * each game's world.
  */
 import type { CanonicalState, CanonicalUnit } from "./canonical.ts";
 import type { Scenario, ScriptCommand } from "./scenarios.ts";
-import type * as Components from "../../src/sim/components.ts";
+import type { Components } from "../../src/sim/components.ts";
 import type * as GameModule from "../../src/sim/game.ts";
-import type * as UnitTypes from "../../src/sim/unitTypes.ts";
-import type * as Vision from "../../src/sim/vision.ts";
 import { hasComponent } from "bitecs";
 import { fnv } from "./canonical.ts";
 import { mapInfo } from "./scenarios.ts";
 
-/** What the adapter needs of a sim. */
-export interface SimModules {
-	"components": Pick<typeof Components, "Building" | "MoveTarget" | "Position" | "tileCenterFP" | "Unit" | "UnitId">;
-	"game": Pick<typeof GameModule, "createGame">;
-	"unitTypes": Pick<typeof UnitTypes, "unitTypeId" | "unitTypeName">;
-	"vision": Pick<typeof Vision, "exportExplored" | "revealAll">;
+/** What the adapter needs of a sim: a game, and — for a given game — its components, explored maps and reveal. */
+export interface Sim {
+	"createGame": typeof GameModule.createGame;
+	"components": (game: Game) => Pick<Components, "Building" | "MoveTarget" | "Position" | "Unit" | "UnitId">;
+	"exportExplored": (game: Game) => [number, number[]][];
+	"revealAll": (game: Game) => void;
+	"tileCenterFP": (tile: number) => number;
+	"unitTypeId": (name: string) => number;
+	"unitTypeName": (id: number) => string;
 }
 
 // The command types (the old protocol's const enum, inlined; the same numbers in the new sim's CmdType).
@@ -34,12 +36,12 @@ export interface Restore { "every": number }
 
 export type Runner = (scenario: Scenario, onTick: (state: CanonicalState) => void, restore?: Restore) => void;
 
-/** A scenario runner for the sim `modules` belong to: it hands each tick's state (after setup, then after every step)
- *  to `onTick`. */
-export function adapter({ components, game: { createGame }, unitTypes: { unitTypeId, unitTypeName }, vision: { exportExplored, revealAll } }: SimModules): Runner {
-	const { Building, MoveTarget, Position, tileCenterFP, Unit, UnitId } = components;
+/** A scenario runner for `sim`: it hands each tick's state (after setup, then after every step) to `onTick`. */
+export function adapter(sim: Sim): Runner {
+	const { createGame, exportExplored, revealAll, tileCenterFP, unitTypeId, unitTypeName } = sim;
 
 	function canonical(game: Game): CanonicalState {
+		const { Building, MoveTarget, Position, Unit, UnitId } = sim.components(game);
 		const units = game.unitEids().map((eid): CanonicalUnit => {
 			const uid = UnitId.id[eid]!;
 			const unit: CanonicalUnit = { "uid": uid, "type": unitTypeName(Unit.type[eid]!), "team": Unit.team[eid]!, "x": Position.x[eid]!, "y": Position.y[eid]! };
@@ -71,17 +73,19 @@ export function adapter({ components, game: { createGame }, unitTypes: { unitTyp
 			return unit;
 		}).sort((left, right) => left.uid - right.uid);
 
-		return { "tick": game.world.tick, "units": units, "explored": Object.fromEntries(exportExplored().map(([team, explored]) => [team, fnv(explored.join(""))])) };
+		return { "tick": game.world.tick, "units": units, "explored": Object.fromEntries(exportExplored(game).map(([team, explored]) => [team, fnv(explored.join(""))])) };
 	}
 
 	return (scenario, onTick, restore) => {
 		let game = createGame(scenario.seed, mapInfo(scenario.map));
 
 		if (!scenario.fog) {
-			revealAll();
+			revealAll(game);
 		}
 
 		game.initUnitIdCounter(0);
+
+		const { Building, UnitId } = sim.components(game);
 
 		const unitUids = scenario.spawns.map((spawn) => UnitId.id[game.spawnUnit(tileCenterFP(spawn.tile[0]), tileCenterFP(spawn.tile[1]), spawn.team ?? 0, undefined, unitTypeId(spawn.type))]!);
 		const buildings = scenario.buildings.map((building) => {

@@ -12,9 +12,13 @@ const WATER = 1;
 const COAST = 2;
 // IMPASSABLE = 3
 
-let _pass: Uint8Array | null = null;
-let _mapW = 0;
-let _mapH = 0;
+/** A world's terrain: its size in tiles, and which tiles are blocked (null without a map — pre-map dev mode). */
+export interface Terrain {
+	"w": number;
+	"h": number;
+	/** 0 = walkable, 1 = blocked. */
+	"pass": Uint8Array | null;
+}
 
 /**
  * Build the passability array from the tile layer GID data.
@@ -24,26 +28,17 @@ let _mapH = 0;
  * @param mapH       Map height in tiles
  * @param terrainArr terrain.json[tilesetName] — indexed by GID, value = terrain class
  */
-export function initPassability(
-	gids: number[],
-	mapW: number,
-	mapH: number,
-	terrainArr: number[]
-): void {
-	_mapW = mapW;
-	_mapH = mapH;
-	_pass = new Uint8Array(mapW * mapH); // 0 = walkable, 1 = blocked
+export function buildTerrain(gids: number[], mapW: number, mapH: number, terrainArr: number[]): Terrain {
+	const pass = new Uint8Array(mapW * mapH); // 0 = walkable, 1 = blocked
 
 	for (let i = 0; i < gids.length; i++) {
 		const gid = gids[i];
 
-		if (gid === 0) { _pass[i] = 1; continue; }        // empty tile → blocked
+		if (gid === 0) { pass[i] = 1; continue; }        // empty tile → blocked
 		const cls = terrainArr[gid] ?? 3;                  // unknown → impassable
 
-		_pass[i] = (cls === LAND || cls === COAST) ? 0 : 1;
+		pass[i] = (cls === LAND || cls === COAST) ? 0 : 1;
 	}
-}
 
-export function getPassability(): Uint8Array { return _pass; }
-export function getMapW(): number { return _mapW; }
-export function getMapH(): number { return _mapH; }
+	return { "w": mapW, "h": mapH, "pass": pass };
+}

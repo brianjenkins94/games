@@ -7,7 +7,7 @@ import { test } from "node:test";
 import unitsJson from "../src/assets/units.json" with { "type": "json" };
 import unitTypeIds from "../src/assets/unitTypeIds.json" with { "type": "json" };
 import { CmdType } from "../src/sim/command.ts";
-import { MAX_ENTITIES, tileCenterFP, UnitId } from "../src/sim/components.ts";
+import { MAX_ENTITIES, tileCenterFP } from "../src/sim/components.ts";
 import { createGame } from "../src/sim/game.ts";
 import { unitTypeId, unitTypeName } from "../src/sim/unitTypes.ts";
 import { MAX_LIVE_UNITS, MAX_QUEUED_ORDERS, MAX_QUEUED_PRODUCTION, validateCommand } from "../src/sim/validate.ts";
@@ -20,10 +20,10 @@ const EDGE = SIZE * 32 * 1000;
 function setup() {
 	const game = createGame(1, { "gids": Array.from({ "length": SIZE * SIZE }, () => 1), "mapW": SIZE, "mapH": SIZE, "terrainArr": [0, 0] });
 
-	revealAll();
+	revealAll(game.world);
 	game.initUnitIdCounter(0);
 
-	const uid = (eid: number) => UnitId.id[eid]!;
+	const uid = (eid: number) => game.world.components.UnitId.id[eid]!;
 	const footman = unitTypeId("unit-footman");
 	const barracksType = unitTypeId("unit-human-barracks");
 	const mine = [uid(game.spawnUnit(tileCenterFP(1), tileCenterFP(1), 0, undefined, footman)), uid(game.spawnUnit(tileCenterFP(2), tileCenterFP(1), 0, undefined, footman))];

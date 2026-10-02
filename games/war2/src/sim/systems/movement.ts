@@ -34,25 +34,12 @@
  * snapshot/replay reproduces.  UnitAnim is render-only (excluded from hash).
  */
 
+import type { SimWorld } from "../world.ts";
 import { hasComponent, query } from "bitecs";
-import {
-	Building,
-	FP,
-	fpToTile,
-	MoveTarget,
-	Path,
-	Position,
-	snapWalkFP,
-	TILE_PX,
-	tileCenterFP,
-	Unit,
-	UNIT_SPD,
-	UnitAnim
-} from "../components.ts";
+import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, UNIT_SPD } from "../components.ts";
 import { distance, octant } from "../distance.ts";
 import { DIR_DX, DIR_DY, getOrComputeFlowField, UNREACHABLE } from "../flowField.ts";
 import { LOCAL_RANGE, localNextAim } from "../localPath.ts";
-import { getMapH, getMapW } from "../passability.ts";
 import { markIdleDirty } from "../pathObstacles.ts";
 import { unitRadiusPx } from "../unitTypes.ts";
 import { getBelievedPassability } from "../vision.ts";
@@ -83,12 +70,14 @@ function clampStep(delta: number, budget: number): number {
 
 /** Halt a unit: clear movement, path and animation state in one place.
  *  The unit keeps its current walk-cell reservation (it just stops on it). */
-export function stopUnit(eid: number): void {
+export function stopUnit(world: SimWorld, eid: number): void {
+	const { MoveTarget, Path, UnitAnim } = world.components;
+
 	MoveTarget.active[eid] = 0;
 	Path.active[eid] = 0;
 	Path.stuckTicks[eid] = 0;
 	UnitAnim.moving[eid] = 0;
-	markIdleDirty();   // a settled unit joins the path-obstacle set (flow fields route around it)
+	markIdleDirty(world);   // a settled unit joins the path-obstacle set (flow fields route around it)
 }
 
 /** Bring a unit to rest.  The unit has walked (collision-off final approach) onto its goal, which is
@@ -101,8 +90,10 @@ export function stopUnit(eid: number): void {
  *  but it WALKS there as a normal move rather than snapping Position across a whole tile.  An instant
  *  one-tile Position jump is the "unit zooms into a space different from where it looked like it'd land"
  *  pop: the sprite was gliding to its goal, then the sim teleports it.  Walking keeps it continuous. */
-function settleOnto(eid: number, rad: number, restX = Position.x[eid], restY = Position.y[eid]): void {
-	freeUnit(eid);
+function settleOnto(world: SimWorld, eid: number, rad: number, restX = world.components.Position.x[eid], restY = world.components.Position.y[eid]): void {
+	const { Position } = world.components;
+
+	freeUnit(world, eid);
 	const bx = snapWalkFP(restX); const
 		by = snapWalkFP(restY);   // 8px-aligned rest base
 	const STEP = TILE_PX * FP;
@@ -114,9 +105,9 @@ function settleOnto(eid: number, rad: number, restX = Position.x[eid], restY = P
 				const fx = bx + dx * STEP; const
 					fy = by + dy * STEP;
 
-				if (footprintSoftFreeAt(fx, fy, rad, eid)) {
+				if (footprintSoftFreeAt(world, fx, fy, rad, eid)) {
 					Position.x[eid] = fx; Position.y[eid] = fy;
-					reserveUnit(eid); stopUnit(eid);
+					reserveUnit(world, eid); stopUnit(world, eid);
 
 					return;
 				}
@@ -124,12 +115,13 @@ function settleOnto(eid: number, rad: number, restX = Position.x[eid], restY = P
 		}
 	}
 
-	reserveUnit(eid); stopUnit(eid);   // nothing free nearby → rest where we are (last resort)
+	reserveUnit(world, eid); stopUnit(world, eid);   // nothing free nearby → rest where we are (last resort)
 }
 
-export function movementSystem(world: object): void {
-	const mapW = getMapW();
-	const mapH = getMapH();
+export function movementSystem(world: SimWorld): void {
+	const { Building, MoveTarget, Path, Position, Unit } = world.components;
+	const mapW = world.terrain.w;
+	const mapH = world.terrain.h;
 
     // Pre-map dev mode (no terrain / no walk grid): direct movement, no collision.
 	if (mapW === 0) {
@@ -142,7 +134,7 @@ export function movementSystem(world: object): void {
 		if (hasComponent(world, eid, Building)) { continue; }   // buildings: static, never move
 
 		if (Unit.movable[eid] === 1 && MoveTarget.active[eid] === 1) {
-			stepUnit(eid, mapW, mapH);
+			stepUnit(world, eid, mapW, mapH);
 		}
 
         // Refresh the tile the unit sits in (drives flow-field & vision sampling).
@@ -154,7 +146,8 @@ export function movementSystem(world: object): void {
 /** Steer one active unit one step: prefer a clean move that avoids units + terrain (route around);
  *  if boxed in, wait, then phase through units as a last resort; settle onto a free tile on arrival
  *  or when terrain-walled too long.  See the module header for the stuckTicks escalation. */
-function stepUnit(eid: number, mapW: number, mapH: number): void {
+function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): void {
+	const { MoveTarget, Path, Position, Unit, UnitAnim } = world.components;
 	const x = Position.x[eid]; const
 		y = Position.y[eid];
 	const goalX = MoveTarget.tx[eid]; const
@@ -165,12 +158,12 @@ function stepUnit(eid: number, mapW: number, mapH: number): void {
     // onto), push back OUT along the separation normal and spend the tick on that — a unit must never
     // stay jammed inside a parked one.  Uses r-JAM_FP, so the shallow touch of a 45° slip (below) isn't
     // treated as a jam and bounced back out.
-	const sep = separateFrom(x, y, r - JAM_FP, eid);
+	const sep = separateFrom(world, x, y, r - JAM_FP, eid);
 
 	if (sep[0] !== 0 || sep[1] !== 0) {
-		freeUnit(eid);
+		freeUnit(world, eid);
 		Position.x[eid] = x + sep[0]; Position.y[eid] = y + sep[1];
-		reserveUnit(eid);
+		reserveUnit(world, eid);
 		UnitAnim.moving[eid] = 1;
 		UnitAnim.dir[eid] = octant(sep[0], sep[1]);
 		Path.stuckTicks[eid] = 0;
@@ -181,7 +174,7 @@ function stepUnit(eid: number, mapW: number, mapH: number): void {
 	const prevDist = distance(goalX - x, goalY - y);
 
 	if (prevDist <= ARRIVE_FP) {
-		settleOnto(eid, r);
+		settleOnto(world, eid, r);
 
 		return;
 	}   // arrived → rest on a free tile
@@ -219,15 +212,15 @@ function stepUnit(eid: number, mapW: number, mapH: number): void {
 
 		if (Path.wpActive[eid] === 0) {
 			const near = Math.abs(curTx - slotTx) <= LOCAL_RANGE && Math.abs(curTy - slotTy) <= LOCAL_RANGE;
-			const localAim = near ? localNextAim(Unit.team[eid], x, y, goalX, goalY, r) : null;
+			const localAim = near ? localNextAim(world, Unit.team[eid], x, y, goalX, goalY, r) : null;
 
 			if (localAim) {
 				aimX = localAim[0]; aimY = localAim[1];
 			} else {
-				const ff = getOrComputeFlowField(Unit.team[eid], goalTx, goalTy);
+				const ff = getOrComputeFlowField(world, Unit.team[eid], goalTx, goalTy);
 
 				if (!ff) {
-					settleOnto(eid, r);
+					settleOnto(world, eid, r);
 
 					return;
 				}
@@ -237,7 +230,7 @@ function stepUnit(eid: number, mapW: number, mapH: number): void {
 				if (flowDir !== UNREACHABLE) {
 					const dxd = DIR_DX[flowDir]; const
 						dyd = DIR_DY[flowDir];
-					const pass = getBelievedPassability(Unit.team[eid]);
+					const pass = getBelievedPassability(world, Unit.team[eid]);
 					const pinch = dxd !== 0 && dyd !== 0 && Boolean(pass)
 						&& pass[curTy * mapW + (curTx + dxd)] === 1 && pass[(curTy + dyd) * mapW + curTx] === 1;
 
@@ -329,37 +322,37 @@ function stepUnit(eid: number, mapW: number, mapH: number): void {
 	const fullX = clampStep(aimX - x, UNIT_SPD);
 	const fullY = clampStep(aimY - y, UNIT_SPD);
 
-	freeUnit(eid);
+	freeUnit(world, eid);
 	const canPhase = Path.stuckTicks[eid] >= GHOST_AFTER;
 	let nx = x; let ny = y; let
 		tier1 = false;
 
-	if (footprintFreeAt(x + sx, y + sy, r, eid)) {
+	if (footprintFreeAt(world, x + sx, y + sy, r, eid)) {
 		nx = x + sx; ny = y + sy; tier1 = true;
-	} else if (footprintStaticFreeAt(x + sx, y + sy, r)) {
+	} else if (footprintStaticFreeAt(world, x + sx, y + sy, r)) {
 		nx = x + sx; ny = y + sy; tier1 = true;                     // SLIP toward the (planner-routed) aim
-	} else if (fullX !== 0 && footprintFreeAt(x + fullX, y, r, eid)) {
+	} else if (fullX !== 0 && footprintFreeAt(world, x + fullX, y, r, eid)) {
 		nx = x + fullX; tier1 = true;                               // slide X around terrain (full speed)
-	} else if (fullY !== 0 && footprintFreeAt(x, y + fullY, r, eid)) {
+	} else if (fullY !== 0 && footprintFreeAt(world, x, y + fullY, r, eid)) {
 		ny = y + fullY; tier1 = true;                               // slide Y (full speed)
-	} else if (sx !== 0 && sy !== 0 && terrainCentreClearAt(x + sx, y + sy) && unitsSoftFreeAt(x + sx, y + sy, r, eid)) {
+	} else if (sx !== 0 && sy !== 0 && terrainCentreClearAt(world, x + sx, y + sy) && unitsSoftFreeAt(world, x + sx, y + sy, r, eid)) {
 		nx = x + sx; ny = y + sy; tier1 = true;                     // diagonal CORNER-CUT: thread a wall
         // pinch / stairstep.  Terrain is checked centre-only (any box clips the flanking walls at the
         // exact corner), so the centre stays in open terrain while the footprint grazes the corners;
         // settled units still block (unitsSoftFreeAt) so it never cuts straight through a parked unit.
-	} else if (sx !== 0 && footprintSoftFreeAt(x + sx, y, r, eid)) {
+	} else if (sx !== 0 && footprintSoftFreeAt(world, x + sx, y, r, eid)) {
 		nx = x + sx;                                                 // follow moving traffic (cardinal)
-	} else if (sy !== 0 && footprintSoftFreeAt(x, y + sy, r, eid)) {
+	} else if (sy !== 0 && footprintSoftFreeAt(world, x, y + sy, r, eid)) {
 		ny = y + sy;
 	} else if (canPhase) {
         // Waited long enough → push through MOVING traffic on either axis (full diagonal too).  Settled
         // units + terrain still block (footprintSoftFreeAt), so we never phase INTO a parked unit and
         // jam inside it — being boxed by parked units instead waits and settles (STUCK_LIMIT).
-		if (footprintSoftFreeAt(x + sx, y + sy, r, eid)) { nx = x + sx; ny = y + sy; } else if (sx !== 0 && footprintSoftFreeAt(x + sx, y, r, eid)) { nx = x + sx; } else if (sy !== 0 && footprintSoftFreeAt(x, y + sy, r, eid)) { ny = y + sy; }
+		if (footprintSoftFreeAt(world, x + sx, y + sy, r, eid)) { nx = x + sx; ny = y + sy; } else if (sx !== 0 && footprintSoftFreeAt(world, x + sx, y, r, eid)) { nx = x + sx; } else if (sy !== 0 && footprintSoftFreeAt(world, x, y + sy, r, eid)) { ny = y + sy; }
 	}
 
 	Position.x[eid] = nx; Position.y[eid] = ny;
-	reserveUnit(eid);
+	reserveUnit(world, eid);
 
 	UnitAnim.moving[eid] = (nx !== x || ny !== y) ? 1 : 0;
 	if (nx !== x || ny !== y) { UnitAnim.dir[eid] = octant(nx - x, ny - y); }
@@ -373,20 +366,22 @@ function stepUnit(eid: number, mapW: number, mapH: number): void {
 
 	if (tier1 || prevDist - newDist >= PROGRESS_EPS) {
 		Path.stuckTicks[eid] = 0;
-	} else if (prevDist <= NEAR_GOAL_FP && footprintSoftFreeAt(goalX, goalY, r, eid)) {
+	} else if (prevDist <= NEAR_GOAL_FP && footprintSoftFreeAt(world, goalX, goalY, r, eid)) {
         // Near the goal but couldn't thread the last bit in — rest at the goal POSITION if it's clear.
-		settleOnto(eid, r, goalX, goalY);
+		settleOnto(world, eid, r, goalX, goalY);
 	} else {
 		Path.stuckTicks[eid] += 1;
 
 		if (Path.stuckTicks[eid] >= STUCK_LIMIT) {
-			settleOnto(eid, r);
+			settleOnto(world, eid, r);
 		}
 	}
 }
 
 // ── Pre-map fallback (dev only) ────────────────────────────────────────────────
-function movePreMap(world: object): void {
+function movePreMap(world: SimWorld): void {
+	const { MoveTarget, Position, Unit, UnitAnim } = world.components;
+
 	for (const eid of query(world, [Position, MoveTarget, Unit])) {
 		if (!MoveTarget.active[eid]) { continue; }
 		let sx = MoveTarget.tx[eid] - Position.x[eid];
@@ -396,7 +391,7 @@ function movePreMap(world: object): void {
 		if (d <= UNIT_SPD) {
 			Position.x[eid] = MoveTarget.tx[eid];
 			Position.y[eid] = MoveTarget.ty[eid];
-			stopUnit(eid);
+			stopUnit(world, eid);
 			continue;
 		}
 
