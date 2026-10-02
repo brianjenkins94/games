@@ -209,7 +209,8 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
 
 - **W0: an oracle, before anything moves.** *Done (2026-10-01).*
   - The old sim core is frozen in `legacy/` (`src/game`, `src/net/protocol.ts`, the asset JSON it reads, and *Plains of
-    snow BNE*). It runs under tsx because of its `const enum`s; it's deleted once W1 matches it.
+    snow BNE*). It runs under tsx because of its `const enum`s. It's deleted once nothing needs the old sim's traces
+    re-recorded.
   - `test/oracle/scenarios.ts` holds 20 scenarios as plain data any sim can run:
     - the old suite's setups: 8 directions, 4 diagonal gaps, a group in the open with a repeated move and queued moves,
       a pinch corridor, routing around a building, production with rally and cancel, and building placement;
@@ -219,8 +220,8 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
     state at every tick, plus the full state every 100 ticks. That state is positions, move targets, buildings, order
     and production queues, rally points, and each team's explored map, with types by name.
   - `test/oracle.test.ts` replays them all, also in reverse order (the old sim's module globals mustn't leak between
-    scenarios). It names the first tick that differs and the last checkpoint that agreed. In W1 the new sim's adapter
-    runs here instead.
+    scenarios). It names the first tick that differs and the last checkpoint that agreed. Since W1 the new sim runs here
+    too.
   - **What the traces caught:** units that never settle. Their move target stays active while they stand still, and
     the sim keeps working on them every tick:
     - in `pinch-corridor`, two units given a queued move through the corridor never start it;
@@ -229,14 +230,57 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
     These are the stuck / settled-short pathologies the old detector flagged. They're recorded as the old behaviour,
     so when W1 fixes them each fix is a documented diff.
   - The incident corpus comes back with the detector in W4. For now these scenarios stand in for it.
-- **W1: the sim core, bitecs kept, snapshot contract fixed.**
-  - `games/war2/src/sim`: the bitecs components and systems carried over.
-  - New: per-component field lists driving snapshot, restore, the full hash and the spawn reset; `lastMove` and
-    tie-breaks keyed by `UnitId`; an entity-cap guard; the netsim-style validator; a stable type table; per-unit speed.
-  - Erasable TypeScript only (no `const enum`), so Node runs it directly, as it does netsim.
-  - Pathing carried over, plus the mv-1 fix and one ring-search helper.
-  - Must pass the W0 oracle (modulo documented diffs) and restore + replay == continuous as a property test.
-  - Node tests with coverage thresholds, in CI from the first commit.
+- **W1: the sim core, bitecs kept, snapshot contract fixed.** *Done (2026-10-01), bar what's deferred to the pathing
+  rewrite below.*
+  - **What landed:**
+    - The port: `src/sim` is `legacy/src/game` made erasable (`CmdType` a plain object, `.ts` imports, JSON import
+      attributes), plus the commands moved out of the old wire protocol. The oracle runs both sims through one adapter
+      (`test/oracle/adapter.ts`); the mechanical port matched all 20 traces tick for tick.
+    - One field list, `SIM_FIELDS` (from the components, minus the client-only `Unit.selected`/`movable`), now drives
+      the snapshot, the restore, the spawn reset (`resetEntity`) and `worldHash` (every field, plus tick, RNG, id
+      counter, queues, rally, `lastMove` and the explored maps). `Path.wp*` is snapshotted and reset; `lastMove` is
+      snapshotted and keyed by `UnitId`, as are the formation-slot tie-breaks. None of this changed a trace.
+    - `test/sim.test.ts` pins the contract (every field restored, a recycled entity starts clean, `lastMove` survives,
+      the hash sees every field). `test/snapshot.test.ts` is the restore property: every scenario, restored from its own
+      snapshot every 7 ticks, plays exactly as it does uninterrupted.
+  - **The one deliberate deviation so far:** restoring every 7 ticks showed the walk grid depended on history. Where
+    units overlap, a cell keeps whichever unit moved onto it last, which no snapshot carries. The grid is now repainted
+    from positions, in `UnitId` order, at the start of every tick (`repaintWalkGrid`), so it's a function of state. That
+    changes only the three random scenarios (their tight spawn clusters overlap; first difference at ticks 7, 207 and 7).
+    `test/oracle/deviations.ts` lists them with the reason: the new sim is held to its own trace there
+    (`traces/w1/`, `npm run record -- --sim`), the old sim still to the original, and a listed deviation must still
+    differ, or the test fails.
+    - The validator is netsim's shape: `validateCommand(world, team, unknown)` never throws and returns the command
+      normalized (known fields only, `team` stamped) or a typed `Rejection` (`malformed`, `not-allowed`,
+      `unknown-unit`, `not-owner`, `wrong-type`, `out-of-bounds`, `full`). Integers and finiteness, map bounds (a
+      BUILD's whole footprint), type class (no moving buildings, BUILD only buildings, PRODUCE only what that building
+      trains), ownership, the per-team unit cap, plus sanity caps on shift-queued orders (32) and production queues
+      (16). SPAWN and SPEED are refused as `not-allowed` (the host's, and a referee control). The NaN
+      `CANCEL_PRODUCE` that dropped the queue's head is `malformed` now. `test/validate.test.ts` reaches every
+      rejection.
+    - Unit type ids come from an append-only table, `src/assets/unitTypeIds.json`, frozen from the sorted keys the
+      old sim derived them from, so every id is unchanged; a test holds `units.json` to it and pins a few ids.
+    - The entity cap: every spawn checks `hasRoom()` (`MAX_ENTITIES`, the column length less bitecs' id 0) and
+      returns -1 past it, spending no stable id; production holds its finished unit and retries, as it does with no
+      room to place one.
+    - Coverage, netsim-style: `test:node` runs the new sim's tests under `node --test` with thresholds (lines 90,
+      branches 85, functions 80, today 90.6 / 87.2 / 80.3). The random scenarios skip it: under V8's precise coverage
+      their 3,000 ticks take minutes. They run, uncovered, in `test:oracle` (tsx, for the old sim) with the oracle.
+      Functions are low where W2 comes in: the client-side halves of `game.ts` and `snapshot.ts` (known units,
+      reconcile). Raise the floors as W2 tests them.
+  - **Tried and not taken, for the pathing rewrite:**
+    - **mv-1.** Letting settled units block the slip tier (`footprintSoftFreeAt` in place of
+      `footprintStaticFreeAt`) does fix the W0 pathology: the never-settling units in `pinch-corridor` and
+      `production-rally` settle (by ticks 667 and 281), and the random maps end with fewer stuck. But it breaks the
+      "razor" case the slip exists for: in `diagonal-gap-NE`/`-SW` the unit, which threaded the gap cleanly in 57
+      ticks, now stalls 35 ticks and settles 56px short. A trade, not a one-line fix. Both sides are acceptance cases
+      for the rewrite.
+    - **Per-unit speed.** The movement ladder's steps, lanes and progress threshold all assume one global `UNIT_SPD`.
+      Footmen and peasants (speed 10) would keep it, but knights (13) and gryphons (14) would exercise tuning nothing
+      has checked. It goes in with the rewrite.
+    - **The ring-search helper.** The six ring searches are `orders.ts`'s formation and gather logic, which the
+      rewrite replaces. Factoring them now would polish code that's about to go.
+  - Must pass the W0 oracle (modulo documented deviations) and restore + replay == continuous as a property test.
 - **W2: the net layer.**
   - First, the PeerJS check: a reliable, ordered PeerJS data channel handed to a worker as it's created, on both the
     dialing and the answering side, in a browser test. If PeerJS won't allow it, decide between relaying through the
@@ -276,7 +320,8 @@ Decided 2026-10-01:
 - **Host restore: later.** For now a match ends when its host leaves, as in netsim. Revisit once snapshots are
   complete.
 - **Pathing: carried as-is, rewritten later.** It's been buggy: flow fields for long distances, A* for short, with the
-  stuck and settled-short units W0's traces caught. W1 moves it over unchanged (bar the mv-1 one-liner), so the oracle
-  keeps holding. The rewrite comes once war2 is settled on the new stack, against the traces and scenarios W0 built.
+  stuck and settled-short units W0's traces caught. W1 moved it over unchanged, bar the walk-grid repaint (a
+  determinism fix). mv-1 turned out to be a trade, not a one-liner, and went to the rewrite with per-unit speed and the
+  ring searches (see W1). The rewrite comes once war2 is settled on the new stack, against the traces and scenarios W0 built.
 - **Gameplay (combat onward): after the port (W4).** The port stays behaviour-preserving, so the W0 traces keep
   checking every step; combat begins in W5.

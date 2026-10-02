@@ -7,6 +7,7 @@ import type { Scenario } from "./scenarios.ts";
 import * as path from "node:path";
 import * as fs from "@brianjenkins94/util/fs";
 import { digest } from "./canonical.ts";
+import { DEVIATIONS } from "./deviations.ts";
 
 export const CHECKPOINT = 100;
 export const TRACES = path.resolve(import.meta.dirname, "traces");
@@ -40,12 +41,16 @@ export function record(scenario: Scenario, run: (scenario: Scenario, onTick: (st
 	return trace;
 }
 
-export function traceFile(name: string): string {
-	return path.join(TRACES, name + ".json");
+/** Which sim a trace is of: the old one's (W0's recording), or the new one's — the same file, unless the scenario is a
+ *  deviation (deviations.ts), whose new-sim trace is its own, in traces/w1/. */
+export type Of = "legacy" | "sim";
+
+export function traceFile(name: string, of: Of = "legacy"): string {
+	return of === "sim" && name in DEVIATIONS ? path.join(TRACES, "w1", name + ".json") : path.join(TRACES, name + ".json");
 }
 
-export function readTrace(name: string): Trace {
-	return JSON.parse(fs.readFileSync(traceFile(name))) as Trace;
+export function readTrace(name: string, of: Of = "legacy"): Trace {
+	return JSON.parse(fs.readFileSync(traceFile(name, of))) as Trace;
 }
 
 /** Compare a run against a recorded trace: undefined if they agree every tick, else where they first part. */

@@ -6,8 +6,9 @@ snow BNE*, the map the old client loaded).
 
 It's here only as the reference W0's oracle runs against (see `../MIGRATION.md` and `../test/oracle/`): the
 recorded traces come from it, and W1's new sim has to reproduce them. **Don't edit it** — a change here changes the
-reference. It's deleted once W1 matches it.
+reference. It's deleted once nothing needs the old sim's traces re-recorded.
 
 It uses `const enum` (in `src/net/protocol.ts`), which Node's type stripping can't run and the repo's tsconfig
-(`erasableSyntaxOnly`) rejects: it runs under tsx, and a repo-wide `tsc` reports those two lines (CI doesn't run `tsc`).
+(`erasableSyntaxOnly`) rejects: it runs under tsx, and a repo-wide `tsc` reports those two lines, plus a `CommandCard`
+cast in `abilities.ts` (CI doesn't run `tsc`).
 

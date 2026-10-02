@@ -5,7 +5,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "test": "tsx --test \"test/*.test.ts\"",
+    "test": "node --run test:node && node --run test:oracle",
+    "test:node": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-skip-pattern=\"random-plains\" --test-coverage-lines=90 --test-coverage-branches=85 --test-coverage-functions=80 \"test/sim.test.ts\" \"test/validate.test.ts\" \"test/snapshot.test.ts\"",
+    "test:oracle": "tsx --test \"test/oracle.test.ts\" \"test/snapshot.test.ts\"",
     "record": "tsx test/oracle/record.ts"
   },
   "dependencies": {
