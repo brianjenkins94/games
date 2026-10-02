@@ -14,7 +14,7 @@ const TILE = 32_000;
 interface Unit { "uid": number; "team": number; "type": string; "x": number; "y": number; "moving": boolean; "target"?: [number, number]; "building"?: unknown }
 interface State { "tick": number; "paused": boolean; "units": Unit[]; "clients": { "peer": string; "team": number; "viewTick": number; "view": Unit[]; "predicted": Unit[] }[] }
 interface Divergence { "tick": number; "clients": { "peer": string; "comparable": boolean; "identical"?: boolean; "reason"?: string }[] }
-interface Status { "tick": number; "paused": boolean; "speed": number; "stats": Record<string, number>; "seats": { "team": number; "peer": string; "lastSeq": number }[]; "clients": { "state": string }[] }
+interface Status { "tick": number; "paused": boolean; "speed": number; "stats": Record<string, number>; "seats": { "team": number; "peer": string; "lastSeq": number }[]; "clients": { "state": string; "stats": Record<string, number> }[] }
 
 let session: Session;
 

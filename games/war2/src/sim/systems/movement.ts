@@ -34,14 +34,15 @@
  * snapshot/replay reproduces.  UnitAnim is render-only (excluded from hash).
  */
 
+import type { Shape } from "../collide.ts";
 import type { SimWorld } from "../world.ts";
 import { hasComponent } from "bitecs";
+import { inset, unitShape } from "../collide.ts";
 import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, UNIT_SPD } from "../components.ts";
 import { distance, octant } from "../distance.ts";
 import { DIR_DX, DIR_DY, getOrComputeFlowField, UNREACHABLE } from "../flowField.ts";
 import { LOCAL_RANGE, localNextAim } from "../localPath.ts";
 import { markIdleDirty } from "../pathObstacles.ts";
-import { unitRadiusPx } from "../unitTypes.ts";
 import { getBelievedPassability } from "../vision.ts";
 import { unitEids } from "../world.ts";
 import { footprintFreeAt, footprintSoftFreeAt, footprintStaticFreeAt, freeUnit, reserveUnit, separateFrom, terrainCentreClearAt, unitsSoftFreeAt } from "../walkGrid.ts";
@@ -91,7 +92,7 @@ export function stopUnit(world: SimWorld, eid: number): void {
  *  but it WALKS there as a normal move rather than snapping Position across a whole tile.  An instant
  *  one-tile Position jump is the "unit zooms into a space different from where it looked like it'd land"
  *  pop: the sprite was gliding to its goal, then the sim teleports it.  Walking keeps it continuous. */
-function settleOnto(world: SimWorld, eid: number, rad: number, restX = world.components.Position.x[eid], restY = world.components.Position.y[eid]): void {
+function settleOnto(world: SimWorld, eid: number, self: Shape, restX = world.components.Position.x[eid], restY = world.components.Position.y[eid]): void {
 	const { Position } = world.components;
 
 	freeUnit(world, eid);
@@ -106,7 +107,7 @@ function settleOnto(world: SimWorld, eid: number, rad: number, restX = world.com
 				const fx = bx + dx * STEP; const
 					fy = by + dy * STEP;
 
-				if (footprintSoftFreeAt(world, fx, fy, rad, eid)) {
+				if (footprintSoftFreeAt(world, fx, fy, self, eid)) {
 					Position.x[eid] = fx; Position.y[eid] = fy;
 					reserveUnit(world, eid); stopUnit(world, eid);
 
@@ -153,13 +154,13 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 		y = Position.y[eid];
 	const goalX = MoveTarget.tx[eid]; const
 		goalY = MoveTarget.ty[eid];
-	const r = unitRadiusPx(Unit.type[eid]) * FP;   // diamond collision radius (sub-tile)
+	const self = unitShape(Unit.type[eid]);   // its collision shape (collide.ts)
 
     // De-penetrate first: if we're DEEPLY overlapping a settled unit (we settled-onto / were settled-
     // onto), push back OUT along the separation normal and spend the tick on that — a unit must never
     // stay jammed inside a parked one.  Uses r-JAM_FP, so the shallow touch of a 45° slip (below) isn't
     // treated as a jam and bounced back out.
-	const sep = separateFrom(world, x, y, r - JAM_FP, eid);
+	const sep = separateFrom(world, x, y, inset(self, JAM_FP), eid);
 
 	if (sep[0] !== 0 || sep[1] !== 0) {
 		freeUnit(world, eid);
@@ -175,7 +176,7 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 	const prevDist = distance(goalX - x, goalY - y);
 
 	if (prevDist <= ARRIVE_FP) {
-		settleOnto(world, eid, r);
+		settleOnto(world, eid, self);
 
 		return;
 	}   // arrived → rest on a free tile
@@ -213,7 +214,7 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 
 		if (Path.wpActive[eid] === 0) {
 			const near = Math.abs(curTx - slotTx) <= LOCAL_RANGE && Math.abs(curTy - slotTy) <= LOCAL_RANGE;
-			const localAim = near ? localNextAim(world, Unit.team[eid], x, y, goalX, goalY, r) : null;
+			const localAim = near ? localNextAim(world, Unit.team[eid], x, y, goalX, goalY, self) : null;
 
 			if (localAim) {
 				aimX = localAim[0]; aimY = localAim[1];
@@ -221,7 +222,7 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 				const ff = getOrComputeFlowField(world, Unit.team[eid], goalTx, goalTy);
 
 				if (!ff) {
-					settleOnto(world, eid, r);
+					settleOnto(world, eid, self);
 
 					return;
 				}
@@ -328,28 +329,28 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 	let nx = x; let ny = y; let
 		tier1 = false;
 
-	if (footprintFreeAt(world, x + sx, y + sy, r, eid)) {
+	if (footprintFreeAt(world, x + sx, y + sy, self, eid)) {
 		nx = x + sx; ny = y + sy; tier1 = true;
-	} else if (footprintStaticFreeAt(world, x + sx, y + sy, r)) {
+	} else if (footprintStaticFreeAt(world, x + sx, y + sy, self)) {
 		nx = x + sx; ny = y + sy; tier1 = true;                     // SLIP toward the (planner-routed) aim
-	} else if (fullX !== 0 && footprintFreeAt(world, x + fullX, y, r, eid)) {
+	} else if (fullX !== 0 && footprintFreeAt(world, x + fullX, y, self, eid)) {
 		nx = x + fullX; tier1 = true;                               // slide X around terrain (full speed)
-	} else if (fullY !== 0 && footprintFreeAt(world, x, y + fullY, r, eid)) {
+	} else if (fullY !== 0 && footprintFreeAt(world, x, y + fullY, self, eid)) {
 		ny = y + fullY; tier1 = true;                               // slide Y (full speed)
-	} else if (sx !== 0 && sy !== 0 && terrainCentreClearAt(world, x + sx, y + sy) && unitsSoftFreeAt(world, x + sx, y + sy, r, eid)) {
+	} else if (sx !== 0 && sy !== 0 && terrainCentreClearAt(world, x + sx, y + sy) && unitsSoftFreeAt(world, x + sx, y + sy, self, eid)) {
 		nx = x + sx; ny = y + sy; tier1 = true;                     // diagonal CORNER-CUT: thread a wall
         // pinch / stairstep.  Terrain is checked centre-only (any box clips the flanking walls at the
         // exact corner), so the centre stays in open terrain while the footprint grazes the corners;
         // settled units still block (unitsSoftFreeAt) so it never cuts straight through a parked unit.
-	} else if (sx !== 0 && footprintSoftFreeAt(world, x + sx, y, r, eid)) {
+	} else if (sx !== 0 && footprintSoftFreeAt(world, x + sx, y, self, eid)) {
 		nx = x + sx;                                                 // follow moving traffic (cardinal)
-	} else if (sy !== 0 && footprintSoftFreeAt(world, x, y + sy, r, eid)) {
+	} else if (sy !== 0 && footprintSoftFreeAt(world, x, y + sy, self, eid)) {
 		ny = y + sy;
 	} else if (canPhase) {
         // Waited long enough → push through MOVING traffic on either axis (full diagonal too).  Settled
         // units + terrain still block (footprintSoftFreeAt), so we never phase INTO a parked unit and
         // jam inside it — being boxed by parked units instead waits and settles (STUCK_LIMIT).
-		if (footprintSoftFreeAt(world, x + sx, y + sy, r, eid)) { nx = x + sx; ny = y + sy; } else if (sx !== 0 && footprintSoftFreeAt(world, x + sx, y, r, eid)) { nx = x + sx; } else if (sy !== 0 && footprintSoftFreeAt(world, x, y + sy, r, eid)) { ny = y + sy; }
+		if (footprintSoftFreeAt(world, x + sx, y + sy, self, eid)) { nx = x + sx; ny = y + sy; } else if (sx !== 0 && footprintSoftFreeAt(world, x + sx, y, self, eid)) { nx = x + sx; } else if (sy !== 0 && footprintSoftFreeAt(world, x, y + sy, self, eid)) { ny = y + sy; }
 	}
 
 	Position.x[eid] = nx; Position.y[eid] = ny;
@@ -367,14 +368,14 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 
 	if (tier1 || prevDist - newDist >= PROGRESS_EPS) {
 		Path.stuckTicks[eid] = 0;
-	} else if (prevDist <= NEAR_GOAL_FP && footprintSoftFreeAt(world, goalX, goalY, r, eid)) {
+	} else if (prevDist <= NEAR_GOAL_FP && footprintSoftFreeAt(world, goalX, goalY, self, eid)) {
         // Near the goal but couldn't thread the last bit in — rest at the goal POSITION if it's clear.
-		settleOnto(world, eid, r, goalX, goalY);
+		settleOnto(world, eid, self, goalX, goalY);
 	} else {
 		Path.stuckTicks[eid] += 1;
 
 		if (Path.stuckTicks[eid] >= STUCK_LIMIT) {
-			settleOnto(world, eid, r);
+			settleOnto(world, eid, self);
 		}
 	}
 }

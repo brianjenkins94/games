@@ -23,6 +23,9 @@ const _names: string[] = ["", ...unitTypeIds];
 const _ids = new Map<string, number>(_names.map((name, id) => [name, id]));
 
 /** Intern a unit-type name to its stable integer id (0 if unknown). */
+/** How many type ids there are (0, none, included): the length of a table indexed by type id. */
+export const UNIT_TYPE_COUNT = _names.length;
+
 export function unitTypeId(name: string): number {
 	return _ids.get(name) ?? UNIT_TYPE_NONE;
 }

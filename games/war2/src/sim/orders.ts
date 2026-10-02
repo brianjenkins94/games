@@ -11,12 +11,12 @@
 import type { Order } from "./types.ts";
 import type { SimWorld } from "./world.ts";
 import { hasComponent } from "bitecs";
+import { unitShape } from "./collide.ts";
 import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, WALK_PX } from "./components.ts";
 import { distance, octant } from "./distance.ts";
 import { getOrComputeFlowField, UNREACHABLE } from "./flowField.ts";
 import { markIdleDirty } from "./pathObstacles.ts";
 import { stopUnit as _stopUnit } from "./systems/movement.ts";
-import { unitRadiusPx } from "./unitTypes.ts";
 import { getBelievedPassability } from "./vision.ts";
 import { footprintSoftFreeAt } from "./walkGrid.ts";
 import { unitEids } from "./world.ts";
@@ -276,9 +276,9 @@ export function setMoveTarget(
     // tile whose footprint is clear up front, so it paths to a clean rest spot.  Ignores *moving* units
     // (they clear) — only parked units relocate the goal.
 	if (avoidUnits) {
-		const rad = unitRadiusPx(Unit.type[eid]) * FP;
+		const self = unitShape(Unit.type[eid]);
 
-		if (!footprintSoftFreeAt(world, goalXFP, goalYFP, rad, eid)) {
+		if (!footprintSoftFreeAt(world, goalXFP, goalYFP, self, eid)) {
 			const STEP = TILE_PX * FP;
 			const mapH = world.terrain.h;
 
@@ -295,7 +295,7 @@ export function setMoveTarget(
 
 						if (tx < 0 || ty < 0 || tx >= mapW || ty >= mapH) { continue; }
 						if (pass[ty * mapW + tx]) { continue; }                        // blocked terrain
-						if (footprintSoftFreeAt(world, fx, fy, rad, eid)) {
+						if (footprintSoftFreeAt(world, fx, fy, self, eid)) {
 							goalXFP = fx; goalYFP = fy; goalTx = tx; goalTy = ty;
 							found = true;
 						}

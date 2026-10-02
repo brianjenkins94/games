@@ -144,7 +144,7 @@ test("worlds side by side share nothing: two games interleaved tick by tick play
 
 test("the sim keeps no state of its own: no module-level variables, only constant tables", () => {
 	// Everything mutable lives on the world (world.ts). These are lookup tables, built once and never written.
-	const TABLES = new Set(["CmdType", "LOCAL_FIELDS", "DIR_DX", "DIR_DY", "DIR_COST", "_names", "_ids"]);
+	const TABLES = new Set(["CmdType", "LOCAL_FIELDS", "DIR_DX", "DIR_DY", "DIR_COST", "_names", "_ids", "POINT"]);
 	const root = path.resolve(import.meta.dirname, "../src/sim");
 	const found: string[] = [];
 

@@ -15,9 +15,12 @@
  * guest agree.  Plain storage — the rebuild scan lives in world.ts (which can iterate the ECS). It's the world's
  * (`world.obstacles`).
  */
+import type { Shape } from "./collide.ts";
 import type { SimWorld } from "./world.ts";
+import { inside } from "./collide.ts";
 
 const WALK_PX = 8;
+const WALK_FP = WALK_PX * 1000;
 
 /** A world's path obstacles: the C-space grid size in 8px cells, each team's grid, and whether the idle set may have
  *  changed since they were built. */
@@ -40,28 +43,23 @@ export function markIdleDirty(world: SimWorld): void { world.obstacles.dirty = t
 /** Clear every team's grid — called at the start of a rebuild. */
 export function resetIdleGrids(world: SimWorld): void { for (const g of world.obstacles.grids.values()) { g.fill(0); } }
 
-/** Stamp the C-SPACE diamond of a settled unit at world centre (xPx,yPx): every 8px cell whose centre
- *  is within L1 `sumPx` (= mover radius + settled radius) is un-enterable for a mover's centre.  Strict
- *  `<` so touching (L1 == sum) stays free — a mover may path right up against a settled unit, just not
- *  overlap it.  Deterministic integer. */
-export function addIdleCSpace(world: SimWorld, team: number, xPx: number, yPx: number, sumPx: number): void {
+/** Stamp the C-SPACE of a settled unit centred at (xFP,yFP): `cspace` is its shape summed with the mover's
+ *  (collide.sum), and every 8px cell whose centre is inside it is un-enterable for a mover's centre.  Strict, so
+ *  touching stays free — a mover may path right up against a settled unit, just not overlap it.  Deterministic
+ *  integer. */
+export function addIdleCSpace(world: SimWorld, team: number, xFP: number, yFP: number, cspace: Shape): void {
 	const { cW, cH, grids } = world.obstacles;
 	let g = grids.get(team);
 
 	if (!g) { g = new Uint8Array(cW * cH); grids.set(team, g); }
-	const cx0 = Math.max(0, Math.floor((xPx - sumPx) / WALK_PX));
-	const cx1 = Math.min(cW - 1, Math.floor((xPx + sumPx) / WALK_PX));
-	const cy0 = Math.max(0, Math.floor((yPx - sumPx) / WALK_PX));
-	const cy1 = Math.min(cH - 1, Math.floor((yPx + sumPx) / WALK_PX));
+	const cx0 = Math.max(0, Math.floor((xFP - cspace.w) / WALK_FP));
+	const cx1 = Math.min(cW - 1, Math.floor((xFP + cspace.w) / WALK_FP));
+	const cy0 = Math.max(0, Math.floor((yFP - cspace.h) / WALK_FP));
+	const cy1 = Math.min(cH - 1, Math.floor((yFP + cspace.h) / WALK_FP));
 
 	for (let cy = cy0; cy <= cy1; cy++) {
-		const dyc = Math.abs((cy * WALK_PX + WALK_PX / 2) - yPx);
-
-		if (dyc >= sumPx) { continue; }
 		for (let cx = cx0; cx <= cx1; cx++) {
-			const dxc = Math.abs((cx * WALK_PX + WALK_PX / 2) - xPx);
-
-			if (dxc + dyc < sumPx) { g[cy * cW + cx] = 1; }
+			if (inside(cspace.w, cspace.h, cspace.d, cx * WALK_FP + WALK_FP / 2 - xFP, cy * WALK_FP + WALK_FP / 2 - yFP)) { g[cy * cW + cx] = 1; }
 		}
 	}
 }

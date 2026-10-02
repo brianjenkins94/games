@@ -585,8 +585,16 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
        hand-written scenarios' stalls are unchanged. Tests: a 26-tile detour round a wall (the straight line goes well
        past the stall window without gaining — the old detector called it stalled) arrives unflagged; two overlapping
        movers are flagged stacked at 50 ticks.
-    2. `collide.ts`, with every existing shape re-expressed through it and no change in behaviour — every trace
-       identical, the proof that it's a refactor.
+    2. ~~`collide.ts`, with every existing shape re-expressed through it and no change in behaviour.~~ Done
+       (2026-10-02). The octagon (`Shape`: `w`, `h`, `d`), its test (`inside`, `overlaps` of two summed), `depth`,
+       `sum`, `inset`, and the shapes: `unitShape` and `buildingShape` (constant tables built once — the sim keeps no
+       state of its own), `WALL`, `TILE_MOVER`, `POINT`. Every collision now goes through it: the walk grid's terrain,
+       unit and de-penetration tests and its broad-phase, the local A* (its clearance margin is the shape grown, its
+       centre-only diagonal edge `POINT`), movement and orders (a shape, not a radius), and the settled-unit C-space
+       (each unit summed with the assumed mover, stamped in integer fixed point where it used fractional pixels). Every
+       trace, the census and the restore property are unchanged. `test/collide.test.ts` checks the new test against
+       the formulas it replaced, exhaustively, and pins the diagonal-pinch geometry step 4 counts on: a one-tile unit at
+       the corner between two diagonal walls touches both and overlaps neither.
     3. Progress that means progress (the smallest behaviour change): the jitter loops escalate and settle.
     4. One rule for what blocks a mover: the slip goes; the diagonal-gap scenarios must still thread cleanly.
     5. Local planning wherever a parked unit blocks the flow.

@@ -16,7 +16,9 @@
  * Determinism: a pure function of (team, start, goal, terrain, settled C-space).  Generation-stamped
  * scratch avoids per-call allocation and full clears; it's the world's (`world.local`).
  */
+import type { Shape } from "./collide.ts";
 import type { SimWorld } from "./world.ts";
+import { inset, POINT } from "./collide.ts";
 import { DIR_DX, DIR_DY, MinHeap } from "./flowField.ts";
 import { buildingAtIdx } from "./occupancy.ts";
 import { cspaceBlockedCell } from "./pathObstacles.ts";
@@ -27,7 +29,7 @@ export const LOCAL_RANGE = 6;             // tiles: within this of the goal, ste
 const CELLS_PER_TILE = 4;             // 8px cells per 32px tile
 const RANGE_CELLS = LOCAL_RANGE * CELLS_PER_TILE;   // A* window radius around the goal (cells)
 const DIR_COST = [10, 14, 10, 14, 10, 14, 10, 14] as const;
-const CLEARANCE_MARGIN = 12000;   // FP: a cell clear at rFP but not rFP+this is "touching" (low clearance)
+const CLEARANCE_MARGIN = 12000;   // FP: a cell clear for the mover but not for it grown by this is "touching" (low clearance)
 const CLEARANCE_PENALTY = 40;      // extra A* cost for a low-clearance cell → prefer margin, allow touching
 
 /** A world's local-path scratch, over its map's 8px cells. */
@@ -63,22 +65,21 @@ function octile(dx: number, dy: number): number {
 	return 10 * hi + 4 * lo;
 }
 
-/** True if a mover of L1 radius `rFP` centred at (xFP,yFP) is clear of static terrain on this team's
+/** True if a mover of shape `self` centred at (xFP,yFP) is clear of static terrain on this team's
  *  BELIEVED grid.  Delegates to the SAME test the mover uses (walkGrid.terrainClearForPass) so the
- *  planner's route can never permit a path the mover can't walk — walls as diamonds, buildings as
- *  octagons, identically. */
-function terrainClearFP(world: SimWorld, pass: Uint8Array, xFP: number, yFP: number, rFP: number): boolean {
-	return terrainClearForPass(world, pass, xFP, yFP, rFP);
+ *  planner's route can never permit a path the mover can't walk — the same shapes, identically. */
+function terrainClearFP(world: SimWorld, pass: Uint8Array, xFP: number, yFP: number, self: Shape): boolean {
+	return terrainClearForPass(world, pass, xFP, yFP, self);
 }
 
 /** Cell-centre terrain test for the A* grid (true = blocked for a centre sitting in that cell). */
-function terrainCell(world: SimWorld, pass: Uint8Array, cx: number, cy: number, rFP: number): boolean {
-	return !terrainClearFP(world, pass, (cx * 8 + 4) * 1000, (cy * 8 + 4) * 1000, rFP);
+function terrainCell(world: SimWorld, pass: Uint8Array, cx: number, cy: number, self: Shape): boolean {
+	return !terrainClearFP(world, pass, (cx * 8 + 4) * 1000, (cy * 8 + 4) * 1000, self);
 }
 
-/** True if the straight segment (ax,ay)→(bx,by) is traversable for a mover of radius rFP — clear of
+/** True if the straight segment (ax,ay)→(bx,by) is traversable for a mover of shape `self` — clear of
  *  terrain AND this team's settled-unit C-space.  Drives the string-pull. */
-function losClear(world: SimWorld, pass: Uint8Array, team: number, ax: number, ay: number, bx: number, by: number, rFP: number): boolean {
+function losClear(world: SimWorld, pass: Uint8Array, team: number, ax: number, ay: number, bx: number, by: number, self: Shape): boolean {
 	const dx = bx - ax; const
 		dy = by - ay;
 	const span = Math.abs(dx) > Math.abs(dy) ? Math.abs(dx) : Math.abs(dy);
@@ -88,7 +89,7 @@ function losClear(world: SimWorld, pass: Uint8Array, team: number, ax: number, a
 		const x = ax + ((dx * i / steps) | 0); const
 			y = ay + ((dy * i / steps) | 0);
 
-		if (!terrainClearFP(world, pass, x, y, rFP)) { return false; }
+		if (!terrainClearFP(world, pass, x, y, self)) { return false; }
 		if (cspaceBlockedCell(world, team, (x / 8000) | 0, (y / 8000) | 0)) { return false; }
 	}
 
@@ -101,7 +102,7 @@ function losClear(world: SimWorld, pass: Uint8Array, team: number, ax: number, a
  * (caller falls back to the flow field).  The start cell is C-space-exempt (the mover may currently
  * touch/overlap a parked unit and must be able to path out).
  */
-export function localNextAim(world: SimWorld, team: number, uxFP: number, uyFP: number, gxFP: number, gyFP: number, rFP: number): [number, number] | null {
+export function localNextAim(world: SimWorld, team: number, uxFP: number, uyFP: number, gxFP: number, gyFP: number, self: Shape): [number, number] | null {
 	const pass = getBelievedPassability(world, team);
 	const local = world.local;
 
@@ -123,7 +124,8 @@ export function localNextAim(world: SimWorld, team: number, uxFP: number, uyFP: 
     // standing legitimately close to a wall can still path out (the continuous collision validates the
     // actual first step anyway).  The GOAL tile only needs to be a passable TILE — a tile-centre goal
     // adjacent to a wall is reachable even though its inflated footprint grazes the wall.
-	const blockedTerrain = (cx: number, cy: number): boolean => terrainCell(world, pass, cx, cy, rFP);
+	const blockedTerrain = (cx: number, cy: number): boolean => terrainCell(world, pass, cx, cy, self);
+	const wider = inset(self, -CLEARANCE_MARGIN);
 	const blocked = (idx: number, cx: number, cy: number): boolean => idx !== startIdx && idx !== goalIdx && (blockedTerrain(cx, cy) || cspaceBlockedCell(world, team, cx, cy));
 	const goalTi = (gcy >> 2) * mapW + (gcx >> 2);
 
@@ -171,14 +173,14 @@ export function localNextAim(world: SimWorld, team: number, uxFP: number, uyFP: 
 				const mx = (4 * (x + nx) + 4) * 1000; const
 					my = (4 * (y + ny) + 4) * 1000;
 
-				if (!terrainClearFP(world, pass, mx, my, DIR_DX[d] !== 0 && DIR_DY[d] !== 0 ? 0 : rFP)) { continue; }
+				if (!terrainClearFP(world, pass, mx, my, DIR_DX[d] !== 0 && DIR_DY[d] !== 0 ? POINT : self)) { continue; }
 			}
 
-            // Clearance cost: penalise cells the mover can only pass by TOUCHING a wall (clear at rFP but
-            // not at rFP+margin).  The A* then prefers routes with real clearance — so it doesn't skim an
+            // Clearance cost: penalise cells the mover can only pass by TOUCHING a wall (clear for its shape but
+            // not for it grown by the margin).  The A* then prefers routes with real clearance — so it doesn't skim an
             // obstacle's edge into a touching-boundary freeze — yet still uses touching cells when they're
             // the only way through (a pinch / 1-tile gap), where the uniform penalty doesn't change the route.
-			const wide = terrainClearFP(world, pass, (nx * 8 + 4) * 1000, (ny * 8 + 4) * 1000, rFP + CLEARANCE_MARGIN);
+			const wide = terrainClearFP(world, pass, (nx * 8 + 4) * 1000, (ny * 8 + 4) * 1000, wider);
 			const ng = gcur + DIR_COST[d] + (wide ? 0 : CLEARANCE_PENALTY);
 
 			if (stamp[ni] !== gen || ng < g[ni]) {
@@ -205,7 +207,7 @@ export function localNextAim(world: SimWorld, team: number, uxFP: number, uyFP: 
 		const wx = ((c % cW) * 8 + 4) * 1000; const
 			wy = (((c / cW) | 0) * 8 + 4) * 1000;
 
-		if (losClear(world, pass, team, uxFP, uyFP, wx, wy, rFP)) { return [wx, wy]; }
+		if (losClear(world, pass, team, uxFP, uyFP, wx, wy, self)) { return [wx, wy]; }
 	}
 
 	const aimIdx = path[len - 2 >= 0 ? len - 2 : 0];   // nothing visible → next cell along the path

@@ -19,11 +19,12 @@ import { createLocalPath } from "./localPath.ts";
 import { freeRect, occupyRect, rectEmpty } from "./occupancy.ts";
 import { advanceOrderQueues } from "./orders.ts";
 import { buildTerrain } from "./passability.ts";
+import { sum, TILE_MOVER, unitShape } from "./collide.ts";
 import { addIdleCSpace, createPathObstacles, markIdleDirty, resetIdleGrids } from "./pathObstacles.ts";
 import { productionSystem } from "./production.ts";
 import { rngRange, rngState } from "./rng.ts";
 import { movementSystem } from "./systems/movement.ts";
-import { unitBuildTicks, unitFootprint, unitRadiusPx } from "./unitTypes.ts";
+import { unitBuildTicks, unitFootprint } from "./unitTypes.ts";
 import { createVision, visionSystem } from "./vision.ts";
 import { createWalkGrid, freeUnit, reserveUnit, resetWalkGrid } from "./walkGrid.ts";
 
@@ -328,13 +329,12 @@ export function refreshPathObstacles(world: SimWorld): void {
 	if (!world.obstacles.dirty) { return; }
 	resetIdleGrids(world);
 	const { Building, MoveTarget, Position, Unit } = world.components;
-	const MOVER_R = TILE_PX >> 1;   // assume a ~tile mover for the shared C-space (land units)
 
 	for (const eid of unitEids(world)) {
 		if (hasComponent(world, eid, Building) || Unit.movable[eid] !== 1) { continue; }   // buildings / display-only
 		if (MoveTarget.active[eid] === 1) { continue; }                       // moving → not an obstacle
-        // 8px C-space: a mover's centre may not come within (mover r + this unit's r) of this centre.
-		addIdleCSpace(world, Unit.team[eid], Position.x[eid] / FP, Position.y[eid] / FP, MOVER_R + unitRadiusPx(Unit.type[eid]));
+        // 8px C-space: this unit's shape summed with the assumed mover's (a one-tile land unit, shared by the team).
+		addIdleCSpace(world, Unit.team[eid], Position.x[eid], Position.y[eid], sum(TILE_MOVER, unitShape(Unit.type[eid])));
 	}
 
 	world.obstacles.dirty = false;
