@@ -1,0 +1,38 @@
+{
+  "name": "cd",
+  "on": {
+    "workflow_dispatch": null,
+    # Fire when CI finishes on main. workflow_run runs on the built-in GITHUB_TOKEN — no PAT/dispatch hand-off needed;
+    # the job below gates on CI success (workflow_run fires on failure too).
+    "workflow_run": {
+      "workflows": ["ci"],
+      "types": ["completed"],
+      "branches": ["main"]
+    }
+  },
+  # No cancel-in-progress: a running deploy should finish rather than be interrupted by the next run.
+  "concurrency": {
+    "group": "${{ github.workflow }}-${{ github.ref }}"
+  },
+  # Must grant at least what the reusable deploy workflow asks for (its token is the intersection): pages + id-token
+  # for the Pages deploy, and contents:write because its permissions block names it (nothing here cuts a release).
+  "permissions": {
+    "contents": "write",
+    "pages": "write",
+    "id-token": "write"
+  },
+  "jobs": {
+    "cd": {
+      # Only after a manual dispatch or a successful CI run on main.
+      "if": "${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}",
+      # lib's reusable app-deploy workflow: setup → run → pages-deploy(docs). util-build builds every game into
+      # docs/<name>/ under the /games/<name>/ base, so each one is at brianjenkins94.github.io/games/<name>/ — war2's
+      # play.html is the link two people on different machines open to playtest over PeerJS.
+      "uses": "brianjenkins94/lib/.github/workflows/deploy.yml@main",
+      "with": {
+        "run": "pnpm run build",
+        "workspace-packages": "games/*,packages/*"
+      }
+    }
+  }
+}

@@ -422,7 +422,7 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
       `test/browser/hud.test.ts` (2) plays it in a real window: select a peasant, B, F, the ghost, a click on open
       ground, and the referee has a farm under construction there; select the town hall, click its train slot, the
       peasant's in production and in the status strip, and clicking it there cancels it.
-- **W4: tools and the browser safety net.**
+- **W4: tools and the browser safety net.** *Done (2026-10-02).*
   - war2's page tools: `war2_state`/`unit`/`map`/`trace`/`summarize_move`/`control`/`command`/incidents.
   - The pathology detector, and incident capture → fixture JSON.
   - Browser tests on netsim's harness, with the pathology guard running in CI.
@@ -475,8 +475,20 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
       status strip and portrait update in place, rather than rebuilding under the pointer 20 times a second (CI caught
       a lost click).
 
-- **W5: in the editor, then the game.**
+- **W5: in the editor, then the game.** *The editor half done (2026-10-02).*
   - war2 in an editor preview and across tabs, over WebRTC.
+    - **In the editor:** war2's files written into an editor workspace, `vite` run in its terminal, the match in its
+      preview. Two capability prompts — the assets mirror (`net:brianjenkins94.github.io`) and `net.webrtc:peer` —
+      and once allowed, both clients seat and sync in ~30 s (most of it the prompt), both renderers draw the map,
+      units and buildings, and commands apply. The editor's architecture view draws the whole of it: the page, the
+      referee, both clients and their UIs, the two rtc links, and each one's fetches from the mirror.
+    - **What it took:** two bugs, one on each side. The editor's in-browser dev server (almostnode) 404'd every plain
+      file (JSON, images) of an app rooted below the workspace — it resolved an already-resolved path against the root
+      again — so war2 sat at "starting…". And a client gave up its join when no referee answered within 10 s; the
+      referee serves joins only once its map is loaded, which in the editor waits on the capability prompt, so the
+      match ran with nobody seated. No responder yet now means try again; a refusal is still final.
+    - **Deployed:** `cd` deploys every game to Pages after CI passes on main, so war2's `play.html` at
+      brianjenkins94.github.io/games/war2/ is the link two people on different machines open to playtest over PeerJS.
   - Then war2's own roadmap (its `PLAN.md`): combat, then economy, tech, and AI, onto a foundation where every change
     is guarded.
 
