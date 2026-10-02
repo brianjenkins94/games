@@ -63,11 +63,17 @@ test("three instances, three workers, one referee: every client stays in sync wi
 
 	assert.deepEqual(divergence.clients.map((client) => [client.peer, client.identical]), [["client-0", true], ["client-1", true], ["client-2", true]]);
 
-	const { stats } = await tool<{ "stats": Record<string, number> }>(page, "netsim_status");
+	const { stats, clients } = await tool<{ "stats": Record<string, number>; "clients": { "stats": Record<string, number> }[] }>(page, "netsim_status");
 
 	assert.ok(stats["commandsApplied"] > 0, "the bots were really playing");
 	assert.equal(stats["commandsRejected"], 0);
 	assert.equal(stats["unknownSender"], 0);
+
+	// Each update reaches its client once: in the referee's own tab, not a second time down the tab's tree too.
+	const sent = stats["keyframes"] + stats["deltas"];
+	const received = clients.reduce((sum, client) => sum + client.stats["updates"], 0);
+
+	assert.ok(received <= sent, `the clients got ${received} updates of the ${sent} sent`);
 	await page.close();
 });
 

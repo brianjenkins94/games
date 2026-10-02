@@ -11,7 +11,7 @@
 import type { Hub } from "@brianjenkins94/hub";
 import type { Client } from "../net/index.ts";
 import type { ClientInspection, InstanceInput, InstanceView, PortMessage } from "./bootstrap.ts";
-import { createHub, dataChannelTransport, portTransport, serve } from "@brianjenkins94/hub";
+import { createHub, dataChannelTransport, portTransport, rpcCallSubject, serve } from "@brianjenkins94/hub";
 import { observe } from "@brianjenkins94/observability";
 import { createClient, hostPermissions, subjects } from "../net/index.ts";
 import { approxDistance, createRng, encodeUnit, nextInt, tiles, validateCommand } from "../sim/index.ts";
@@ -26,7 +26,10 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 	// id is a control frame, which permissions don't stop.
 	const toReferee = hub.link(dataChannelTransport(channel), { "uplink": true, "transit": false, "permissions": { "publish": [], "subscribe": [] } });
 
-	hub.link(portTransport(globalThis), { "transit": false });
+	// Its page sends it only clicks, debug calls from its own tab, and observability's traffic. In the host's tab the
+	// referee is in the page's tree too, so without this its team's state came twice — over the data channel and down
+	// the tab — and the host's clients did every update twice (half of them stale).
+	hub.link(portTransport(globalThis), { "transit": false, "permissions": { "publish": [`netsim.${MATCH}.input.*`, rpcCallSubject(`netsim.${MATCH}.debug.*.*`), "$sys.>"] } });
 	await toReferee.ready;
 
 	const id = hub.knownAs()[0];
