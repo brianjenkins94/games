@@ -494,8 +494,8 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
 
 - **W6: the pathing rewrite.** *Planned (2026-10-02), awaiting approval.*
   - **What the census says.** The hand-written scenarios are clean but for two units in `pinch-corridor` and two in
-    `production-rally`; the random maps have 13–15 faults each. Of all 48, 41 are *stalled* (moving, no closer for
-    100 ticks), 5 oscillating, 1 stuck, 1 settled short.
+    `production-rally`; the random maps have 13–15 faults each. Of all 46, 40 are *stalled* (moving, no closer for
+    100 ticks), 4 oscillating, 1 stuck, 1 settled short.
   - **Why units stall** (traced tick by tick in pinch-corridor's unit 1, production-rally's unit 6 and random-plains-2's
     unit 1): a two-tick loop between rules that disagree about parked units. The flow field doesn't see units, so it
     aims a mover straight at a parked one; the full step is refused, but the slip rung tests terrain only and steps it
@@ -575,8 +575,16 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
         checked against the census's *jammed* and the time units spend waiting.
   - **Steps,** each its own commit with its census diff explained:
     0. ~~Trace random-plains-1's unit 3.~~ Done: above.
-    1. The detector: progress along the route, and the *stacked* kind; the census re-recorded. No sim change, so the
-       traces don't move — the census's diff is the detector's alone (detours no longer stalls; the stacks counted).
+    1. ~~The detector: progress along the route, and the *stacked* kind; the census re-recorded.~~ Done
+       (2026-10-02). The flow field keeps its cost-to-go (`FlowField.cost`), read by the detector without touching the
+       cache (`peekFlowField`); progress is a straight-line gain *or* a lower cost along the route, each with its own
+       best. Stacked: moving teammates within 12 px for 50 ticks running (`STACK_FP`, `STACK_TICKS`); the recorder
+       doesn't auto-flag it, as with oscillating. No trace moved. The census went from 46 to 82: 40 units newly
+       *stacked* (every scenario with a group: group-open 8, pinch-corridor 6, around-building 4, build-farm 2, the
+       random maps 5–8), and 4 stalls gone from the random maps (detours, now progress) with 14 more flagged later — the
+       hand-written scenarios' stalls are unchanged. Tests: a 26-tile detour round a wall (the straight line goes well
+       past the stall window without gaining — the old detector called it stalled) arrives unflagged; two overlapping
+       movers are flagged stacked at 50 ticks.
     2. `collide.ts`, with every existing shape re-expressed through it and no change in behaviour — every trace
        identical, the proof that it's a refactor.
     3. Progress that means progress (the smallest behaviour change): the jitter loops escalate and settle.

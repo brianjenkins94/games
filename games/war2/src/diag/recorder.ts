@@ -9,7 +9,8 @@
  * - **the pathology detector** (pathology.ts), run every tick, and what it finds now;
  * - **incidents**: a moment captured for replay — its lead-up snapshot, the commands since, and a hash of the world at
  *   the moment. Flagged by hand, or automatically when the detector sees a give-up, a settle short, a stall, or a stuck
- *   unit that stays stuck (debounced, and never the same unit and fault twice in a while).
+ *   unit that stays stuck (debounced, and never the same unit and fault twice in a while) — not an oscillation or a
+ *   stack, which the census counts instead.
  *
  * An incident becomes a **fixture** (`fixture`): plain JSON for test/incidents/, which test/incidents.test.ts replays
  * from its snapshot through its commands — asserting the replay reaches the captured world exactly (its hash), then
@@ -162,13 +163,14 @@ export function createRecorder({ snapEvery = 30, keep = 6, trackLength = 200, co
 			current = detector.scan(world, applied.map((entry) => entry.command));
 
 			// The worst current fault, debounced: a give-up, a settle short or a stall at once; a stuck unit once it's stayed
-			// stuck — never the same unit and fault twice within `dedup`.
+			// stuck — never the same unit and fault twice within `dedup`. Not an oscillation, nor a stack: both are common
+			// (every group moving together stacks, until W6 keeps movers apart) and counted by the census instead.
 			if (current.size > 0 && tick - lastAuto >= cooldown) {
 				for (const [uid, pathology] of current) {
 					const key = `${pathology}:${uid}`;
 					const since = detector.stuckSince(uid);
 
-					if (tick - (flagged.get(key) ?? -Infinity) < dedup || pathology === "oscillating" || (pathology === "stuck" && (since === undefined || tick - since < sustain))) {
+					if (tick - (flagged.get(key) ?? -Infinity) < dedup || pathology === "oscillating" || pathology === "stacked" || (pathology === "stuck" && (since === undefined || tick - since < sustain))) {
 						continue;
 					}
 

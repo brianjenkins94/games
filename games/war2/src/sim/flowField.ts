@@ -40,6 +40,10 @@ export const UNREACHABLE = 0xFF;
 
 export interface FlowField {
 	"dirs": Uint8Array; // indexed by tileY * mapW + tileX
+	/** Each tile's cost to the goal (cardinal 10, diagonal 14; INF where unreachable) — how far a unit still has to go
+	 *  ALONG its route, which around terrain or through fog is not the straight line (the pathology detector's
+	 *  progress). Same indexing as `dirs`. */
+	"cost": Int32Array;
 	"goalTx": number;
 	"goalTy": number;
 }
@@ -111,7 +115,7 @@ export class MinHeap {
 
 // ── Computation ───────────────────────────────────────────────────────────────
 
-const INF = 0x7FFFFFFF;
+export const INF = 0x7FFFFFFF;
 
 /** A world's flow fields: the LRU cache, a count of the Dijkstra runs, and the Dijkstra's scratch. */
 export interface FlowFields {
@@ -232,7 +236,7 @@ export function computeFlowField(world: SimWorld, team: number, goalTx: number, 
 		}
 	}
 
-	return { "dirs": dirs, "goalTx": goalTx, "goalTy": goalTy };
+	return { "dirs": dirs, "cost": cost.slice(), "goalTx": goalTx, "goalTy": goalTy };
 }
 
 // ── LRU cache ─────────────────────────────────────────────────────────────────
@@ -277,6 +281,14 @@ export function getOrComputeFlowField(world: SimWorld, team: number, goalTx: num
 }
 
 export function clearFlowFieldCache(world: SimWorld): void { world.flow.cache.clear(); }
+
+/** The cached field for `team` and goal, if there is one — read-only: no Dijkstra, no LRU touch, no belief check. For
+ *  watchers (the pathology detector) that mustn't change what the sim does next. */
+export function peekFlowField(world: SimWorld, team: number, goalTx: number, goalTy: number): FlowField | undefined {
+	const { w: mapW, h: mapH } = world.terrain;
+
+	return world.flow.cache.get(team * (mapW * mapH) + goalTy * mapW + goalTx);
+}
 
 /** Drop only `team`'s cached fields (its goal keys occupy a contiguous span — see the key formula).
  *  Internal: invoked by getOrComputeFlowField when this team's belief turns dirty. */

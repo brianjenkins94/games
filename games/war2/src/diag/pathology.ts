@@ -9,9 +9,13 @@
  * - **stuck** — moving, but grinding toward the settle limit (movement.ts STUCK_LIMIT);
  * - **settled-short** — just stopped, not told to, more than a tile from the slot it was steering for;
  * - **oscillating** — moving, but bouncing between two tiles over its last few tile changes;
- * - **stalled** — moving, but no closer to its target for STALL_TICKS. It may be jittering in place (a few pixels to
- *   and fro each tick), which keeps resetting its stall counter, so it never escalates and never settles: what W0's
- *   traces caught in pinch-corridor and production-rally.
+ * - **stalled** — moving, but no closer to its target for STALL_TICKS — neither in a straight line nor along its route
+ *   (its flow field's cost to go, so a unit going round terrain, or through fog its team believes open, is making
+ *   progress while the straight line grows). It may be jittering in place (a few pixels to and fro each tick), which
+ *   keeps resetting its stall counter, so it never escalates and never settles: what W0's traces caught in
+ *   pinch-corridor and production-rally;
+ * - **stacked** — moving, and overlapping a moving teammate (within STACK_FP) for STACK_TICKS running: movers pass
+ *   through movers, so units sharing a route travel piled on each other (W6 step 0).
  *
  * The old detector's give-up and settled-short also fired on a group's units already in their slots and on units
  * just stopped; those are left out (W4).
@@ -22,9 +26,10 @@ import { hasComponent } from "bitecs";
 import { CmdType } from "../sim/command.ts";
 import { fpToTile } from "../sim/components.ts";
 import { distance } from "../sim/distance.ts";
+import { INF, peekFlowField } from "../sim/flowField.ts";
 import { unitEids } from "../sim/world.ts";
 
-export type Pathology = "give-up" | "stuck" | "settled-short" | "oscillating" | "stalled";
+export type Pathology = "give-up" | "stuck" | "settled-short" | "oscillating" | "stalled" | "stacked";
 
 /** stuckTicks at which a moving unit counts as stuck: about two thirds of the way to the settle limit (36). */
 export const STUCK_FLAG = 24;
@@ -34,6 +39,11 @@ export const OSC_WINDOW = 6;
 export const STALL_TICKS = 100;
 /** What counts as getting closer: a quarter tile, fixed-point. */
 const PROGRESS_FP = 8000;
+/** Two moving teammates closer than this (L1, fixed-point: 12 px, so two 32 px units more than half overlapped) are
+ *  on top of each other. */
+export const STACK_FP = 12000;
+/** Ticks running two movers must stay that close to count as stacked (2.5 s). */
+export const STACK_TICKS = 50;
 
 interface Track {
 	"prevMove": number;
@@ -47,6 +57,8 @@ interface Track {
 	"tx": number;
 	"ty": number;
 	"best": number;
+	/** The least cost to go along its route it's had (its flow field's; Infinity without one). */
+	"routeBest": number;
 	"bestAt": number;
 }
 
@@ -62,6 +74,8 @@ export interface PathologyDetector {
 
 export function createPathologyDetector(): PathologyDetector {
 	const tracks = new Map<number, Track>();
+	/** "lowUid+highUid" → ticks running the two have been stacked. */
+	const stacks = new Map<string, number>();
 
 	return {
 		"scan": (world, applied) => {
@@ -84,6 +98,8 @@ export function createPathologyDetector(): PathologyDetector {
 			}
 
 			const live = new Set<number>();
+			const movers: { "uid": number; "team": number; "x": number; "y": number }[] = [];
+			const mapW = world.terrain.w;
 
 			for (const eid of unitEids(world)) {
 				if (hasComponent(world, eid, Building) || Unit.movable[eid] !== 1) {
@@ -93,7 +109,7 @@ export function createPathologyDetector(): PathologyDetector {
 				const uid = UnitId.id[eid];
 				const moving = MoveTarget.active[eid];
 				const tile = Path.curTy[eid] * 4096 + Path.curTx[eid];
-				const track = tracks.get(uid) ?? { "prevMove": 0, "prevSlotTx": -999, "prevSlotTy": -999, "tiles": [], "stuckSince": -1, "tx": -1, "ty": -1, "best": Infinity, "bestAt": world.tick };
+				const track = tracks.get(uid) ?? { "prevMove": 0, "prevSlotTx": -999, "prevSlotTy": -999, "tiles": [], "stuckSince": -1, "tx": -1, "ty": -1, "best": Infinity, "routeBest": Infinity, "bestAt": world.tick };
 
 				live.add(uid);
 
@@ -125,11 +141,28 @@ export function createPathologyDetector(): PathologyDetector {
 				}
 
 				const away = distance(MoveTarget.tx[eid] - Position.x[eid], MoveTarget.ty[eid] - Position.y[eid]);
+				// Along the route: the cost to go at its tile, by the field it's steering on — if the sim has one cached
+				// (peeked: watching must not change what the sim does next).
+				const routeCost = moving === 1 ? peekFlowField(world, Unit.team[eid], Path.goalTx[eid], Path.goalTy[eid])?.cost[Path.curTy[eid] * mapW + Path.curTx[eid]] : undefined;
+				const route = routeCost === undefined || routeCost === INF ? Infinity : routeCost;
+				const retargeted = moving === 0 || MoveTarget.tx[eid] !== track.tx || MoveTarget.ty[eid] !== track.ty;
 
-				if (moving === 0 || MoveTarget.tx[eid] !== track.tx || MoveTarget.ty[eid] !== track.ty || away <= track.best - PROGRESS_FP) {
-					[track.tx, track.ty, track.best, track.bestAt] = [MoveTarget.tx[eid], MoveTarget.ty[eid], moving === 0 ? Infinity : away, world.tick];
+				// Each measure keeps its own best, moved only by its own progress, so either one going on counts.
+				if (retargeted) {
+					[track.tx, track.ty, track.best, track.routeBest, track.bestAt] = [MoveTarget.tx[eid], MoveTarget.ty[eid], moving === 0 ? Infinity : away, moving === 0 ? Infinity : route, world.tick];
+				} else if (away <= track.best - PROGRESS_FP || route < track.routeBest) {
+					if (away <= track.best - PROGRESS_FP) {
+						track.best = away;
+					}
+
+					track.routeBest = Math.min(track.routeBest, route);
+					track.bestAt = world.tick;
 				} else if (world.tick - track.bestAt >= STALL_TICKS && !found.has(uid)) {
 					found.set(uid, "stalled");
+				}
+
+				if (moving === 1) {
+					movers.push({ "uid": uid, "team": Unit.team[eid], "x": Position.x[eid], "y": Position.y[eid] });
 				}
 
 				track.prevMove = moving;
@@ -140,6 +173,39 @@ export function createPathologyDetector(): PathologyDetector {
 				}
 
 				tracks.set(uid, track);
+			}
+
+			// Stacked: moving teammates on top of each other, tick after tick (a pair apart, or not both moving, starts over).
+			const close = new Set<string>();
+
+			for (let i = 0; i < movers.length; i += 1) {
+				for (let j = i + 1; j < movers.length; j += 1) {
+					const [a, b] = [movers[i], movers[j]];
+
+					if (a.team !== b.team || Math.abs(a.x - b.x) + Math.abs(a.y - b.y) >= STACK_FP) {
+						continue;
+					}
+
+					const key = `${Math.min(a.uid, b.uid)}+${Math.max(a.uid, b.uid)}`;
+					const run = (stacks.get(key) ?? 0) + 1;
+
+					close.add(key);
+					stacks.set(key, run);
+
+					if (run >= STACK_TICKS) {
+						for (const uid of [a.uid, b.uid]) {
+							if (!found.has(uid)) {
+								found.set(uid, "stacked");
+							}
+						}
+					}
+				}
+			}
+
+			for (const key of stacks.keys()) {
+				if (!close.has(key)) {
+					stacks.delete(key);
+				}
 			}
 
 			// Units that are gone are forgotten.
@@ -156,6 +222,6 @@ export function createPathologyDetector(): PathologyDetector {
 
 			return since === undefined || since < 0 ? undefined : since;
 		},
-		"reset": () => { tracks.clear(); }
+		"reset": () => { tracks.clear(); stacks.clear(); }
 	};
 }
