@@ -1,12 +1,13 @@
 /**
- * Hosting a match, in a page (netsim's, W3 — see MIGRATION.md): starts the referee worker, makes each client's WebRTC link to it — for an instance iframe
- * of this page's (`addInstance`, both ends here) or a player in another tab (`attachRemote`, signaling over the lobby)
- * — and shows every client's status checked against the referee (its view hash at that tick must match the referee's
- * hash of what that team can see).
+ * Hosting a match, in a page (netsim's, W3 — see MIGRATION.md): starts the referee worker, makes each client's link to
+ * it — for an instance iframe of this page's (`addInstance`, both ends here, WebRTC) or a player in another tab or on
+ * another machine (`attachRemote`, the referee's end of a link its lobby made: lobby.ts, peerLobby.ts) — and shows
+ * every client's status checked against the referee (its view hash at that tick must match the referee's hash of what
+ * that team can see).
  */
 import type { ClientDiag, RefereeTick } from "../net/index.ts";
 import type { AttachMessage, InitMessage, PortMessage, Settings } from "./bootstrap.ts";
-import type { RtcLink, Signaling } from "./rtc.ts";
+import type { MakeLink, RtcLink } from "./rtc.ts";
 import type { Hub } from "@brianjenkins94/hub";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { observeApp, ownWorker } from "@brianjenkins94/observability";
@@ -59,12 +60,12 @@ export function startHost({ observed, settings, matchId, grid, status, summary }
 	const connections = new Map<string, RtcLink[]>();
 
 	/** The referee's end of `peer`'s link: its data channel goes straight to the referee worker. */
-	function attach(peer: string, signaling: Signaling): RtcLink[] {
+	function attach(peer: string, link: MakeLink): RtcLink[] {
 		for (const connection of connections.get(peer) ?? []) {
 			connection.close();
 		}
 
-		const ends = [offerLink(linkLabel(MATCH, peer), signaling, (channel) => {
+		const ends = [link((channel) => {
 			referee.postMessage({ "type": "war2-attach", "peer": peer, "channel": channel } satisfies AttachMessage, [channel as unknown as Transferable]);
 		})];
 
@@ -166,7 +167,7 @@ export function startHost({ observed, settings, matchId, grid, status, summary }
 			const frame = createInstanceFrame(grid, { "id": id, "matchId": matchId, "bots": settings.bots }, (loaded) => {
 				const [refereeEnd, clientEnd] = localSignaling();
 
-				attach(id, refereeEnd).push(answerLink(clientEnd, (channel) => {
+				attach(id, (take) => offerLink(linkLabel(MATCH, id), refereeEnd, take)).push(answerLink(clientEnd, (channel) => {
 					loaded.contentWindow!.postMessage({ "type": "war2-port", "channel": channel } satisfies PortMessage, location.origin, [channel as unknown as Transferable]);
 				}));
 			});
@@ -175,9 +176,9 @@ export function startHost({ observed, settings, matchId, grid, status, summary }
 
 			return frame;
 		},
-		/** A player in another tab, known as `peer`: the referee's end of its link, signaling over the lobby. */
-		"attachRemote": (peer: string, signaling: Signaling): void => {
-			attach(peer, signaling);
+		/** A player in another tab or on another machine, known as `peer`: the referee's end of its link (its lobby's). */
+		"attachRemote": (peer: string, link: MakeLink): void => {
+			attach(peer, link);
 		}
 	};
 }

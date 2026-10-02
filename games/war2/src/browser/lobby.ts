@@ -16,7 +16,8 @@
  * editor's preview and a local dev server; across machines, players would need another way to signal.
  */
 
-import type { Signal, Signaling } from "./rtc.ts";
+import type { MakeLink, Signal, Signaling } from "./rtc.ts";
+import { answerLink, linkLabel, offerLink } from "./rtc.ts";
 
 /** On the match's lobby channel. */
 type LobbyMessage =
@@ -65,9 +66,11 @@ interface Common {
 	"close": () => void;
 }
 
+/** A tab's place in a match — through this module's lobby (tabs of one browser) or PeerJS's (peerLobby.ts: players on
+ *  other machines). Either way the host gets, for each player link, the referee's end of it; a player makes its own. */
 export type Lobby =
-	| Common & { "role": "host"; /** Each time a player's instance needs a link to the referee: its signaling. */ "onPlayer": (handler: (peer: string, signaling: Signaling) => void) => void }
-	| Common & { "role": "player"; /** Signaling for a fresh link to the host's referee (resolves once the host has accepted it). */ "connect": () => Promise<Signaling>; "onHostLeft": (handler: () => void) => void };
+	| Common & { "role": "host"; /** Each time a player's instance needs a link to the referee: the referee's end of it. */ "onPlayer": (handler: (peer: string, link: MakeLink) => void) => void }
+	| Common & { "role": "player"; /** A fresh link to the host's referee: its client's end (resolves once the host has accepted it). */ "link": (take: (channel: RTCDataChannel) => void) => Promise<{ "close": () => void }>; "onHostLeft": (handler: () => void) => void };
 
 /** How often a player repeats an unanswered `connect` (a host still starting up hasn't heard it). */
 const RETRY_MS = 250;
@@ -121,7 +124,7 @@ export async function joinLobby(match: string): Promise<Lobby> {
 
 	if (await hold(hostLock, released)) {
 		const accepted = new Set<string>();
-		let onPlayer: (peer: string, signaling: Signaling) => void = () => undefined;
+		let onPlayer: (peer: string, link: MakeLink) => void = () => undefined;
 
 		lobby.addEventListener("message", (event: MessageEvent<LobbyMessage>) => {
 			const message = event.data;
@@ -133,7 +136,9 @@ export async function joinLobby(match: string): Promise<Lobby> {
 			// A repeat (our answer crossed its retry) is answered again, not linked again.
 			if (!accepted.has(message.link)) {
 				accepted.add(message.link);
-				onPlayer(message.peer, lobbySignaling(lobby, message.link, "host"));
+				const signaling = lobbySignaling(lobby, message.link, "host");
+
+				onPlayer(message.peer, (take) => offerLink(linkLabel(match, message.peer), signaling, take));
 			}
 
 			lobby.postMessage({ "type": "accepted", "link": message.link } satisfies LobbyMessage);
@@ -172,7 +177,7 @@ export async function joinLobby(match: string): Promise<Lobby> {
 		"match": match,
 		"peer": peer,
 		"close": close,
-		"connect": async () => {
+		"link": async (take) => {
 			const link = crypto.randomUUID();
 			// Listening before asking: the host's offer can follow its acceptance straight away.
 			const signaling = lobbySignaling(lobby, link, "player");
@@ -198,7 +203,7 @@ export async function joinLobby(match: string): Promise<Lobby> {
 				send();
 			});
 
-			return signaling;
+			return answerLink(signaling, take);
 		},
 		"onHostLeft": (handler) => {
 			onHostLeft = handler;

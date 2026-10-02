@@ -343,7 +343,7 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
   - The referee and client workers (from W2): the host's player as a client worker like any other, speed as an RPC
     on the host tab's own hub, fog drawn from the client worker's view.
 
-    *Done, bar PeerJS* (`src/browser`, `index.html`, `play.html`, `instance.html`): netsim's browser runtime carrying
+    *Done* (`src/browser`, `index.html`, `play.html`, `instance.html`): netsim's browser runtime carrying
     war2. The host page starts the referee worker and an instance iframe per client; each client worker links to the
     referee over a WebRTC data channel made by the pages and handed to the workers. The host's own player is one of
     them, with no special path. A second tab of `play.html` at the same match joins as another player through the
@@ -360,6 +360,18 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
     tool refusing another team's unit before it's sent; an instance reloaded mid-match rejoining its seat; players in
     separate tabs in sync, keeping their seat across a reload, let go when their tab closes, told when the host's does;
     and the PeerJS hand-off.
+
+    **Players on other machines** (`play.html?lobby=peerjs`, `peerLobby.ts`): whoever registers the match's PeerJS id
+    (`war2-<match>`) with the broker first hosts; a tab that finds it taken joins and dials it, under a name of its
+    own kept across a reload (a name that links again replaces its old link). PeerJS makes the peer connections, and
+    each data channel goes straight to its worker, as W2's check showed it can. Both lobbies now hand the host the
+    same thing, the referee's end of a link (`MakeLink`: give it `take`, and `take` gets the channel in the task it's
+    made), so `host.ts` doesn't know which lobby a player came through. Default: PeerJS's cloud broker and its STUN and
+    TURN servers. `&broker=host:port` and `&ice=none` point it at a broker of our own with no ICE servers, as the tests
+    do (`online.test.ts`, 3): two browser contexts, sharing no BroadcastChannel, lock or storage, play one match in sync
+    through a local broker; a reloaded player keeps its name and seat; the player is told when the host goes. A one-off
+    run through PeerJS's cloud (not in CI) had both in sync about 2s after opening. The invite link is the page's own
+    URL. (The games repo deploys nothing to Pages yet, so for now it's a local dev server's URL.)
   - Phaser 4 bundled.
   - The renderer fed `RenderState` over the hub.
   - HUD and command card.

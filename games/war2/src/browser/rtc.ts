@@ -23,6 +23,13 @@ export interface RtcLink {
 	"close": () => void;
 }
 
+/**
+ * How a lobby gives a page one end of a link, however it's made (this module's offer/answer over a signaling path, or
+ * PeerJS's own: peerLobby.ts): call it with `take`, and `take` gets the end's data channel in the very task the
+ * channel is made or arrives — the only time it can be transferred to a worker.
+ */
+export type MakeLink = (take: (channel: RTCDataChannel) => void) => RtcLink;
+
 const CONFIG: RTCConfiguration = { "iceServers": [] };
 
 /** The data channel's label for `peer`'s link: both ends name the connection by it (observability does too). */
