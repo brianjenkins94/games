@@ -651,8 +651,22 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
        has an incident, so the moment it used to give up is kept as a fixture expecting unit 1 to reach its goal
        (`npm run record -- --reaches pinch-corridor 1 544`); the recorder's own test now makes its incident from a gap a
        parked teammate fills, which no pathing can get past.
-    6. Groups travel as a block, and queue where the route narrows — with the detector's *jammed* kind, since only
-       now can movers block each other.
+    6. ~~Groups travel as a block, and queue where the route narrows — with the detector's *jammed* kind.~~ Done
+       (2026-10-02). *Offset-following* (`formationAim`): a unit in a group reads the shared field where it would be
+       without its offset (its slot less the shared goal tile's centre) and aims at the next tile there shifted back by
+       it — half the offset where the whole isn't clear ground, and the field itself, single file, where half isn't
+       either; an offset aim must also be forward on the unit's own route (where that check was missing, units held their
+       place along a wall away from pinch-corridor's gap). *Taking turns* (`yieldsTo`): a unit yields to a moving
+       teammate further along its route (a lower cost to go, ties to the lower id), which blocks it as a parked unit
+       would; a total order, so no two wait on each other — the one ahead passes through those behind as before — and
+       waiting behind one isn't a stuck tick. *Jammed* (detector): a stall with a moving teammate within 40 px, a queue
+       not clearing — none in the census. The census 59 → 27: stacked 38 → 0 (group-open's 3×3 crosses in its three
+       rows), oscillating 4 → 9 (units shuffling across a tile edge while they wait their turn — pinch-corridor's unit 6
+       at the gap — and on the random maps), settled-short 3 → 4, stuck 14. What queueing costs: pinch-corridor's units
+       file through its gap in turn (units 5 and 6 at 176 ticks, from 153; unit 2 at 440, from 362), build-farm's unit 1
+       waits its turn past the site (172, from 149), group-open's front row 3 ticks slower (89). Traces: group-open,
+       build-farm, around-building and pinch-corridor deviate, with the random maps; the pinch-corridor fixture
+       re-captured; the detector's stacked test no longer leans on the sim stacking (it can't now).
     7. Taken goals reassigned; rally points spread.
     8. Per-unit speed.
     9. The ring-search helper and what's left of `orders.ts`.

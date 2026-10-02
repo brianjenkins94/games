@@ -14,6 +14,9 @@
  *   progress while the straight line grows). It may be jittering in place (a few pixels to and fro each tick), which
  *   keeps resetting its stall counter, so it never escalates and never settles: what W0's traces caught in
  *   pinch-corridor and production-rally;
+ * - **jammed** — stalled, with a moving teammate right beside it (within JAM_FP): a queue that isn't clearing. Movers
+ *   take turns where the route narrows (W6 step 6), so one waiting behind another doesn't count as stuck — this is
+ *   where waiting has gone on too long;
  * - **stacked** — moving, and overlapping a moving teammate (within STACK_FP) for STACK_TICKS running: movers pass
  *   through movers, so units sharing a route travel piled on each other (W6 step 0).
  *
@@ -29,7 +32,7 @@ import { distance } from "../sim/distance.ts";
 import { INF, peekFlowField } from "../sim/flowField.ts";
 import { unitEids } from "../sim/world.ts";
 
-export type Pathology = "give-up" | "stuck" | "settled-short" | "oscillating" | "stalled" | "stacked";
+export type Pathology = "give-up" | "stuck" | "settled-short" | "oscillating" | "stalled" | "jammed" | "stacked";
 
 /** stuckTicks at which a moving unit counts as stuck: about two thirds of the way to the settle limit (36). */
 export const STUCK_FLAG = 24;
@@ -44,6 +47,9 @@ const PROGRESS_FP = 8000;
 export const STACK_FP = 12000;
 /** Ticks running two movers must stay that close to count as stacked (2.5 s). */
 export const STACK_TICKS = 50;
+/** A stalled unit with a moving teammate this close (L1, fixed-point: 40 px — touching, for one-tile units, with room)
+ *  is jammed in a queue rather than stuck on its own. */
+export const JAM_FP = 40000;
 
 interface Track {
 	"prevMove": number;
@@ -171,7 +177,10 @@ export function createPathologyDetector(): PathologyDetector {
 					track.routeBest = Math.min(track.routeBest, route);
 					track.bestAt = world.tick;
 				} else if (world.tick - track.bestAt >= STALL_TICKS && !found.has(uid)) {
-					found.set(uid, "stalled");
+					const queued = unitEids(world).some((other) => other !== eid && MoveTarget.active[other] === 1 && Unit.team[other] === Unit.team[eid]
+						&& Math.abs(Position.x[other] - Position.x[eid]) + Math.abs(Position.y[other] - Position.y[eid]) < JAM_FP);
+
+					found.set(uid, queued ? "jammed" : "stalled");
 				}
 
 				if (moving === 1) {

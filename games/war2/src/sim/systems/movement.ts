@@ -38,6 +38,7 @@ import { hasComponent } from "bitecs";
 import { unitShape } from "../collide.ts";
 import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, UNIT_SPD } from "../components.ts";
 import { distance, octant } from "../distance.ts";
+import type { FlowField } from "../flowField.ts";
 import { DIR_DX, DIR_DY, getOrComputeFlowField, INF, UNREACHABLE } from "../flowField.ts";
 import { LOCAL_RANGE, localNextAim, parkedInTheWay } from "../localPath.ts";
 import { markIdleDirty } from "../pathObstacles.ts";
@@ -88,21 +89,34 @@ function noProgress(world: SimWorld, eid: number, self: Shape): void {
  *  overlapping terrain, a building or a parked unit: [dx, dy].  Binary search over the integer fraction, so a unit
  *  blocked short of the full step stops exactly touching (strict overlap: touching is clear) — which is what lets the
  *  next tick's slide run along the touching face. */
-function advance(world: SimWorld, eid: number, self: Shape, x: number, y: number, cx: number, cy: number): [number, number] {
+function advance(world: SimWorld, eid: number, self: Shape, x: number, y: number, cx: number, cy: number, yieldTo?: YieldTo): [number, number] {
 	const span = Math.max(Math.abs(cx), Math.abs(cy));
 
 	if (span === 0) { return [0, 0]; }
-	if (footprintSoftFreeAt(world, x + cx, y + cy, self, eid)) { return [cx, cy]; }
+	if (footprintSoftFreeAt(world, x + cx, y + cy, self, eid, yieldTo)) { return [cx, cy]; }
 	let lo = 0; let
 		hi = span;   // clear at lo/span of the step, not at hi/span
 
 	while (hi - lo > 1) {
 		const mid = (lo + hi) >> 1;
 
-		if (footprintSoftFreeAt(world, x + Math.trunc(cx * mid / span), y + Math.trunc(cy * mid / span), self, eid)) { lo = mid; } else { hi = mid; }
+		if (footprintSoftFreeAt(world, x + Math.trunc(cx * mid / span), y + Math.trunc(cy * mid / span), self, eid, yieldTo)) { lo = mid; } else { hi = mid; }
 	}
 
 	return [Math.trunc(cx * lo / span), Math.trunc(cy * lo / span)];
+}
+
+/** Which moving units block this one, as parked units do (footprintSoftFreeAt). */
+type YieldTo = (other: number) => boolean;
+
+/** Taking turns (W6 step 6): a unit yields to a moving teammate further along its route — a lower cost to go at its tile
+ *  (Path.lastCost, last tick's), ties to the lower stable id.  A total order, so no two units wait on each other: the
+ *  one ahead passes through those behind as every mover did before, and those behind queue rather than pile onto it. */
+function yieldsTo(world: SimWorld, eid: number): YieldTo {
+	const { MoveTarget, Path, Unit, UnitId } = world.components;
+
+	return (other) => MoveTarget.active[other] === 1 && Unit.team[other] === Unit.team[eid]
+		&& (Path.lastCost[other] < Path.lastCost[eid] || (Path.lastCost[other] === Path.lastCost[eid] && UnitId.id[other] < UnitId.id[eid]));
 }
 
 /** A diagonal step's leg, at full speed (the dodecagon distance of (k, k) is UNIT_SPD). */
@@ -118,12 +132,12 @@ function slides(x: number, y: number, sx: number, sy: number, aimX: number, aimY
 }
 
 /** The best single slide from (x,y): where it lands and how much closer to the aim (0 and staying put if none gains). */
-function bestSlide(world: SimWorld, eid: number, self: Shape, x: number, y: number, sx: number, sy: number, aimX: number, aimY: number): [number, number, number] {
+function bestSlide(world: SimWorld, eid: number, self: Shape, x: number, y: number, sx: number, sy: number, aimX: number, aimY: number, yieldTo?: YieldTo): [number, number, number] {
 	const before = distance(aimX - x, aimY - y);
 	let best: [number, number, number] = [x, y, 0];
 
 	for (const [cx, cy] of slides(x, y, sx, sy, aimX, aimY)) {
-		const [dx, dy] = advance(world, eid, self, x, y, cx, cy);
+		const [dx, dy] = advance(world, eid, self, x, y, cx, cy, yieldTo);
 		const gain = before - distance(aimX - x - dx, aimY - y - dy);
 
 		if (gain > best[2]) { best = [x + dx, y + dy, gain]; }
@@ -137,19 +151,19 @@ function bestSlide(world: SimWorld, eid: number, self: Shape, x: number, y: numb
  *  look one step further: take the first of the two slides that gain most together, even if the first gains nothing by
  *  itself (lining up with the gap between two parked units, exactly touching both, so the next can go through).
  *  None gains → it waits, and its stuck count climbs.  Ties go to the first candidate, so it's deterministic. */
-function stepToward(world: SimWorld, eid: number, self: Shape, x: number, y: number, sx: number, sy: number, aimX: number, aimY: number): [number, number] {
-	if ((sx !== 0 || sy !== 0) && footprintSoftFreeAt(world, x + sx, y + sy, self, eid)) { return [x + sx, y + sy]; }
-	const [bx, by, gain] = bestSlide(world, eid, self, x, y, sx, sy, aimX, aimY);
+function stepToward(world: SimWorld, eid: number, self: Shape, x: number, y: number, sx: number, sy: number, aimX: number, aimY: number, yieldTo?: YieldTo): [number, number] {
+	if ((sx !== 0 || sy !== 0) && footprintSoftFreeAt(world, x + sx, y + sy, self, eid, yieldTo)) { return [x + sx, y + sy]; }
+	const [bx, by, gain] = bestSlide(world, eid, self, x, y, sx, sy, aimX, aimY, yieldTo);
 
 	if (gain >= PROGRESS_EPS) { return [bx, by]; }
 	const before = distance(aimX - x, aimY - y);
 	let best: [number, number, number] = [bx, by, gain];
 
 	for (const [cx, cy] of slides(x, y, sx, sy, aimX, aimY)) {
-		const [dx, dy] = advance(world, eid, self, x, y, cx, cy);
+		const [dx, dy] = advance(world, eid, self, x, y, cx, cy, yieldTo);
 
 		if (dx === 0 && dy === 0) { continue; }
-		const [, , then] = bestSlide(world, eid, self, x + dx, y + dy, sx, sy, aimX, aimY);
+		const [, , then] = bestSlide(world, eid, self, x + dx, y + dy, sx, sy, aimX, aimY, yieldTo);
 		const total = before - distance(aimX - x - dx, aimY - y - dy) + then;
 
 		if (total > best[2]) { best = [x + dx, y + dy, total]; }
@@ -182,6 +196,46 @@ function detourAim(world: SimWorld, eid: number, self: Shape, dirs: Uint8Array, 
 	}
 
 	return rejoin === null ? null : localNextAim(world, team, Position.x[eid], Position.y[eid], rejoin[0], rejoin[1], self);
+}
+
+/** Travel as a block (W6 step 6): a unit in a group steers by the group's one shared field from its own place in the
+ *  formation — its offset from the group's destination (its slot less the shared goal tile's centre).  It reads the
+ *  field where it would be without the offset, and aims at the next tile there shifted back by the offset: so the block
+ *  keeps its shape in the open for the cost of one Dijkstra, rather than every unit funnelling onto the field's one
+ *  lane (group-open's 3×3 was a single overlapping file by tick 40).  Where the shifted point isn't clear ground, half
+ *  the offset; where even that isn't, null — the unit follows the field itself, single file, as through a gap.  Null for
+ *  a unit alone (its slot IS the goal: no offset).  Returns the aim and the field's step [dx, dy] (for lane-riding). */
+function formationAim(world: SimWorld, eid: number, self: Shape, field: FlowField): [number, number, number, number] | null {
+	const { MoveTarget, Path, Position, Unit } = world.components;
+	const { w: mapW, h: mapH } = world.terrain;
+	const offX = MoveTarget.tx[eid] - tileCenterFP(Path.goalTx[eid]); const
+		offY = MoveTarget.ty[eid] - tileCenterFP(Path.goalTy[eid]);
+
+	if (Math.abs(offX) + Math.abs(offY) < TILE_PX * FP) { return null; }   // alone, or the group's middle: no offset
+	const vtx = fpToTile(Position.x[eid] - offX); const
+		vty = fpToTile(Position.y[eid] - offY);
+
+	if (vtx < 0 || vty < 0 || vtx >= mapW || vty >= mapH) { return null; }
+	const dir = field.dirs[vty * mapW + vtx];
+
+	if (dir === UNREACHABLE) { return null; }
+	const pass = getBelievedPassability(world, Unit.team[eid]);
+	const [x, y] = [Position.x[eid], Position.y[eid]];
+	const here = field.cost[fpToTile(y) * mapW + fpToTile(x)];
+
+	for (const share of [2, 1]) {   // the whole offset, then half
+		const ax = Math.trunc(tileCenterFP(vtx + DIR_DX[dir]) + offX * share / 2); const
+			ay = Math.trunc(tileCenterFP(vty + DIR_DY[dir]) + offY * share / 2);
+		const atx = fpToTile(ax); const
+			aty = fpToTile(ay);
+
+		// Clear ground, forward on the unit's OWN route (a field step that doesn't bring it closer — along a wall away from
+		// the gap the block is narrowing to — is no place to hold), and a straight line there.
+		if (atx < 0 || aty < 0 || atx >= mapW || aty >= mapH || field.cost[aty * mapW + atx] >= here) { continue; }
+		if (terrainClearForPass(world, pass, ax, ay, self) && terrainClearForPass(world, pass, (x + ax) >> 1, (y + ay) >> 1, self)) { return [ax, ay, DIR_DX[dir], DIR_DY[dir]]; }
+	}
+
+	return null;
 }
 
 /** Halt a unit: clear movement, path and animation state in one place.
@@ -380,8 +434,13 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 				const blocked = flowDir !== UNREACHABLE && (Path.stuckTicks[eid] >= DETOUR_AFTER || parkedInTheWay(world, Unit.team[eid], x, y, tileCenterFP(curTx + DIR_DX[flowDir]), tileCenterFP(curTy + DIR_DY[flowDir])));
 				const detour = blocked ? detourAim(world, eid, self, ff.dirs, curTx, curTy) : null;
 
+				const block = detour ? null : formationAim(world, eid, self, ff);
+
 				if (detour) {
 					aimX = detour[0]; aimY = detour[1];   // a parked unit on the route: round it (local A*), then rejoin
+				} else if (block) {
+					[aimX, aimY] = block;                 // in a group, in the open: keep its place in the block
+					if (block[2] === 0) { laneAxis = 1; } else if (block[3] === 0) { laneAxis = 2; }
 				} else if (flowDir !== UNREACHABLE) {
 					const dxd = DIR_DX[flowDir]; const
 						dyd = DIR_DY[flowDir];
@@ -465,7 +524,9 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
     // the best slide (stepToward).  No slip through parked units, no centre-only corner-cut: exact contact plus a
     // slide along the touching face threads a razor between two parked units and a diagonal wall pinch alike (W6).
 	freeUnit(world, eid);
-	const [nx, ny] = stepToward(world, eid, self, x, y, sx, sy, aimX, aimY);
+	const [nx, ny] = stepToward(world, eid, self, x, y, sx, sy, aimX, aimY, yieldsTo(world, eid));
+	// Stood still only for a teammate ahead (it could have moved, passing through it): waiting its turn, not stuck.
+	const waiting = nx === x && ny === y && (([px, py]) => px !== x || py !== y)(stepToward(world, eid, self, x, y, sx, sy, aimX, aimY));
 
 	Position.x[eid] = nx; Position.y[eid] = ny;
 	reserveUnit(world, eid);
@@ -499,7 +560,7 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 	} else if (prevDist <= NEAR_GOAL_FP && footprintSoftFreeAt(world, goalX, goalY, self, eid)) {
         // Near the goal but couldn't thread the last bit in — rest at the goal POSITION if it's clear.
 		settleOnto(world, eid, self, goalX, goalY);
-	} else {
+	} else if (!waiting) {
 		noProgress(world, eid, self);
 	}
 }

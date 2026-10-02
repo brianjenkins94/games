@@ -7,7 +7,7 @@ import type { Command } from "../src/sim/command.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { rowsMap } from "../src/browser/maps.ts";
-import { createPathologyDetector, STALL_TICKS } from "../src/diag/pathology.ts";
+import { createPathologyDetector, STACK_TICKS, STALL_TICKS } from "../src/diag/pathology.ts";
 import { CmdType } from "../src/sim/command.ts";
 import { tileCenterFP } from "../src/sim/components.ts";
 import { createGame } from "../src/sim/game.ts";
@@ -24,7 +24,7 @@ for (const scenario of SCENARIOS) {
 	});
 }
 
-test("quiet on the old suite's clean scenarios but for stacking; W0's stuck pairs in pinch-corridor and production-rally now arrive", () => {
+test("quiet on the old suite's clean scenarios; W0's stuck pairs in pinch-corridor and production-rally now arrive", () => {
 	const faults = (name: string) => Object.keys(recorded[name]).filter((key) => !key.startsWith("stacked:")).sort();
 
 	for (const scenario of SCENARIOS.filter((candidate) => !candidate.name.startsWith("random-") && !["pinch-corridor", "production-rally"].includes(candidate.name))) {
@@ -35,12 +35,14 @@ test("quiet on the old suite's clean scenarios but for stacking; W0's stuck pair
 	// what blocks a mover): production-rally's two, whose rally point is taken, settle beside it (within a tile: not
 	// short). Step 5 (local planning round parked units): pinch-corridor's two go round the teammate parked in their way
 	// and arrive — slowed, so flagged stuck on the way, but not giving up.
-	assert.deepEqual(faults("pinch-corridor"), ["stuck:1", "stuck:2"]);
+	// Step 6: unit 6 queues at the gap behind 3 and 5, shuffling across a tile edge while it waits its turn.
+	assert.deepEqual(faults("pinch-corridor"), ["oscillating:6", "stuck:1", "stuck:2"]);
 	assert.deepEqual(faults("production-rally"), ["stuck:5", "stuck:6"]);
 	assert.ok(Object.values(recorded).every((faults) => Object.keys(faults).every((key) => !key.startsWith("stalled:"))), "nothing stalls any more");
-	// Every group moving together stacks (W6 step 0), the lone movers don't.
-	assert.ok(Object.keys(recorded["group-open"]).every((key) => key.startsWith("stacked:")) && Object.keys(recorded["group-open"]).length > 0);
-	assert.deepEqual(recorded["direction-SE"], {});
+	// Every group moving together stacked (W6 step 0); travelling as a block and queueing where it narrows, none does now
+	// (step 6).
+	assert.ok(Object.values(recorded).every((faults) => Object.keys(faults).every((key) => !key.startsWith("stacked:"))), "nothing travels stacked");
+	assert.deepEqual(recorded["group-open"], {});
 });
 
 test("a unit going the long way round a wall is making progress along its route, not stalled", () => {
@@ -82,32 +84,33 @@ test("a unit going the long way round a wall is making progress along its route,
 });
 
 test("stacked: two teammates moving on top of each other are flagged once they've stayed so", () => {
+	// The detector only reads the world (the sim no longer lets a group travel stacked — W6 step 6): two units held 4 px
+	// apart, both "moving".
 	const game = createGame(1, rowsMap(Array.from({ "length": 6 }, () => ".".repeat(40))));
 	const detector = createPathologyDetector();
 
-	revealAll(game.world);
 	game.initUnitIdCounter(0);
 
-	const { UnitId } = game.world.components;
-	// Spawned overlapping (4 px apart), sent the same way one by one: nothing keeps movers apart, so they go stacked.
-	const uids = [0, 4000].map((dx) => UnitId.id[game.spawnUnit(tileCenterFP(1) + dx, tileCenterFP(2), 0, undefined, unitTypeId("unit-footman"))]);
-	const moves: Command[] = uids.map((uid) => ({ "type": CmdType.MOVE, "unitIds": [uid], "txFP": tileCenterFP(38), "tyFP": tileCenterFP(2) }));
+	const { MoveTarget, UnitId } = game.world.components;
+	const eids = [0, 4000].map((dx) => game.spawnUnit(tileCenterFP(1) + dx, tileCenterFP(2), 0, undefined, unitTypeId("unit-footman")));
 	const seen: Record<number, number> = {};
 
-	game.applyCommands(moves);
+	for (const eid of eids) {
+		[MoveTarget.active[eid], MoveTarget.tx[eid], MoveTarget.ty[eid]] = [1, tileCenterFP(38), tileCenterFP(2)];
+	}
 
-	for (let tick = 0; tick < 100; tick += 1) {
-		game.step();
+	for (let tick = 0; tick < 60; tick += 1) {
+		game.world.tick += 1;
 
-		for (const [uid, pathology] of detector.scan(game.world, tick === 0 ? moves : [])) {
+		for (const [uid, pathology] of detector.scan(game.world, [])) {
 			if (pathology === "stacked") {
 				seen[uid] ??= tick;
 			}
 		}
 	}
 
-	assert.deepEqual(Object.keys(seen).map(Number).sort((a, b) => a - b), [...uids].sort((a, b) => a - b));
-	assert.ok(Object.values(seen).every((tick) => tick >= 49), JSON.stringify(seen));
+	assert.deepEqual(Object.keys(seen).map(Number).sort((a, b) => a - b), eids.map((eid) => UnitId.id[eid]).sort((a, b) => a - b));
+	assert.ok(Object.values(seen).every((tick) => tick === STACK_TICKS - 1), JSON.stringify(seen));
 });
 
 test("give-up: a unit ordered alone somewhere it can't reach ends the tick idle, and is caught", () => {
@@ -151,3 +154,30 @@ test("a unit stopped by its player isn't settled-short, and a group in its slots
 	game.step();
 	assert.deepEqual([...detector.scan(game.world, [stop])], [], "stopped where they stood, as told");
 });
+
+test("a stall beside a moving teammate is a jam (a queue not clearing); alone, it's a stall", () => {
+	// The detector only reads the world: two units held where they are, both "moving", far from their targets.
+	for (const [apart, expected] of [[32, "jammed"], [200, "stalled"]] as const) {
+		const game = createGame(1, rowsMap(Array.from({ "length": 8 }, () => ".".repeat(16))));
+		const detector = createPathologyDetector();
+
+		game.initUnitIdCounter(0);
+
+		const { MoveTarget, UnitId } = game.world.components;
+		const [a, b] = [2, 2 + apart / 32].map((tile) => game.spawnUnit(tileCenterFP(tile), tileCenterFP(4), 0, undefined, unitTypeId("unit-footman")));
+
+		for (const eid of [a, b]) {
+			[MoveTarget.active[eid], MoveTarget.tx[eid], MoveTarget.ty[eid]] = [1, tileCenterFP(15), tileCenterFP(0)];
+		}
+
+		let seen: string | undefined;
+
+		for (let tick = 0; tick <= STALL_TICKS; tick += 1) {
+			game.world.tick += 1;
+			seen = detector.scan(game.world, []).get(UnitId.id[a]) ?? seen;
+		}
+
+		assert.equal(seen, expected, `${apart} px apart`);
+	}
+});
+

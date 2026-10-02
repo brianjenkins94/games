@@ -107,7 +107,7 @@ function terrainClearAt(world: SimWorld, xFP: number, yFP: number, self: Shape):
  *  overlaps a parked one.  Broad-phase: the cell grid gives candidate eids in a padded window; the precise test is
  *  the summed shapes (collide.overlaps) — sqrt-free, integer, deterministic.  A diamond is slim on the diagonals, so
  *  two diagonally-adjacent units leave a gap a third threads (the whole point); it is NOT the dodecagon range metric. */
-function unitOverlapAt(world: SimWorld, xFP: number, yFP: number, self: Shape, selfEid: number, settledOnly: boolean): boolean {
+function unitOverlapAt(world: SimWorld, xFP: number, yFP: number, self: Shape, selfEid: number, settledOnly: boolean, yieldTo?: (other: number) => boolean): boolean {
 	const walk = world.walk;
 	const { grid, wW, wH, seen } = walk;
 	const { MoveTarget, Position } = world.components;
@@ -132,7 +132,7 @@ function unitOverlapAt(world: SimWorld, xFP: number, yFP: number, self: Shape, s
 
 			if (seen[other] === gen) { continue; }
 			seen[other] = gen;
-			if (settledOnly && MoveTarget.active[other] === 1) { continue; }   // pass through moving traffic
+			if (settledOnly && MoveTarget.active[other] === 1 && yieldTo?.(other) !== true) { continue; }   // pass through moving traffic (bar those it yields to)
 			if (unitsOverlap(self, shapeOf(world, other), xFP - Position.x[other], yFP - Position.y[other])) { return true; }
 		}
 	}
@@ -142,9 +142,10 @@ function unitOverlapAt(world: SimWorld, xFP: number, yFP: number, self: Shape, s
 
 /** True if a unit of shape `self` could stand at (xFP,yFP) under the one rule for what blocks a mover (W6): in-bounds,
  *  clear of terrain and buildings, and not overlapping a *settled* (non-moving) unit — it flows through moving traffic
- *  (a convoy) while never overlapping a parked one.  The stepper's test, settle's, and an order's goal check. */
-export function footprintSoftFreeAt(world: SimWorld, xFP: number, yFP: number, self: Shape, selfEid: number): boolean {
-	return terrainClearAt(world, xFP, yFP, self) && !unitOverlapAt(world, xFP, yFP, self, selfEid, true);
+ *  (a convoy) while never overlapping a parked one — bar the movers `yieldTo` names, which block like parked units (a
+ *  queue: W6 step 6).  The stepper's test, settle's, and an order's goal check. */
+export function footprintSoftFreeAt(world: SimWorld, xFP: number, yFP: number, self: Shape, selfEid: number, yieldTo?: (other: number) => boolean): boolean {
+	return terrainClearAt(world, xFP, yFP, self) && !unitOverlapAt(world, xFP, yFP, self, selfEid, true, yieldTo);
 }
 
 /** If a unit of shape `self` at (x,y) is OVERLAPPING any SETTLED unit (penetration — it phased in, or one settled

@@ -11,79 +11,44 @@
 	"diagonal-gap-SE": {},
 	"diagonal-gap-SW": {},
 	"diagonal-gap-NW": {},
-	"group-open": {
-		"stacked:5": 63,
-		"stacked:7": 63,
-		"stacked:6": 63,
-		"stacked:8": 63,
-		"stacked:1": 72,
-		"stacked:4": 72,
-		"stacked:2": 72,
-		"stacked:3": 72
-	},
+	"group-open": {},
 	"pinch-corridor": {
-		"stacked:1": 72,
-		"stacked:4": 72,
-		"stacked:2": 72,
-		"stacked:5": 72,
-		"stacked:3": 72,
-		"stacked:6": 72,
-		"stuck:2": 702,
-		"stuck:1": 715
+		"oscillating:6": 413,
+		"stuck:1": 737,
+		"stuck:2": 780
 	},
-	"around-building": {
-		"stacked:1": 72,
-		"stacked:3": 72,
-		"stacked:2": 72,
-		"stacked:4": 72
-	},
+	"around-building": {},
 	"production-rally": {
 		"stuck:6": 237,
 		"stuck:5": 279
 	},
-	"build-farm": {
-		"stacked:2": 73,
-		"stacked:3": 73
-	},
+	"build-farm": {},
 	"random-plains-1": {
-		"stacked:7": 406,
-		"stacked:8": 406,
-		"stacked:3": 549,
-		"stacked:6": 549,
-		"oscillating:8": 1229,
-		"stuck:8": 1248,
-		"oscillating:2": 1909,
-		"stuck:2": 1926,
-		"settled-short:2": 1938
+		"oscillating:5": 1864,
+		"oscillating:2": 2055,
+		"oscillating:1": 2088,
+		"stuck:1": 2105,
+		"settled-short:1": 2117,
+		"stuck:2": 2139,
+		"settled-short:2": 2151
 	},
 	"random-plains-2": {
-		"stacked:1": 55,
-		"stacked:6": 55,
-		"stuck:12": 617,
-		"stuck:11": 701,
-		"stacked:8": 758,
-		"stacked:11": 758,
-		"stacked:12": 759,
-		"stacked:4": 1172,
-		"stacked:10": 1318,
+		"oscillating:10": 117,
+		"stuck:12": 623,
+		"stuck:11": 698,
+		"oscillating:5": 1064,
+		"oscillating:11": 1071,
+		"oscillating:6": 1274,
 		"settled-short:5": 2176,
-		"stacked:2": 2202,
-		"stuck:3": 2418,
-		"oscillating:6": 2463,
-		"stuck:6": 2482,
-		"settled-short:6": 2494,
-		"stuck:2": 2604
+		"stuck:3": 2426,
+		"stuck:6": 2499,
+		"settled-short:6": 2511,
+		"stuck:2": 2611,
+		"stuck:1": 2658
 	},
 	"random-plains-3": {
-		"stacked:9": 93,
-		"stacked:10": 93,
-		"stacked:5": 264,
-		"stacked:6": 264,
-		"stacked:2": 815,
-		"stuck:9": 1131,
-		"stacked:1": 1961,
-		"oscillating:4": 2677,
-		"stuck:4": 2694,
-		"stuck:2": 2987
+		"stuck:9": 1182,
+		"oscillating:4": 2680,
+		"stuck:4": 2696
 	}
 }
