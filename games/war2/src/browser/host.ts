@@ -1,0 +1,183 @@
+/**
+ * Hosting a match, in a page (netsim's, W3 — see MIGRATION.md): starts the referee worker, makes each client's WebRTC link to it — for an instance iframe
+ * of this page's (`addInstance`, both ends here) or a player in another tab (`attachRemote`, signaling over the lobby)
+ * — and shows every client's status checked against the referee (its view hash at that tick must match the referee's
+ * hash of what that team can see).
+ */
+import type { ClientDiag, RefereeTick } from "../net/index.ts";
+import type { AttachMessage, InitMessage, PortMessage, Settings } from "./bootstrap.ts";
+import type { RtcLink, Signaling } from "./rtc.ts";
+import type { Hub } from "@brianjenkins94/hub";
+import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
+import { observeApp, ownWorker } from "@brianjenkins94/observability";
+import { subjects } from "../net/index.ts";
+import { MATCH } from "./bootstrap.ts";
+import { answerLink, linkLabel, localSignaling, offerLink } from "./rtc.ts";
+import { war2Tools } from "./tools.ts";
+
+/** A client reports every tick, paused or not (see client.worker.ts); this long without one, it's stalled. */
+const STALLED_MS = 1000;
+
+export interface HostOptions {
+	/** The page's hub and its observability, when the page started them first (play.ts: before its lobby, so the lobby
+	 *  is observed too). Default: started here. */
+	"observed"?: { "hub": Hub; "telemetry": ReturnType<typeof observeApp> };
+	"settings": Settings;
+	/** This page's match: an instance reloaded within it rejoins its seat; a reloaded page starts a new one. */
+	"matchId": string;
+	/** Where instance iframes go. */
+	"grid": HTMLElement;
+	"status": HTMLTableSectionElement;
+	"summary": HTMLElement;
+}
+
+/** An instance iframe for client `id`, appended to `grid`; `onLoad` runs on every load of it (a reload included). */
+export function createInstanceFrame(grid: HTMLElement, { id, matchId, bots }: { "id": string; "matchId": string; "bots": boolean }, onLoad: (frame: HTMLIFrameElement) => void): HTMLIFrameElement {
+	const frame = document.createElement("iframe");
+
+	frame.src = `instance.html?id=${id}&match=${matchId}&bots=${bots ? 1 : 0}`;
+	frame.title = id;
+	frame.addEventListener("load", () => { onLoad(frame); });
+	grid.append(frame);
+
+	return frame;
+}
+
+export function startHost({ observed, settings, matchId, grid, status, summary }: HostOptions) {
+	const names = subjects(MATCH);
+	const hub = observed?.hub ?? createHub({ "id": "page" });
+	// Every channel of this realm's, past its hub too: the workers it starts and their messages, sockets, BroadcastChannels,
+	// Web Locks (observability's probes) — set up before the referee starts, so its probe sees it.
+	const telemetry = observed?.telemetry ?? observeApp(hub, { "network": true, "messages": true });
+	const referee = new Worker(new URL("referee.worker.ts", import.meta.url), { "type": "module", "name": "referee" });
+	/** The referee's view hashes for recent ticks, to check a client's report at whatever tick it's on. */
+	const history = new Map<number, RefereeTick>();
+	/** Each client's latest report, and when it arrived. */
+	const diags = new Map<string, ClientDiag & { "receivedAt": number }>();
+	let last: RefereeTick | undefined;
+	/** Each client's connections (both ends, for one of this page's instances): closed when it links again. */
+	const connections = new Map<string, RtcLink[]>();
+
+	/** The referee's end of `peer`'s link: its data channel goes straight to the referee worker. */
+	function attach(peer: string, signaling: Signaling): RtcLink[] {
+		for (const connection of connections.get(peer) ?? []) {
+			connection.close();
+		}
+
+		const ends = [offerLink(linkLabel(MATCH, peer), signaling, (channel) => {
+			referee.postMessage({ "type": "war2-attach", "peer": peer, "channel": channel } satisfies AttachMessage, [channel as unknown as Transferable]);
+		})];
+
+		connections.set(peer, ends);
+
+		return ends;
+	}
+
+	const tools = war2Tools(hub, () => currentStatus());
+
+	telemetry.addTools(tools);
+
+	ownWorker(referee, () => { telemetry.log.error("worker failed to load", { "worker": "referee" }); });
+	telemetry.log.info("match starting", { ...settings, "match": matchId, "debug": telemetry.tab !== undefined });
+	hub.link(portTransport(referee));
+	referee.postMessage({ "type": "war2-init", "settings": settings } satisfies InitMessage);
+
+	hub.subscribe(names.refereeTick, (data) => {
+		last = data as RefereeTick;
+		history.set(last.tick, last);
+		history.delete(last.tick - 100);
+	});
+	hub.subscribe(names.diag("*"), (data) => {
+		const diag = data as ClientDiag;
+
+		diags.set(diag.peer, { ...diag, "receivedAt": Date.now() });
+	});
+
+	/** A client is in sync when its view hash matches the referee's for its team at the tick it's on — and it's still
+	 *  reporting: a client that stopped (its worker died, its instance hung) is stalled, whatever it last said. */
+	function checkClient(diag: ClientDiag & { "receivedAt": number }): "in sync" | "behind" | "OUT OF SYNC" | "joining" | "stalled" {
+		if (Date.now() - diag.receivedAt > STALLED_MS) {
+			return "stalled";
+		}
+
+		if (diag.team === undefined || diag.viewTick < 0) {
+			return "joining";
+		}
+
+		const expected = history.get(diag.viewTick)?.viewHashes[diag.team];
+
+		if (expected === undefined) {
+			return "behind";
+		}
+
+		return expected === diag.viewHash ? "in sync" : "OUT OF SYNC";
+	}
+
+	function render(): void {
+		const rows = [...diags.values()].sort((left, right) => left.peer.localeCompare(right.peer)).map((diag) => {
+			const row = document.createElement("tr");
+			const state = checkClient(diag);
+			const cells = [diag.peer, String(diag.team ?? "–"), String(diag.viewTick), state, String(last === undefined ? "–" : last.tick - diag.viewTick), ...["keyframes", "gaps", "desyncs", "snaps", "batchesSent"].map((key) => String(diag.stats[key] ?? 0))];
+
+			row.dataset["state"] = state;
+
+			for (const text of cells) {
+				const cell = document.createElement("td");
+
+				cell.textContent = text;
+				row.append(cell);
+			}
+
+			return row;
+		});
+
+		status.replaceChildren(...rows);
+		summary.textContent = last === undefined ? "starting…" : `tick ${last.tick} · ${last.seats.length} seated · ${last.stats["commandsApplied"]} commands applied · ${last.stats["commandsRejected"]} rejected`;
+	}
+
+	setInterval(render, 250);
+
+	/** The latest status, as data. */
+	function currentStatus() {
+		return {
+			"tick": last?.tick,
+			"clients": [...diags.values()].sort((left, right) => left.peer.localeCompare(right.peer)).map((diag) => ({ "peer": diag.peer, "team": diag.team, "viewTick": diag.viewTick, "state": checkClient(diag), "stats": diag.stats }))
+		};
+	}
+
+	/** For scripts and debugging. */
+	(globalThis as unknown as { "__war2": unknown }).__war2 = {
+		"hub": hub,
+		"logs": (source?: string) => telemetry.records.filter((record) => source === undefined || record.context?.["source"] === source),
+		"architecture": () => telemetry.store.snapshot(),
+		"tab": telemetry.tab,
+		"status": currentStatus,
+		/** The MCP tools this page serves, callable directly: `await __war2.tool("war2_status")`. */
+		"tool": async (name: string, args: Record<string, unknown> = {}) => await tools.find((tool) => tool.name === name)?.handler(args, { "signal": new AbortController().signal })
+	};
+
+	return {
+		"hub": hub,
+		"telemetry": telemetry,
+		/** Seat a client in an instance iframe of this page's: on every load of it, a fresh link to the referee (its worker
+		 *  died with the old document) — over WebRTC, as a player in another tab's is, both ends made here. The instance
+		 *  links up to this page, which observes and debugs the client through it. */
+		"addInstance": (id: string): HTMLIFrameElement => {
+			const frame = createInstanceFrame(grid, { "id": id, "matchId": matchId, "bots": settings.bots }, (loaded) => {
+				const [refereeEnd, clientEnd] = localSignaling();
+
+				attach(id, refereeEnd).push(answerLink(clientEnd, (channel) => {
+					loaded.contentWindow!.postMessage({ "type": "war2-port", "channel": channel } satisfies PortMessage, location.origin, [channel as unknown as Transferable]);
+				}));
+			});
+
+			hub.link(windowTransport(frame.contentWindow!, location.origin));
+
+			return frame;
+		},
+		/** A player in another tab, known as `peer`: the referee's end of its link, signaling over the lobby. */
+		"attachRemote": (peer: string, signaling: Signaling): void => {
+			attach(peer, signaling);
+		}
+	};
+}

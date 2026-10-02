@@ -338,10 +338,28 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
       worker. All three are worker wiring, and the workers are W3's. In netsim, pause and step are served on the
       host tab's own hub (its referee worker), out of every client's reach; war2's speed goes there too. In the net
       layer the host's player is already just another client.
-- **W3: the browser.**
+- **W3: the browser.** *In progress.*
   - Pages, instances and lobby from netsim, with PeerJS for players on other machines.
   - The referee and client workers (from W2): the host's player as a client worker like any other, speed as an RPC
     on the host tab's own hub, fog drawn from the client worker's view.
+
+    *Done, bar PeerJS* (`src/browser`, `index.html`, `play.html`, `instance.html`): netsim's browser runtime carrying
+    war2. The host page starts the referee worker and an instance iframe per client; each client worker links to the
+    referee over a WebRTC data channel made by the pages and handed to the workers. The host's own player is one of
+    them, with no special path. A second tab of `play.html` at the same match joins as another player through the
+    lobby (Web Locks + BroadcastChannel). The referee worker serves the host's controls on the host tab's own tree,
+    out of every client's reach: inspect, pause and step, and **speed** (0.25–8×). Each client worker sends its page
+    only its team's view, its prediction and what its team has explored, so fog is drawn from that: unexplored black,
+    out of sight dimmed. The drawing is a debug canvas until the Phaser renderer lands. Page tools: `war2_status`,
+    `war2_state`, `war2_divergence`, `war2_control`, `war2_command`. Maps are built in for now (`src/browser/maps.ts`:
+    `open`, `arena`); the client's `loadMap` may be async, ready for fetched maps.
+
+    Browser tests on netsim's harness, built and served as it ships (12, about 8s): every client in sync, and paused,
+    every view exactly authority's; pause and step exact; speed (4× ticks over 2.5× as fast, clients keeping up); a
+    click selecting and moving a unit end to end (predicted at once, then authority's, the same target); the command
+    tool refusing another team's unit before it's sent; an instance reloaded mid-match rejoining its seat; players in
+    separate tabs in sync, keeping their seat across a reload, let go when their tab closes, told when the host's does;
+    and the PeerJS hand-off.
   - Phaser 4 bundled.
   - The renderer fed `RenderState` over the hub.
   - HUD and command card.

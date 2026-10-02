@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>war2</title>
+	<style>
+		:root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+		body { margin: 0; background: #0b0e11; color: #d7dde4; }
+		header { display: flex; gap: 16px; align-items: baseline; padding: 12px 16px; }
+		h1 { margin: 0; font-size: 16px; }
+		#summary { color: #8a96a3; font-size: 13px; }
+		#instances { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; padding: 0 16px; }
+		iframe { width: 100%; aspect-ratio: 1; border: 1px solid #243040; border-radius: 6px; background: #101418; }
+		table { margin: 16px; border-collapse: collapse; font: 12px ui-monospace, monospace; }
+		th, td { padding: 4px 10px; text-align: right; border-bottom: 1px solid #1c242e; }
+		th:first-child, td:first-child { text-align: left; }
+		tr[data-state="in sync"] td:nth-child(4) { color: #9fe6b8; }
+		tr[data-state="OUT OF SYNC"] td:nth-child(4) { color: #ff8a7a; font-weight: bold; }
+		tr[data-state="behind"] td:nth-child(4), tr[data-state="joining"] td:nth-child(4) { color: #f5b83d; }
+		tr[data-state="stalled"] td { color: #6b7684; }
+		tr[data-state="stalled"] td:nth-child(4) { color: #ff8a7a; font-weight: bold; }
+	</style>
+</head>
+<body>
+	<header><h1>war2</h1><span id="summary">starting…</span></header>
+	<div id="instances"></div>
+	<table id="status">
+		<thead><tr><th>client</th><th>team</th><th>view tick</th><th>state</th><th>lag</th><th>keyframes</th><th>gaps</th><th>desyncs</th><th>snaps</th><th>batches</th></tr></thead>
+		<tbody></tbody>
+	</table>
+	<script type="module" src="./src/browser/page.ts"></script>
+</body>
+</html>

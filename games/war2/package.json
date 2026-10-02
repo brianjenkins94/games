@@ -5,6 +5,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "dev": "vite --port 5181",
+    "build": "node scripts/build.ts",
     "test": "node --run test:node && node --run test:oracle && node --run test:browser",
     "test:node": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-skip-pattern=\"random-plains\" --test-coverage-lines=92 --test-coverage-branches=87 --test-coverage-functions=86 \"test/sim.test.ts\" \"test/validate.test.ts\" \"test/snapshot.test.ts\" \"test/net/*.test.ts\"",
     "test:oracle": "tsx --test \"test/oracle.test.ts\" \"test/snapshot.test.ts\"",
@@ -13,6 +15,7 @@
   },
   "dependencies": {
     "@brianjenkins94/hub": "https://brianjenkins94.github.io/editor/packages/hub@latest.tgz",
+    "@brianjenkins94/observability": "https://brianjenkins94.github.io/editor/packages/observability@latest.tgz",
     "bitecs": "^0.4.0",
     "peerjs": "^1.5.5"
   },

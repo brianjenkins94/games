@@ -32,8 +32,8 @@ import { hashView } from "./view.ts";
 export interface ClientOptions {
 	"hub": Hub;
 	"match": string;
-	/** A map's sim form, by the name the referee gives in its join reply. */
-	"loadMap": (name: string) => MapInfo;
+	/** A map's sim form, by the name the referee gives in its join reply (fetched, in a browser). */
+	"loadMap": (name: string) => MapInfo | Promise<MapInfo>;
 }
 
 export interface ClientStats {
@@ -220,13 +220,16 @@ export function createClient({ hub, match, loadMap }: ClientOptions): Client {
 		"join": async ({ token, timeoutMs = 5000 } = {}) => {
 			const request: JoinRequest = token === undefined ? {} : { "token": token };
 
-			seat = await rpc.request(names.join, request, { "timeoutMs": timeoutMs, "waitForResponderMs": timeoutMs }) as JoinReply;
+			const reply = await rpc.request(names.join, request, { "timeoutMs": timeoutMs, "waitForResponderMs": timeoutMs }) as JoinReply;
+			const map = await loadMap(reply.map);
+
+			seat = reply;
 			// Carry on the seat's sequence. (A client re-joining on a new link is already there: its own unacked batches
 			// are the ones the seat hasn't taken in yet, and it resends them in order.)
 			nextSeq = Math.max(nextSeq, seat.nextSeq);
 			view = new Map();
 			viewTick = -1;
-			predicted = createSimWorld(seat.seed, loadMap(seat.map), seat.teams);
+			predicted = createSimWorld(seat.seed, map, seat.teams);
 			predicted.exploring = false;   // what the team has explored comes from the view
 			field = new Map(predicted.fields.map(([name], index) => [name, index]));
 			unsubscribe?.();
