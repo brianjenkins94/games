@@ -14,6 +14,7 @@ import { createGame } from "../src/sim/game.ts";
 import { worldHash } from "../src/sim/snapshot.ts";
 import { revealAll } from "../src/sim/vision.ts";
 import { mapInfo, SCENARIOS } from "./oracle/scenarios.ts";
+import { readCensus } from "./oracle/census.ts";
 import { runSim } from "./oracle/sim.ts";
 
 function open() {
@@ -64,7 +65,7 @@ test("it keeps what happened lately: commands with their ticks and teams, each u
 	assert.equal(recorder.incidents().length, 1, "…but not the incidents");
 });
 
-test("it flags an incident by itself when the detector sees a stall — once per unit and fault — and the fixture replays it faithfully, the fault again", () => {
+test("it flags an incident by itself when the detector sees a fault — no more than one a cooldown — and the fixture replays it faithfully, the fault again", () => {
 	const scenario = SCENARIOS.find((candidate) => candidate.name === "pinch-corridor")!;
 	const recorder = createRecorder();
 
@@ -76,12 +77,14 @@ test("it flags an incident by itself when the detector sees a stall — once per
 
 	const auto = recorder.incidents();
 
-	assert.deepEqual(auto.map((incident) => incident.label), ["auto: stalled uid1", "auto: stalled uid2"], "each stalled unit once, a cooldown apart");
-	assert.equal(auto[1].flagTick - auto[0].flagTick >= 100, true);
+	// Units 1 and 2 give up on the same tick, walled behind a parked teammate (W6 step 3: they settle rather than jitter
+	// on): the first is flagged, the second falls inside the cooldown.
+	assert.deepEqual(auto.map((incident) => incident.label), ["auto: settled-short uid1"]);
+	assert.deepEqual([readCensus()["pinch-corridor"]["settled-short:1"], readCensus()["pinch-corridor"]["settled-short:2"]], [auto[0].flagTick, auto[0].flagTick]);
 
 	const fixture = recorder.fixture(auto[0].id, { "map": mapInfo(scenario.map), "seed": scenario.seed, "teams": 2 })!;
 	const replay = replayFixture(fixture, mapInfo(scenario.map));
 
-	assert.deepEqual(fixture.expect, { "pathology": "stalled", "settleBudget": 300 });
-	assert.deepEqual([replay.faithful, replay.focusFaults.has("stalled"), replay.focusReached], [true, true, false]);
+	assert.deepEqual(fixture.expect, { "pathology": "settled-short", "settleBudget": 300 });
+	assert.deepEqual([replay.faithful, replay.focusFaults.has("settled-short"), replay.focusReached], [true, true, false]);
 });

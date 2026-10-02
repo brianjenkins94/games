@@ -1,6 +1,6 @@
 /**
  * Record the oracle's traces: the old sim's, for every scenario (or those named), into traces/<name>.json — or, with
- * `--sim`, the new sim's, for the scenarios where it deviates on purpose (deviations.ts), into traces/w1/<name>.json.
+ * `--sim`, the new sim's, for the scenarios where it deviates on purpose (deviations.ts), into traces/sim/<name>.json.
  *
  *     npm run record [-- [--sim] <scenario> …]
  *     npm run record -- --census
@@ -50,7 +50,7 @@ if (process.argv.includes("--incident")) {
 const of = process.argv.includes("--sim") ? "sim" : "legacy";
 const wanted = process.argv.slice(2).filter((arg) => arg !== "--sim");
 
-await fs.mkdir(path.join(TRACES, "w1"), { "recursive": true });
+await fs.mkdir(path.join(TRACES, "sim"), { "recursive": true });
 
 for (const scenario of SCENARIOS.filter((candidate) => (wanted.length === 0 || wanted.includes(candidate.name)) && (of === "legacy" || candidate.name in DEVIATIONS))) {
 	const started = performance.now();

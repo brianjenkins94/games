@@ -595,7 +595,19 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
        trace, the census and the restore property are unchanged. `test/collide.test.ts` checks the new test against
        the formulas it replaced, exhaustively, and pins the diagonal-pinch geometry step 4 counts on: a one-tile unit at
        the corner between two diagonal walls touches both and overlaps neither.
-    3. Progress that means progress (the smallest behaviour change): the jitter loops escalate and settle.
+    3. ~~Progress that means progress: the jitter loops escalate and settle.~~ Done (2026-10-02). Each unit keeps its
+       closest since its order (`Path.bestDist`, straight-line to its slot; `Path.bestCost`, its flow field's cost to
+       go), reset by a new order; only beating one resets `stuckTicks`. Being pushed out of an overlap counts as a tick
+       without progress, as does any step that beats neither. Only the five scenarios that had stalled units play
+       differently (listed in `deviations.ts`, their new-sim traces in `traces/sim/` — renamed from `traces/w1/`, as it
+       holds every deliberate deviation, not W1's alone); the twelve direction and diagonal-gap scenarios, group-open,
+       around-building and build-farm are unchanged tick for tick. The census: all 36 stalls gone — those units now
+       escalate and give up (stuck 1 → 40, settled-short 1 → 38), pinch-corridor's units 1 and 2 at tick 548, and
+       production-rally's unit 6 settles beside its taken rally point; oscillating 4 → 8, units whose slot (in fog
+       believed open) turns out walled off: with no local route they push at the wall, and settle after the stuck limit
+       where before they slid there for good. Stacked 40 → 35 as the random maps play differently. The incident corpus
+       re-seeded from the new first incidents: both `settled-short`, pinned until steps 5 and 7 route them home. Also
+       fixed: a `.sort()` without a compare in step 1's test, a lint error that failed CI for steps 1 and 2.
     4. One rule for what blocks a mover: the slip goes; the diagonal-gap scenarios must still thread cleanly.
     5. Local planning wherever a parked unit blocks the flow.
     6. Groups travel as a block, and queue where the route narrows — with the detector's *jammed* kind, since only

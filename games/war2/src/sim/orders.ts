@@ -16,7 +16,7 @@ import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, WALK_PX } from "./comp
 import { distance, octant } from "./distance.ts";
 import { getOrComputeFlowField, UNREACHABLE } from "./flowField.ts";
 import { markIdleDirty } from "./pathObstacles.ts";
-import { stopUnit as _stopUnit } from "./systems/movement.ts";
+import { resetProgress, stopUnit as _stopUnit } from "./systems/movement.ts";
 import { getBelievedPassability } from "./vision.ts";
 import { footprintSoftFreeAt } from "./walkGrid.ts";
 import { unitEids } from "./world.ts";
@@ -245,7 +245,7 @@ export function setMoveTarget(
 		MoveTarget.ty[eid] = tyFP;
 		MoveTarget.active[eid] = 1;
 		Path.active[eid] = 0;
-		Path.stuckTicks[eid] = 0;
+		resetProgress(world, eid);
 
 		return true;
 	}
@@ -329,7 +329,7 @@ export function setMoveTarget(
 	Path.goalTy[eid] = flowTy;
 	MoveTarget.tx[eid] = goalXFP;
 	MoveTarget.ty[eid] = goalYFP;
-	Path.stuckTicks[eid] = 0;
+	resetProgress(world, eid);   // a new order: nothing to beat yet
 
 	if (curTx === goalTx && curTy === goalTy) {
         // Already standing in the slot tile — just nudge toward the exact point (no flow needed).

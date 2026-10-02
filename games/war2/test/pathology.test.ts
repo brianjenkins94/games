@@ -24,15 +24,18 @@ for (const scenario of SCENARIOS) {
 	});
 }
 
-test("quiet on the old suite's clean scenarios but for stacking; W0's stuck pairs in pinch-corridor and production-rally are caught as stalled", () => {
+test("quiet on the old suite's clean scenarios but for stacking; W0's stuck pairs in pinch-corridor and production-rally caught — now settling short", () => {
 	const faults = (name: string) => Object.keys(recorded[name]).filter((key) => !key.startsWith("stacked:")).sort();
 
 	for (const scenario of SCENARIOS.filter((candidate) => !candidate.name.startsWith("random-") && !["pinch-corridor", "production-rally"].includes(candidate.name))) {
 		assert.deepEqual(faults(scenario.name), [], scenario.name);
 	}
 
-	assert.deepEqual(faults("pinch-corridor"), ["stalled:1", "stalled:2"]);
-	assert.deepEqual(faults("production-rally"), ["stalled:5", "stalled:6"]);
+	// W6 step 3: progress means beating the best so far, so they escalate and give up rather than jitter on. Unit 6 of
+	// production-rally, whose rally point is taken, settles beside it (within a tile: not short).
+	assert.deepEqual(faults("pinch-corridor"), ["settled-short:1", "settled-short:2", "stuck:1", "stuck:2"]);
+	assert.deepEqual(faults("production-rally"), ["settled-short:5", "stuck:5", "stuck:6"]);
+	assert.ok(Object.values(recorded).every((faults) => Object.keys(faults).every((key) => !key.startsWith("stalled:"))), "nothing stalls any more");
 	// Every group moving together stacks (W6 step 0), the lone movers don't.
 	assert.ok(Object.keys(recorded["group-open"]).every((key) => key.startsWith("stacked:")) && Object.keys(recorded["group-open"]).length > 0);
 	assert.deepEqual(recorded["direction-SE"], {});
@@ -101,7 +104,7 @@ test("stacked: two teammates moving on top of each other are flagged once they'v
 		}
 	}
 
-	assert.deepEqual(Object.keys(seen).map(Number).sort(), [...uids].sort());
+	assert.deepEqual(Object.keys(seen).map(Number).sort((a, b) => a - b), [...uids].sort((a, b) => a - b));
 	assert.ok(Object.values(seen).every((tick) => tick >= 49), JSON.stringify(seen));
 });
 

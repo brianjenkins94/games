@@ -42,11 +42,11 @@ export function record(scenario: Scenario, run: (scenario: Scenario, onTick: (st
 }
 
 /** Which sim a trace is of: the old one's (W0's recording), or the new one's — the same file, unless the scenario is a
- *  deviation (deviations.ts), whose new-sim trace is its own, in traces/w1/. */
+ *  deviation (deviations.ts), whose new-sim trace is its own, in traces/sim/. */
 export type Of = "legacy" | "sim";
 
 export function traceFile(name: string, of: Of = "legacy"): string {
-	return of === "sim" && name in DEVIATIONS ? path.join(TRACES, "w1", name + ".json") : path.join(TRACES, name + ".json");
+	return of === "sim" && name in DEVIATIONS ? path.join(TRACES, "sim", name + ".json") : path.join(TRACES, name + ".json");
 }
 
 export function readTrace(name: string, of: Of = "legacy"): Trace {

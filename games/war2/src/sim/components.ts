@@ -63,8 +63,11 @@ export function createComponents() {
 	//   group's SHARED destination — every unit reads one cached field for long-range navigation — while
 	//   each unit's own final slot is its MoveTarget.tx/ty point (the movement system derives the slot tile
 	//   from it for the near-goal handoff).  For a standalone move the flow goal IS the unit's own target.
-	// stuckTicks = consecutive ticks of ~no progress toward the goal; arrival logic
+	// stuckTicks = consecutive ticks without progress toward the goal; arrival logic
 	//   settles a unit once this passes a threshold (replaces the old occupancy hacks).
+	// bestDist/bestCost = the closest the unit has come since its order: straight-line to its slot (FP) and along its
+	//   route (its flow field's cost to go). Progress is beating one of them — not merely moving, nor being pushed out of
+	//   an overlap, which is how a unit jittering in and out of a parked one kept resetting stuckTicks forever (W6).
 
 	const Path = {
 		"active": new Uint8Array(CAP),   // 1 = following a flow field
@@ -72,7 +75,9 @@ export function createComponents() {
 		"goalTy": new Int16Array(CAP),   // destination tile y
 		"curTx": new Int16Array(CAP),   // tile the unit currently sits in
 		"curTy": new Int16Array(CAP),
-		"stuckTicks": new Uint8Array(CAP),   // consecutive low-progress ticks (arrival/settle)
+		"stuckTicks": new Uint8Array(CAP),   // consecutive ticks without progress (arrival/settle)
+		"bestDist": new Int32Array(CAP),   // closest straight-line distance to the slot since the order (FP)
+		"bestCost": new Int32Array(CAP),   // least cost to go along the route since the order
 		// Pinch-corridor commitment (movement.ts): when the flow steers a unit into a diagonal pinch (both
 		// flanks walls), it commits to driving CENTRE-to-CENTRE through the corridor (wpFrom→wp tile centres)
 		// without re-sampling the flow until it arrives — so the tile-boundary direction flip and the 4-tile-

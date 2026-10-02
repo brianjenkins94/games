@@ -21,12 +21,13 @@
  *     Because each unit is handed a distinct tile target (formation offset / gather slot — see
  *     world.ts), the group comes to rest one-per-tile: grid-crisp and never stacked.
  *
- * `stuckTicks` drives the escalation and is keyed on *goal progress*: a clean (tier-1) move or any
- * real gain toward the goal resets it; merely waiting, shuffling sideways through a pile of traffic,
- * or phasing in place does not — so it climbs to GHOST_AFTER (start phasing) and on to STUCK_LIMIT
- * (settle).  Keying on progress (not just "did I move") is what makes a group funnelled onto a
- * blocked chokepoint settle and spread instead of piling onto one tile forever.  This replaced an
- * earlier hard-reservation model whose every-tick no-overlap rule needed a pile of special cases
+ * `stuckTicks` drives the escalation and is keyed on *goal progress*: only coming closer than the unit ever has since
+ * its order — in a straight line to its slot (by PROGRESS_EPS) or along its route (its flow field's cost to go) —
+ * resets it (Path.bestDist / bestCost).  Moving without beating either, waiting, being pushed out of an overlap, or
+ * phasing in place do not — so it climbs to GHOST_AFTER (start phasing) and on to STUCK_LIMIT (settle).  Keying on
+ * the best so far, not on "did this tick's step succeed" or "did it gain on last tick" (W6): a unit stepping into a
+ * parked unit and being pushed back out "succeeded" and "gained" every other tick, and jittered there forever.  This
+ * replaced an earlier hard-reservation model whose every-tick no-overlap rule needed a pile of special cases
  * (slide/slip/wait, far-first, loiter, settle guards).
  *
  * Determinism: integer fixed-point throughout; magnitudes via the sqrt-free dodecagon distance().
@@ -40,7 +41,7 @@ import { hasComponent } from "bitecs";
 import { inset, unitShape } from "../collide.ts";
 import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, UNIT_SPD } from "../components.ts";
 import { distance, octant } from "../distance.ts";
-import { DIR_DX, DIR_DY, getOrComputeFlowField, UNREACHABLE } from "../flowField.ts";
+import { DIR_DX, DIR_DY, getOrComputeFlowField, INF, UNREACHABLE } from "../flowField.ts";
 import { LOCAL_RANGE, localNextAim } from "../localPath.ts";
 import { markIdleDirty } from "../pathObstacles.ts";
 import { getBelievedPassability } from "../vision.ts";
@@ -51,7 +52,7 @@ import { footprintFreeAt, footprintSoftFreeAt, footprintStaticFreeAt, freeUnit, 
 const ARRIVE_FP = 2 * FP;          // within this of the goal point → settle.  Small, because the
                                       // collision-off final approach walks the unit ~exactly onto the
                                       // centre, so settle's snap is a ≤2px no-op (no visible grid-pop).
-const PROGRESS_EPS = UNIT_SPD >> 1;   // min gain/tick toward the goal to count as "progress"
+const PROGRESS_EPS = UNIT_SPD >> 1;   // min straight-line gain on the best so far to count as "progress"
 const GHOST_AFTER = 5;               // ticks boxed in before phasing through units.  Short now that the
                                       // local A* does the routing-around: phasing is only reached when a
                                       // unit is genuinely boxed (no way around), so a long wait on
@@ -68,6 +69,26 @@ const clampTile = (t: number, n: number) => (t < 0 ? 0 : t >= n ? n - 1 : t);
  *  sub-pixel lane correction never rounds away to zero (which would asymptote a unit at a 1-tile gap). */
 function clampStep(delta: number, budget: number): number {
 	return budget <= 0 ? 0 : delta > budget ? budget : delta < -budget ? -budget : delta;
+}
+
+/** A new order: no progress made yet, nothing to beat (Path.bestDist / bestCost). */
+export function resetProgress(world: SimWorld, eid: number): void {
+	const { Path } = world.components;
+
+	Path.stuckTicks[eid] = 0;
+	Path.bestDist[eid] = INF;
+	Path.bestCost[eid] = INF;
+}
+
+/** A tick without progress: count it, and settle nearby once boxed in too long (STUCK_LIMIT). */
+function noProgress(world: SimWorld, eid: number, self: Shape): void {
+	const { Path } = world.components;
+
+	Path.stuckTicks[eid] += 1;
+
+	if (Path.stuckTicks[eid] >= STUCK_LIMIT) {
+		settleOnto(world, eid, self);
+	}
 }
 
 /** Halt a unit: clear movement, path and animation state in one place.
@@ -168,7 +189,7 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 		reserveUnit(world, eid);
 		UnitAnim.moving[eid] = 1;
 		UnitAnim.dir[eid] = octant(sep[0], sep[1]);
-		Path.stuckTicks[eid] = 0;
+		noProgress(world, eid, self);   // pushed out, not closer: a unit jittering in and out of a parked one gets nowhere
 
 		return;
 	}
@@ -326,19 +347,19 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 
 	freeUnit(world, eid);
 	const canPhase = Path.stuckTicks[eid] >= GHOST_AFTER;
-	let nx = x; let ny = y; let
-		tier1 = false;
+	let nx = x; let
+		ny = y;
 
 	if (footprintFreeAt(world, x + sx, y + sy, self, eid)) {
-		nx = x + sx; ny = y + sy; tier1 = true;
+		nx = x + sx; ny = y + sy;
 	} else if (footprintStaticFreeAt(world, x + sx, y + sy, self)) {
-		nx = x + sx; ny = y + sy; tier1 = true;                     // SLIP toward the (planner-routed) aim
+		nx = x + sx; ny = y + sy;                                   // SLIP toward the (planner-routed) aim
 	} else if (fullX !== 0 && footprintFreeAt(world, x + fullX, y, self, eid)) {
-		nx = x + fullX; tier1 = true;                               // slide X around terrain (full speed)
+		nx = x + fullX;                                             // slide X around terrain (full speed)
 	} else if (fullY !== 0 && footprintFreeAt(world, x, y + fullY, self, eid)) {
-		ny = y + fullY; tier1 = true;                               // slide Y (full speed)
+		ny = y + fullY;                                             // slide Y (full speed)
 	} else if (sx !== 0 && sy !== 0 && terrainCentreClearAt(world, x + sx, y + sy) && unitsSoftFreeAt(world, x + sx, y + sy, self, eid)) {
-		nx = x + sx; ny = y + sy; tier1 = true;                     // diagonal CORNER-CUT: thread a wall
+		nx = x + sx; ny = y + sy;                                   // diagonal CORNER-CUT: thread a wall
         // pinch / stairstep.  Terrain is checked centre-only (any box clips the flanking walls at the
         // exact corner), so the centre stays in open terrain while the footprint grazes the corners;
         // settled units still block (unitsSoftFreeAt) so it never cuts straight through a parked unit.
@@ -359,24 +380,25 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 	UnitAnim.moving[eid] = (nx !== x || ny !== y) ? 1 : 0;
 	if (nx !== x || ny !== y) { UnitAnim.dir[eid] = octant(nx - x, ny - y); }
 
-    // Progress bookkeeping.  A clean (tier-1) move — which includes sliding sideways to round an
-    // obstacle — or any real gain toward the goal resets the stall counter; waiting, shuffling
-    // sideways through traffic, or phasing in place do NOT.  So a group funnelled onto a blocked
-    // chokepoint keeps climbing and SETTLES (then spreads via settleOnto) instead of piling there
-    // forever.  The same counter gates phasing (GHOST_AFTER) and the give-up settle (STUCK_LIMIT).
+    // Progress bookkeeping.  Only beating the best so far resets the stall counter — closer in a straight line to the
+    // slot (by PROGRESS_EPS), or a lower cost to go along the route (so going round terrain counts); sliding without
+    // gaining, waiting, shuffling through traffic or phasing in place do NOT.  So a group funnelled onto a blocked
+    // chokepoint keeps climbing and SETTLES (then spreads via settleOnto) instead of piling there forever.  The same
+    // counter gates phasing (GHOST_AFTER) and the give-up settle (STUCK_LIMIT).
 	const newDist = distance(goalX - nx, goalY - ny);
+	const ff = getOrComputeFlowField(world, Unit.team[eid], goalTx, goalTy);
+	const newCost = ff ? ff.cost[clampTile(fpToTile(ny), mapH) * mapW + clampTile(fpToTile(nx), mapW)] : INF;
+	const closer = newDist <= Path.bestDist[eid] - PROGRESS_EPS;
 
-	if (tier1 || prevDist - newDist >= PROGRESS_EPS) {
+	if (closer || newCost < Path.bestCost[eid]) {
+		if (closer) { Path.bestDist[eid] = newDist; }
+		if (newCost < Path.bestCost[eid]) { Path.bestCost[eid] = newCost; }
 		Path.stuckTicks[eid] = 0;
 	} else if (prevDist <= NEAR_GOAL_FP && footprintSoftFreeAt(world, goalX, goalY, self, eid)) {
         // Near the goal but couldn't thread the last bit in — rest at the goal POSITION if it's clear.
 		settleOnto(world, eid, self, goalX, goalY);
 	} else {
-		Path.stuckTicks[eid] += 1;
-
-		if (Path.stuckTicks[eid] >= STUCK_LIMIT) {
-			settleOnto(world, eid, self);
-		}
+		noProgress(world, eid, self);
 	}
 }
 
