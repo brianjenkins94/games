@@ -490,7 +490,77 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
     - **Deployed:** `cd` deploys every game to Pages after CI passes on main, so war2's `play.html` at
       brianjenkins94.github.io/games/war2/ is the link two people on different machines open to playtest over PeerJS.
   - Then war2's own roadmap (its `PLAN.md`): combat, then economy, tech, and AI, onto a foundation where every change
-    is guarded.
+    is guarded — after the pathing rewrite (W6), since combat stands on movement: chasing, attack-move, closing to range.
+
+- **W6: the pathing rewrite.** *Planned (2026-10-02), awaiting approval.*
+  - **What the census says.** The hand-written scenarios are clean but for two units in `pinch-corridor` and two in
+    `production-rally`; the random maps have 13–15 faults each. Of all 48, 41 are *stalled* (moving, no closer for
+    100 ticks), 5 oscillating, 1 stuck, 1 settled short.
+  - **Why units stall** (traced tick by tick in pinch-corridor's unit 1, production-rally's unit 6 and random-plains-2's
+    unit 1): a two-tick loop between rules that disagree about parked units. The flow field doesn't see units, so it
+    aims a mover straight at a parked one; the full step is refused, but the slip rung tests terrain only and steps it
+    *into* the parked unit; next tick, de-penetration pushes it back out. Both count as progress — the slip as a clean
+    move, the push-out by resetting `stuckTicks` outright — so the escalation (phase at 5, settle at 36) never comes:
+    the unit jitters 2–3 px for good. Production-rally's unit 6 meets it at its own goal: the rally point, where unit 4
+    is already parked, so it can never arrive. Random-plains-2's sits three movers on one pixel against a parked unit.
+    This is also why mv-1 was a trade: making the slip respect parked units breaks the loop, but the slip is there
+    because the local A* plans through *touching* cells that a solid step refuses — a planner/stepper mismatch, which
+    each fix only papers over from one side.
+  - **Not yet explained:** random-plains-1's unit 3 isn't jittering — it walks steadily *away* from its goal, 3 px a
+    tick, beside another mover. Traced first (step 0).
+  - **The collision model: one shape for everything.** Every collider is an axis-aligned box with its corners cut at
+    45° — an octagon, given by a half-width `w`, a half-height `h` and a corner bound `d` (`|dx| < w`, `|dy| < h`,
+    `|dx| + |dy| < d`). No cut is a square; a full cut (the N/S/E/W sides shrunk to nothing) is a diamond. Two of them
+    overlap exactly when `|dx| < wA + wB`, `|dy| < hA + hB` and `|dx| + |dy| < dA + dB`: their sum is the same kind of
+    shape, so every pair — unit and unit, unit and wall, unit and building — is one closed-form, integer, three-compare
+    test, and the planner's C-space is each obstacle grown by the mover's shape, stamped exactly. Planner and stepper
+    agree by construction.
+    - Today's shapes are all special cases: units are diamonds (L1 radius 16 for 32×32, 32 for 64×64), wall tiles are
+      diamonds inscribed in the tile (corners pass), and buildings are already these octagons (footprint inset 8 px,
+      corners cut 8 px). So 32×32 units and walls stay diamonds — the slim diagonal is what threads two units parked
+      diagonally (the diagonal-gap scenarios) and a wall pinch; buildings keep theirs; 64×64 units get a real shape of
+      their own.
+  - **What changes, layer by layer:**
+    - **Shapes** (new `collide.ts`): the octagon, its overlap test, the sum of two, and each type's shape from
+      `units.json` (`boxSize`, plus a corner cut, defaulting to a full one) and each building's footprint.
+    - **One rule for what blocks a mover:** terrain, buildings, and the *parked* units its team can see (its own, and
+      enemies in sight — fog stays honest). Routing, stepping and overlap correction all use it, in the same strict
+      form (touching is clear), so a gap the planner routes through is one a step can take.
+    - **Routing:** the flow field stays for long range (terrain and buildings, by tile). The local A* plans on the
+      exact C-space, and runs wherever the flow's next step is blocked by a parked unit — around the *mover*, not only
+      within 6 tiles of its goal.
+    - **Stepping:** the aimed step if clear under the one rule, else a slide along the free axis. The slip rung goes
+      (it existed for the mismatch), and so should the centre-only corner-cut, if diamond-on-diamond touching threads
+      pinches as the geometry says it will — to confirm against the pinch and diagonal-gap scenarios. Moving traffic
+      is passed through after a wait, as now.
+    - **Progress:** `stuckTicks` follows the best distance to the goal, as the pathology detector does — a step that
+      doesn't get closer doesn't reset it, and nor does pushing out of an overlap. Escalation: replan, then pass through
+      movers, then take another slot, then settle.
+    - **Goals that are taken:** a mover whose slot holds a parked unit when it gets there is given the nearest free
+      one; units trained to one rally point spread around it.
+    - **Overlap correction** stays only for overlaps from outside movement — a unit spawned on another, a building
+      placed on units — and isn't progress.
+    - **Per-unit speed:** each type's `speed` mapped to pixels per tick, and every threshold (arrival, progress,
+      lanes) derived from it rather than the global `UNIT_SPD`.
+    - **One ring search:** `orders.ts`'s six become one helper, as the formation and gather code is rewritten around
+      the slot reassignment.
+  - **Steps,** each its own commit with its census diff explained:
+    0. Trace random-plains-1's unit 3 and add what it shows to this plan.
+    1. `collide.ts`, with every existing shape re-expressed through it and no change in behaviour — every trace
+       identical, the proof that it's a refactor.
+    2. Progress that means progress (the smallest behaviour change): the jitter loops escalate and settle.
+    3. One rule for what blocks a mover: the slip goes; the diagonal-gap scenarios must still thread cleanly.
+    4. Local planning wherever a parked unit blocks the flow.
+    5. Taken goals reassigned; rally points spread.
+    6. Per-unit speed.
+    7. The ring-search helper and what's left of `orders.ts`.
+  - **Done when:** the census has no stalls or oscillations, or each one left is listed with its reason (as
+    `deviations.ts` lists the traces'); every direction and diagonal-gap scenario still arrives as cleanly as now
+    (diagonal-gap-NE in 57 ticks); all six units of `pinch-corridor` cross and come back; the incident corpus's two
+    stalls flip to `reachesGoal`; the restore property and determinism hold; and every trace that moves is re-recorded
+    (`traces/w6/`) with why.
+  - **Not in it:** crowd steering (units yielding to each other in motion), a formation redesign, and pathing for
+    combat (chasing, attack-move) — that's combat's, on top of this.
 
 ## Decisions
 
@@ -509,6 +579,6 @@ Decided 2026-10-01:
 - **Pathing: carried as-is, rewritten later.** It's been buggy: flow fields for long distances, A* for short, with the
   stuck and settled-short units W0's traces caught. W1 moved it over unchanged, bar the walk-grid repaint (a
   determinism fix). mv-1 turned out to be a trade, not a one-liner, and went to the rewrite with per-unit speed and the
-  ring searches (see W1). The rewrite comes once war2 is settled on the new stack, against the traces and scenarios W0 built.
+  ring searches (see W1). The rewrite comes once war2 is settled on the new stack, against the traces and scenarios W0 built: planned as W6.
 - **Gameplay (combat onward): after the port (W4).** The port stays behaviour-preserving, so the W0 traces keep
   checking every step; combat begins in W5.
