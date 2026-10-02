@@ -133,6 +133,8 @@ test("a town hall trains a peasant from its card, the queue shows in the status 
 	}, { "arg": hall.uid });
 
 	assert.deepEqual(queued.queue, ["unit-peasant"]);
+	// Paused, the peasant can't finish training (45 ticks) before we've looked — the view stays, the strip with it.
+	await tool(page, "war2_control", { "action": "pause" });
 	await instance.locator(".hud-status [data-production=\"0\"]").waitFor();
 
 	// The strip is refreshed with every view, but its item stays the same element (a click needs its mousedown and
@@ -141,7 +143,12 @@ test("a town hall trains a peasant from its card, the queue shows in the status 
 
 	await page.waitForTimeout(500);
 	assert.equal(await item!.evaluate((element) => element.isConnected), true, "the production item wasn't rebuilt under the pointer");
+	const seq = await lastSeq(page);
+
 	await instance.locator(".hud-status [data-production=\"0\"]").click();
+	// The cancel reaches the referee, which applies it on its next tick.
+	await until(page, "the referee to take the cancel", async (from: number) => (await (globalThis as unknown as { "__war2": { "tool": (name: string) => Promise<{ "seats": { "peer": string; "lastSeq": number }[] }> } }).__war2.tool("war2_status")).seats.find((seat) => seat.peer === "player-0")!.lastSeq > from, { "arg": seq });
+	await tool(page, "war2_control", { "action": "step", "ticks": 1 });
 	await until(page, "the training cancelled", async (uid: number) => {
 		const state = await (globalThis as unknown as { "__war2": { "tool": (name: string) => Promise<State> } }).__war2.tool("war2_state");
 
