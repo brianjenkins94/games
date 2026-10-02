@@ -368,8 +368,15 @@ export function stepWorld(world: SimWorld): void {
 	world.tick += 1;
 }
 
+/**
+ * Every unit and building, in stable-id order — the order the order-sensitive systems walk them in (movement:
+ * collision claims; production: who gets the next unit id), and snapshots list them in. Not bitecs's entity order,
+ * which a snapshot restored into a running world (a live incident replay) gets in whatever order bitecs recycles ids:
+ * a safeguard — no scenario's outcome has depended on it (the oracle's traces didn't move), but the sim shouldn't play
+ * differently for where its entity ids came from.
+ */
 export function unitEids(world: SimWorld): number[] {
-	const { MoveTarget, Position, Unit } = world.components;
+	const { MoveTarget, Position, Unit, UnitId } = world.components;
 
-	return [...query(world, [Position, Unit, MoveTarget])];
+	return [...query(world, [Position, Unit, MoveTarget])].sort((a, b) => UnitId.id[a] - UnitId.id[b]);
 }

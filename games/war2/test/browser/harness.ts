@@ -153,10 +153,10 @@ export async function tool<T = unknown>(page: Page, name: string, args: Record<s
 	return page.evaluate(async ([toolName, toolArgs]) => (globalThis as unknown as { "__war2": { "tool": (n: string, a: unknown) => Promise<unknown> } }).__war2.tool(toolName, toolArgs), [name, args] as const) as Promise<T>;
 }
 
-/** The pathology guard: no incident flagged in this match (the referee's detector stayed quiet). For tests that give
- *  deliberate orders — bots wander into the pathing's known faults. */
+/** The pathology guard: the referee's detector flagged nothing in this match (an incident flagged by hand doesn't
+ *  count). For tests that give deliberate orders — bots wander into the pathing's known faults. */
 export async function assertQuiet(page: Page): Promise<void> {
-	const incidents = await tool<{ "id": string; "label": string }[]>(page, "war2_incidents");
+	const incidents = (await tool<{ "id": string; "label": string }[]>(page, "war2_incidents")).filter((incident) => incident.label.startsWith("auto:"));
 
 	if (incidents.length > 0) {
 		throw new Error(`pathing incident(s) flagged: ${incidents.map((incident) => `${incident.id} ${incident.label}`).join("; ")} — war2_replay_incident <id> to look, war2_save_incident_test to pin it`);

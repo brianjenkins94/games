@@ -2,7 +2,8 @@
  *  controls — inspect, pause / step, speed — are served here, on the host tab's own tree: no client link carries them
  *  (W3, see MIGRATION.md: speed as a host RPC). */
 import type { Referee } from "../net/index.ts";
-import type { AttachMessage, InitMessage, RefereeControl, RefereeInspection } from "./bootstrap.ts";
+import type { Recorder } from "../diag/recorder.ts";
+import type { AttachMessage, DiagRequest, InitMessage, RefereeControl, RefereeInspection } from "./bootstrap.ts";
 import { createHub, dataChannelTransport, portTransport, serve } from "@brianjenkins94/hub";
 import { observe } from "@brianjenkins94/observability";
 import { createReferee, lobbyPermissions, teamView } from "../net/index.ts";
@@ -11,7 +12,8 @@ import { rngRange } from "../sim/rng.ts";
 import { snapshotUnit } from "../sim/snapshot.ts";
 import { unitTypeId } from "../sim/unitTypes.ts";
 import { canPlaceBuilding, spawnBuilding, spawnUnit, unitEids } from "../sim/world.ts";
-import { describe, MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
+import { createRecorder } from "../diag/recorder.ts";
+import { describe, MATCH, REFEREE_CONTROL, REFEREE_DIAG, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
 import { loadGameMap } from "./maps.ts";
 
 const hub = createHub({ "id": "referee" });
@@ -34,6 +36,8 @@ const links = new Map<string, () => void>();
 let paused = false;
 let speed = 1;
 let current: Referee | undefined;
+let recorder: Recorder | undefined;
+let match: InitMessage["settings"] | undefined;
 let timer: ReturnType<typeof setInterval> | undefined;
 let seated = "";
 
@@ -113,6 +117,9 @@ async function start(settings: InitMessage["settings"]): Promise<void> {
 	const gameMap = await loadGameMap(settings.map);
 	const map = gameMap.info;
 
+	match = settings;
+	recorder = createRecorder();
+
 	current = createReferee({
 		"hub": hub,
 		"match": MATCH,
@@ -120,6 +127,15 @@ async function start(settings: InitMessage["settings"]): Promise<void> {
 		"map": settings.map,
 		"mapInfo": map,
 		"teams": settings.teams,
+		"observe": (world, applied) => {
+			const before = recorder.incidents().length;
+
+			recorder.observe(world, applied);
+
+			for (const incident of recorder.incidents().slice(before)) {
+				log.warn("incident", { "id": incident.id, "label": incident.label, "tick": incident.flagTick });
+			}
+		},
 		"setup": (world) => {
 			// Each team at its start (the map's, else a band of its own), as a WC2 match opens: a town hall, finished,
 			// two workers beside it, and soldiers for the rest. Humans and orcs in turn.
@@ -152,6 +168,66 @@ async function start(settings: InitMessage["settings"]): Promise<void> {
 	log.info("referee started", { "teams": settings.teams, "map": settings.map, "units": current.world.eidOf.size });
 	run();
 }
+
+// The flight recorder (pull, not push): what the host's tools ask of the match's recent past.
+serve(hub, REFEREE_DIAG, (args) => {
+	const request = args as DiagRequest;
+
+	if (current === undefined || recorder === undefined) {
+		throw new Error("the match hasn't started");
+	}
+
+	const { world } = current;
+
+	switch (request.op) {
+		case "pathologies":
+			return recorder.pathologies().map(({ uid, pathology }) => {
+				const eid = world.eidOf.get(uid);
+
+				return { "pathology": pathology, ...eid === undefined ? { "uid": uid } : describe(snapshotUnit(world, eid)) };
+			});
+		case "incidents":
+			return recorder.incidents();
+		case "commands":
+			return recorder.commands();
+		case "track":
+			return recorder.track(request.uid);
+		case "flag": {
+			const incident = recorder.flag(world, request.label ?? "flagged by hand");
+
+			log.info("incident flagged", { "id": incident.id, "label": incident.label, "tick": incident.flagTick });
+
+			return recorder.incidents().find((summary) => summary.id === incident.id);
+		}
+
+		case "incident": {
+			const incident = recorder.incident(request.id);
+
+			return incident === undefined ? undefined : { ...incident, "snapshot": undefined, "units": incident.snapshot.units.map(describe) };
+		}
+
+		case "fixture":
+			return recorder.fixture(request.id, { "map": match.map, "seed": match.seed, "teams": match.teams });
+		case "replay": {
+			const incident = recorder.incident(request.id);
+
+			if (incident === undefined) {
+				throw new Error(`no incident ${request.id}`);
+			}
+
+			// Rewound to its lead-up, paused: step through it (war2_control), its commands applying again at their ticks.
+			paused = true;
+			current.restore(incident.snapshot, incident.commands);
+			recorder.reset();
+			log.info("incident replayed", { "id": incident.id, "tick": world.tick });
+
+			return { "tick": world.tick, "paused": true, "flagTick": incident.flagTick };
+		}
+
+		default:
+			throw new Error("unknown diagnostics request");
+	}
+});
 
 globalThis.addEventListener("message", (event: MessageEvent<InitMessage | AttachMessage | undefined>) => {
 	const message = event.data;

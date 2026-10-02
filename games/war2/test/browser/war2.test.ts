@@ -7,7 +7,7 @@ import type { Page } from "playwright";
 import type { Session } from "./harness.ts";
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { startSession, tool, until } from "./harness.ts";
+import { assertQuiet, startSession, tool, until } from "./harness.ts";
 
 const TILE = 32_000;
 
@@ -166,6 +166,7 @@ test("a player's clicks move a unit, end to end: renderer → instance → clien
 	// The sim rests units on its 8px grid: the target is within a cell of the click.
 	assert.ok(Math.abs(authority.target![0] - target.x) <= 8000 && Math.abs(authority.target![1] - target.y) <= 8000, JSON.stringify({ authority, target }));
 	assert.ok(settled.clients.every((entry) => entry.identical), JSON.stringify(settled));
+	await assertQuiet(page);
 	await page.close();
 });
 
@@ -211,6 +212,7 @@ test("war2_command acts as a client, and the client's own check refuses another 
 	assert.deepEqual(after.units.find((unit) => unit.uid === mine.uid)!.target, [16.5 * TILE, 2.5 * TILE]);
 	assert.deepEqual(after.units.find((unit) => unit.uid === theirs.uid)!.target, theirs.target, "the other team's unit is untouched");
 	assert.equal((await tool<Status>(page, "war2_status")).stats["commandsRejected"], 0, "the refused one never reached the referee");
+	await assertQuiet(page);
 	await page.close();
 });
 
@@ -237,5 +239,6 @@ test("a player who reloads their instance mid-match rejoins their seat, catches 
 	const moved = await tool<{ "ok": boolean; "received": boolean }>(page, "war2_command", { "client": "client-1", "type": "move", "units": [mine.uid], "x": 18.5, "y": 2.5 });
 
 	assert.deepEqual([moved.ok, moved.received], [true, true], "and plays on");
+	await assertQuiet(page);
 	await page.close();
 });

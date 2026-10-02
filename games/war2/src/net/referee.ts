@@ -9,10 +9,13 @@
  * (`seatPermissions`): the referee publishes every team's view, and the hub lets each client receive only its own.
  */
 import type { Hub } from "@brianjenkins94/hub";
+import type { Command } from "../sim/command.ts";
+import type { WorldSnapshot } from "../sim/snapshot.ts";
 import type { UnitSnapshot } from "../sim/types.ts";
 import type { MapInfo, SimWorld } from "../sim/world.ts";
 import type { CommandBatch, JoinReply, JoinRequest, RefereeTick, ResyncRequest, StateUpdate } from "./protocol.ts";
 import { serve } from "@brianjenkins94/hub";
+import { applySnapshot } from "../sim/snapshot.ts";
 import { applyCommands } from "../sim/systems/commands.ts";
 import { validateCommand } from "../sim/validate.ts";
 import { exploredRuns } from "../sim/vision.ts";
@@ -33,6 +36,9 @@ export interface RefereeOptions {
 	"setup"?: (world: SimWorld) => void;
 	/** Send a keyframe at least this often (ticks). Default 10. */
 	"keyframeEvery"?: number;
+	/** After each step: the world, and the commands it applied (validated, each with its issuer's team) — for
+	 *  diagnostics that watch the match (src/diag/recorder.ts). Read-only. */
+	"observe"?: (world: SimWorld, applied: { "team": number; "command": Command }[]) => void;
 }
 
 export interface RefereeStats {
@@ -82,6 +88,10 @@ export interface Referee {
 	"sync": () => void;
 	/** Seated teams, for diagnostics. */
 	"seats": () => { "team": number; "peer": string; "lastSeq": number }[];
+	/** Rewind the match to `snapshot` (an incident's: src/diag/recorder.ts), with `scheduled` commands to apply again at
+	 *  their ticks (a command at tick T in the step that makes T) — so stepping on replays it exactly. Every client gets
+	 *  a keyframe; its prediction is corrected from it. */
+	"restore": (snapshot: WorldSnapshot, scheduled: { "tick": number; "team": number; "command": Command }[]) => void;
 	"close": () => void;
 }
 
@@ -97,13 +107,15 @@ function isResync(value: unknown): value is ResyncRequest {
 	return typeof request === "object" && request !== null && request.resync === true;
 }
 
-export function createReferee({ hub, match, seed, map, mapInfo, teams = 2, setup, keyframeEvery = 10 }: RefereeOptions): Referee {
+export function createReferee({ hub, match, seed, map, mapInfo, teams = 2, setup, keyframeEvery = 10, observe }: RefereeOptions): Referee {
 	const world = createSimWorld(seed, mapInfo, teams);
 	const names = subjects(match);
 	/** By token. */
 	const seats = new Map<string, Seat>();
 	const seatOf = (peer: string | undefined): Seat | undefined => [...seats.values()].find((seat) => seat.peer === peer);
 	const pending: { "seat": Seat; "seq": number; "commands": unknown[] }[] = [];
+	/** A restored incident's commands, still to apply again: already validated once, applied as they were. */
+	let scheduled: { "tick": number; "team": number; "command": Command }[] = [];
 	const stats: RefereeStats = { "ticks": 0, "batchesApplied": 0, "batchesOutOfOrder": 0, "unknownSender": 0, "malformed": 0, "commandsApplied": 0, "commandsRejected": 0, "keyframes": 0, "deltas": 0, "held": 0, "resyncs": 0 };
 
 	setup?.(world);
@@ -235,12 +247,22 @@ export function createReferee({ hub, match, seed, map, mapInfo, teams = 2, setup
 		"world": world,
 		"stats": stats,
 		"tick": () => {
+			const applied: { "team": number; "command": Command }[] = [];
+
+			for (const entry of scheduled.filter((candidate) => candidate.tick === world.tick + 1)) {
+				applyCommands(world, [entry.command]);
+				applied.push({ "team": entry.team, "command": entry.command });
+			}
+
+			scheduled = scheduled.filter((candidate) => candidate.tick > world.tick + 1);
+
 			for (const { seat, seq, commands } of pending.splice(0)) {
 				for (const command of commands) {
 					const result = validateCommand(world, seat.team, command);
 
 					if (result.ok) {
 						applyCommands(world, [result.command]);
+						applied.push({ "team": seat.team, "command": result.command });
 						stats.commandsApplied += 1;
 					} else {
 						stats.commandsRejected += 1;
@@ -252,6 +274,7 @@ export function createReferee({ hub, match, seed, map, mapInfo, teams = 2, setup
 
 			stepWorld(world);
 			stats.ticks += 1;
+			observe?.(world, applied);
 
 			const viewHashes: Record<number, number> = {};
 
@@ -271,6 +294,18 @@ export function createReferee({ hub, match, seed, map, mapInfo, teams = 2, setup
 			}
 		},
 		"seats": seatList,
+		"restore": (snapshot, commands) => {
+			applySnapshot(world, snapshot);
+			scheduled = commands.filter((entry) => entry.tick > world.tick).map((entry) => structuredClone(entry));
+			// Batches taken in but not yet applied are dropped (the replay is the incident's, not live input) — and count as
+			// applied, so their clients stop resending them.
+			pending.length = 0;
+
+			for (const seat of seats.values()) {
+				seat.appliedSeq = seat.lastSeq;
+				seat.needKeyframe = true;
+			}
+		},
 		"close": () => {
 			stopServing();
 			unsubscribe();

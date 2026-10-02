@@ -35,7 +35,7 @@
  */
 
 import type { SimWorld } from "../world.ts";
-import { hasComponent, query } from "bitecs";
+import { hasComponent } from "bitecs";
 import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, UNIT_SPD } from "../components.ts";
 import { distance, octant } from "../distance.ts";
 import { DIR_DX, DIR_DY, getOrComputeFlowField, UNREACHABLE } from "../flowField.ts";
@@ -43,6 +43,7 @@ import { LOCAL_RANGE, localNextAim } from "../localPath.ts";
 import { markIdleDirty } from "../pathObstacles.ts";
 import { unitRadiusPx } from "../unitTypes.ts";
 import { getBelievedPassability } from "../vision.ts";
+import { unitEids } from "../world.ts";
 import { footprintFreeAt, footprintSoftFreeAt, footprintStaticFreeAt, freeUnit, reserveUnit, separateFrom, terrainCentreClearAt, unitsSoftFreeAt } from "../walkGrid.ts";
 
 // ── Tunables ──────────────────────────────────────────────────────────────────
@@ -130,7 +131,7 @@ export function movementSystem(world: SimWorld): void {
 		return;
 	}
 
-	for (const eid of query(world, [Position, MoveTarget, Unit])) {
+	for (const eid of unitEids(world)) {
 		if (hasComponent(world, eid, Building)) { continue; }   // buildings: static, never move
 
 		if (Unit.movable[eid] === 1 && MoveTarget.active[eid] === 1) {
@@ -380,9 +381,9 @@ function stepUnit(world: SimWorld, eid: number, mapW: number, mapH: number): voi
 
 // ── Pre-map fallback (dev only) ────────────────────────────────────────────────
 function movePreMap(world: SimWorld): void {
-	const { MoveTarget, Position, Unit, UnitAnim } = world.components;
+	const { MoveTarget, Position, UnitAnim } = world.components;
 
-	for (const eid of query(world, [Position, MoveTarget, Unit])) {
+	for (const eid of unitEids(world)) {
 		if (!MoveTarget.active[eid]) { continue; }
 		let sx = MoveTarget.tx[eid] - Position.x[eid];
 		let sy = MoveTarget.ty[eid] - Position.y[eid];

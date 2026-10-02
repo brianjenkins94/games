@@ -12,13 +12,13 @@
  */
 import type { ProductionState } from "./types.ts";
 import type { SimWorld } from "./world.ts";
-import { query } from "bitecs";
+import { hasComponent } from "bitecs";
 import productionJson from "../assets/production.json" with { "type": "json" };
 import { tileCenterFP } from "./components.ts";
 import { isEmpty } from "./occupancy.ts";
 import { enqueueOrder } from "./orders.ts";
 import { unitBuildTicks, unitTypeName } from "./unitTypes.ts";
-import { spawnUnit } from "./world.ts";
+import { spawnUnit, unitEids } from "./world.ts";
 
 const PRODUCTION = productionJson as Record<string, { "trains"?: string[] }>;
 
@@ -98,7 +98,8 @@ export function productionSystem(world: SimWorld): void {
 	const { Building, Unit, UnitId } = world.components;
 
 	if (!world.production) { return; }
-	for (const eid of query(world, [Building])) {
+	// Buildings in stable-id order: which finishes first decides who gets the next unit id.
+	for (const eid of unitEids(world).filter((candidate) => hasComponent(world, candidate, Building))) {
 		if (Building.buildLeft[eid] > 0) { continue; }            // still under construction → can't produce
 		const uid = UnitId.id[eid];
 		const p = world.production[uid];

@@ -161,3 +161,35 @@ test("the sim keeps no state of its own: no module-level variables, only constan
 
 	assert.deepEqual(found, [], "module state: put it on the world");
 });
+
+test("a snapshot restored into a used world plays on exactly as one restored fresh (what a live incident replay does)", () => {
+	const game = open(16);
+	const { UnitId } = game.world.components;
+	const uids = [2, 3, 4, 5, 6].map((tile) => UnitId.id[game.spawnUnit(tileCenterFP(tile), tileCenterFP(8), 0)]!);
+
+	game.applyCommands([{ "type": CmdType.MOVE, "unitIds": uids, "txFP": tileCenterFP(12), "tyFP": tileCenterFP(3) }]);
+
+	for (let tick = 0; tick < 20; tick += 1) {
+		game.step();
+	}
+
+	const snapshot = game.takeSnapshot();
+	const fresh = open(16);
+
+	fresh.applySnapshot(snapshot);
+
+	// The used world churns its entity ids (bitecs recycles them, last freed first), then takes the snapshot back.
+	for (const eid of game.unitEids().slice(0, 3)) {
+		game.despawnUnit(eid);
+	}
+
+	game.spawnUnit(tileCenterFP(1), tileCenterFP(1), 0);
+	game.applySnapshot(snapshot);
+
+	for (let tick = 0; tick < 80; tick += 1) {
+		game.step();
+		fresh.step();
+	}
+
+	assert.equal(worldHash(game.world), worldHash(fresh.world));
+});

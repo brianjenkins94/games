@@ -1,0 +1,73 @@
+{
+	"direction-S": {},
+	"direction-N": {},
+	"direction-E": {},
+	"direction-W": {},
+	"direction-SE": {},
+	"direction-NW": {},
+	"direction-SW": {},
+	"direction-NE": {},
+	"diagonal-gap-NE": {},
+	"diagonal-gap-SE": {},
+	"diagonal-gap-SW": {},
+	"diagonal-gap-NW": {},
+	"group-open": {},
+	"pinch-corridor": {
+		"stalled:1": 610,
+		"stalled:2": 610
+	},
+	"around-building": {},
+	"production-rally": {
+		"stalled:6": 307,
+		"stalled:5": 350
+	},
+	"build-farm": {},
+	"random-plains-1": {
+		"stalled:3": 177,
+		"stalled:11": 267,
+		"stalled:2": 292,
+		"stalled:12": 302,
+		"stalled:7": 303,
+		"stalled:8": 403,
+		"stalled:6": 469,
+		"stalled:4": 811,
+		"stalled:1": 895,
+		"stalled:9": 1041,
+		"stalled:10": 1041,
+		"oscillating:8": 1222,
+		"stalled:5": 1389,
+		"oscillating:2": 1914
+	},
+	"random-plains-2": {
+		"stalled:1": 106,
+		"stalled:6": 106,
+		"stalled:3": 117,
+		"stalled:2": 196,
+		"stuck:5": 670,
+		"settled-short:5": 682,
+		"stalled:12": 688,
+		"stalled:5": 1085,
+		"stalled:4": 1098,
+		"stalled:10": 1321,
+		"stalled:7": 1388,
+		"stalled:8": 1412,
+		"stalled:9": 1412,
+		"stalled:11": 1412,
+		"oscillating:6": 2455
+	},
+	"random-plains-3": {
+		"stalled:2": 106,
+		"stalled:3": 106,
+		"stalled:6": 106,
+		"stalled:5": 116,
+		"stalled:9": 289,
+		"stalled:10": 325,
+		"stalled:8": 330,
+		"stalled:11": 341,
+		"stalled:12": 342,
+		"stalled:7": 366,
+		"stalled:1": 558,
+		"stalled:4": 852,
+		"oscillating:4": 2692
+	}
+}

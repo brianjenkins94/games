@@ -1,0 +1,161 @@
+/**
+ * The pathology detector: a read-only scan after each tick for units the pathing has failed (W4, see MIGRATION.md).
+ * Carried from the old war2's referee, as an instance — its tracking is its own, so any number of detectors (one per
+ * referee, one per test) scan side by side. It never touches the sim, so determinism holds.
+ *
+ * A unit is flagged as:
+ * - **give-up** — ordered alone to move this tick, but ended it idle, more than a tile from the target (a group spreads
+ *   to slots around the click, so only a lone unit's give-up is plain);
+ * - **stuck** — moving, but grinding toward the settle limit (movement.ts STUCK_LIMIT);
+ * - **settled-short** — just stopped, not told to, more than a tile from the slot it was steering for;
+ * - **oscillating** — moving, but bouncing between two tiles over its last few tile changes;
+ * - **stalled** — moving, but no closer to its target for STALL_TICKS. It may be jittering in place (a few pixels to
+ *   and fro each tick), which keeps resetting its stall counter, so it never escalates and never settles: what W0's
+ *   traces caught in pinch-corridor and production-rally.
+ *
+ * The old detector's give-up and settled-short also fired on a group's units already in their slots and on units
+ * just stopped; those are left out (W4).
+ */
+import type { Command } from "../sim/command.ts";
+import type { SimWorld } from "../sim/world.ts";
+import { hasComponent } from "bitecs";
+import { CmdType } from "../sim/command.ts";
+import { fpToTile } from "../sim/components.ts";
+import { distance } from "../sim/distance.ts";
+import { unitEids } from "../sim/world.ts";
+
+export type Pathology = "give-up" | "stuck" | "settled-short" | "oscillating" | "stalled";
+
+/** stuckTicks at which a moving unit counts as stuck: about two thirds of the way to the settle limit (36). */
+export const STUCK_FLAG = 24;
+/** How many distinct consecutive tiles to look back over for bouncing. */
+export const OSC_WINDOW = 6;
+/** Ticks a moving unit may go without getting closer to its target before it counts as stalled (5 s). */
+export const STALL_TICKS = 100;
+/** What counts as getting closer: a quarter tile, fixed-point. */
+const PROGRESS_FP = 8000;
+
+interface Track {
+	"prevMove": number;
+	"prevSlotTx": number;
+	"prevSlotTy": number;
+	/** The unit's last tiles, each different from the one before. */
+	"tiles": number[];
+	/** The tick it started grinding, while it is (-1 otherwise). */
+	"stuckSince": number;
+	/** Its target, the closest it's come to it, and the tick it last got closer. */
+	"tx": number;
+	"ty": number;
+	"best": number;
+	"bestAt": number;
+}
+
+export interface PathologyDetector {
+	/** Scan `world` after a step that applied `applied`: every unit in trouble, by stable id, with what's wrong (the
+	 *  first found wins). */
+	"scan": (world: SimWorld, applied: readonly Command[]) => Map<number, Pathology>;
+	/** The tick a unit started grinding, if it's stuck now. */
+	"stuckSince": (uid: number) => number | undefined;
+	/** Forget everything (a restored or replayed world starts clean). */
+	"reset": () => void;
+}
+
+export function createPathologyDetector(): PathologyDetector {
+	const tracks = new Map<number, Track>();
+
+	return {
+		"scan": (world, applied) => {
+			const { Building, MoveTarget, Path, Position, Unit, UnitId } = world.components;
+			const found = new Map<number, Pathology>();
+			const stopped = new Set(applied.flatMap((command) => (command.type === CmdType.STOP ? command.unitIds : [])));
+
+			for (const command of applied) {
+				if (command.type !== CmdType.MOVE || command.unitIds.length !== 1 || command.queue === true) {
+					continue;
+				}
+
+				const [ttx, tty] = [fpToTile(command.txFP), fpToTile(command.tyFP)];
+				const [uid] = command.unitIds;
+				const eid = world.eidOf.get(uid);
+
+				if (eid !== undefined && MoveTarget.active[eid] === 0 && Math.max(Math.abs(Path.curTx[eid] - ttx), Math.abs(Path.curTy[eid] - tty)) > 1) {
+					found.set(uid, "give-up");
+				}
+			}
+
+			const live = new Set<number>();
+
+			for (const eid of unitEids(world)) {
+				if (hasComponent(world, eid, Building) || Unit.movable[eid] !== 1) {
+					continue;
+				}
+
+				const uid = UnitId.id[eid];
+				const moving = MoveTarget.active[eid];
+				const tile = Path.curTy[eid] * 4096 + Path.curTx[eid];
+				const track = tracks.get(uid) ?? { "prevMove": 0, "prevSlotTx": -999, "prevSlotTy": -999, "tiles": [], "stuckSince": -1, "tx": -1, "ty": -1, "best": Infinity, "bestAt": world.tick };
+
+				live.add(uid);
+
+				if (moving === 1 && Path.stuckTicks[eid] >= STUCK_FLAG) {
+					if (!found.has(uid)) {
+						found.set(uid, "stuck");
+					}
+
+					if (track.stuckSince < 0) {
+						track.stuckSince = world.tick;
+					}
+				} else {
+					track.stuckSince = -1;
+				}
+
+				// Settled-short: just stopped (moving 1 → 0) more than a tile from the slot it was steering for — for any
+				// reason: walled, slot taken, reflowed.
+				if (track.prevMove === 1 && moving === 0 && !stopped.has(uid) && !found.has(uid) && Math.abs(Path.curTx[eid] - track.prevSlotTx) + Math.abs(Path.curTy[eid] - track.prevSlotTy) > 1) {
+					found.set(uid, "settled-short");
+				}
+
+				if (track.tiles.at(-1) !== tile) {
+					track.tiles.push(tile);
+					track.tiles.splice(0, Math.max(0, track.tiles.length - OSC_WINDOW));
+				}
+
+				if (moving === 1 && track.tiles.length >= OSC_WINDOW && new Set(track.tiles).size <= 2 && !found.has(uid)) {
+					found.set(uid, "oscillating");
+				}
+
+				const away = distance(MoveTarget.tx[eid] - Position.x[eid], MoveTarget.ty[eid] - Position.y[eid]);
+
+				if (moving === 0 || MoveTarget.tx[eid] !== track.tx || MoveTarget.ty[eid] !== track.ty || away <= track.best - PROGRESS_FP) {
+					[track.tx, track.ty, track.best, track.bestAt] = [MoveTarget.tx[eid], MoveTarget.ty[eid], moving === 0 ? Infinity : away, world.tick];
+				} else if (world.tick - track.bestAt >= STALL_TICKS && !found.has(uid)) {
+					found.set(uid, "stalled");
+				}
+
+				track.prevMove = moving;
+
+				if (moving === 1) {
+					track.prevSlotTx = fpToTile(MoveTarget.tx[eid]);
+					track.prevSlotTy = fpToTile(MoveTarget.ty[eid]);
+				}
+
+				tracks.set(uid, track);
+			}
+
+			// Units that are gone are forgotten.
+			for (const uid of tracks.keys()) {
+				if (!live.has(uid)) {
+					tracks.delete(uid);
+				}
+			}
+
+			return found;
+		},
+		"stuckSince": (uid) => {
+			const since = tracks.get(uid)?.stuckSince;
+
+			return since === undefined || since < 0 ? undefined : since;
+		},
+		"reset": () => { tracks.clear(); }
+	};
+}

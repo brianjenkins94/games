@@ -34,7 +34,9 @@ type Game = GameModule.GameInstance;
  *  from nothing but that snapshot, and goes on in that one. */
 export interface Restore { "every": number }
 
-export type Runner = (scenario: Scenario, onTick: (state: CanonicalState) => void, restore?: Restore) => void;
+/** Each tick's canonical state; and, for a caller that wants to look inside, the game and the commands applied
+ *  before that tick's step (empty after setup). */
+export type Runner = (scenario: Scenario, onTick: (state: CanonicalState, game: Game, applied: unknown[]) => void, restore?: Restore) => void;
 
 /** A scenario runner for `sim`: it hands each tick's state (after setup, then after every step) to `onTick`. */
 export function adapter(sim: Sim): Runner {
@@ -125,7 +127,7 @@ export function adapter(sim: Sim): Runner {
 			return { "type": CMD.BUILD, "typeId": unitTypeId(command.build), "team": command.team ?? 0, "tileX": command.tile[0], "tileY": command.tile[1] };
 		};
 
-		onTick(canonical(game));
+		onTick(canonical(game), game, []);
 
 		for (let tick = 0; tick < scenario.ticks; tick += 1) {
 			if (restore !== undefined && tick > 0 && tick % restore.every === 0) {
@@ -135,14 +137,14 @@ export function adapter(sim: Sim): Runner {
 				game.applySnapshot(snapshot);
 			}
 
-			const commands = byTick.get(tick);
+			const applied = (byTick.get(tick) ?? []).map(toCommand);
 
-			if (commands !== undefined) {
-				game.applyCommands(commands.map(toCommand) as Parameters<Game["applyCommands"]>[0]);
+			if (applied.length > 0) {
+				game.applyCommands(applied as Parameters<Game["applyCommands"]>[0]);
 			}
 
 			game.step();
-			onTick(canonical(game));
+			onTick(canonical(game), game, applied);
 		}
 	};
 }

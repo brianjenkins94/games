@@ -427,6 +427,48 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
   - The pathology detector, and incident capture → fixture JSON.
   - Browser tests on netsim's harness, with the pathology guard running in CI.
   - The zero-knowledge comparison extended to war2.
+
+    *Done, bar the zero-knowledge comparison:*
+    - **The pathology detector** (`src/diag/pathology.ts`), carried from the old referee as an instance: give-up,
+      stuck, settled-short, oscillating — and a new kind, **stalled** (moving, but no closer to its target for 5 s).
+      W0's stuck pairs in pinch-corridor and production-rally turned out to be jittering a few pixels to and fro every
+      tick, which keeps resetting the stall counter, so they never escalate, never settle, and slipped past the old
+      kinds; stalled catches them. Two old false alarms are fixed: give-up fired on a group's units already in their
+      slots (now judged for a lone unit only, with a tile's slack), and settled-short on units their player stopped.
+    - **The census** (`test/oracle/census.ts`, `traces/pathologies.json`, `npm run record -- --census`): every
+      scenario run with the detector watching, each fault and the tick it showed, pinned like a trace. Quiet on all
+      15 clean scenarios; pinch-corridor and production-rally's stalled pairs; the random maps' 13–15 faults each
+      (stalls, a few oscillations, one stuck unit settling short) — the pathing's known faults, for the rewrite to
+      clear, each clearing a deliberate diff.
+    - **The flight recorder** (`src/diag/recorder.ts`), watching the referee after each step (`RefereeOptions.observe`):
+      snapshots every 30 ticks (the last six: ~9 s of lead-up), the last 30 s of applied commands, each unit's track
+      (tile, when), the detector's current faults, and incidents — auto-flagged (a give-up, settle short or stall at
+      once, a stuck unit once it stays stuck; debounced, never the same unit and fault twice in 30 s) or by hand. An
+      incident is its lead-up snapshot, the commands since, and the world's hash at the flag. Pulled by the host's
+      tools over RPC (`war2.local.referee.diag`) — nothing pushed per tick.
+    - **Replay** (`src/diag/replay.ts`): a fixture rebuilt on its map (by name, or inline for a scenario's), restored,
+      its commands applied at their ticks — it must reach the flagged world's hash exactly — then on, with the
+      detector watching the focus unit. Live, `Referee.restore` rewinds the running match to an incident's lead-up,
+      paused, its commands scheduled to apply again as it's stepped.
+    - **The incident corpus** (`test/incidents/`, `test/incidents.test.ts`): each fixture replays faithfully and
+      meets its expectation — its fault shows again (a known bug, pinned; flip it to `reachesGoal` once fixed) or the
+      focus unit reaches its goal. Seeded with the two stalls (`npm run record -- --incident <scenario>`); a tampered
+      fixture is caught.
+    - **Page tools:** `war2_pathologies`, `war2_unit` (state, fault, track), `war2_trace`, `war2_region` (pairwise
+      clearances), `war2_summarize_move`, `war2_incidents`, `war2_flag_incident`, `war2_replay_incident`,
+      `war2_save_incident_test` (returns the fixture JSON and its path, for the agent to write).
+    - **The guard in the browser:** `assertQuiet` (harness.ts) fails a test the detector flagged anything in; it runs
+      at the end of every browser test that gives deliberate orders (bots wander into the known faults). Plus
+      `WAR2_CPU_THROTTLE=<n>` to play CI's slower runners locally.
+    - **Tests:** the detector (census and synthetic cases), the recorder (what it keeps, auto and hand flags, fixtures
+      round-tripping through replay), the corpus, the map loader (a stubbed mirror); in the browser, an incident flagged
+      in a live match and saved through the tool replays in node to the captured hash, and a live replay rewinds and
+      steps back to the flagged moment exactly.
+    - **On the way:** the order-sensitive systems (movement, production) walk units in stable-id order, not bitecs's
+      entity order, so a world restored in place plays as one restored fresh (a safeguard: no trace moved). The HUD's
+      status strip and portrait update in place, rather than rebuilding under the pointer 20 times a second (CI caught
+      a lost click).
+
 - **W5: in the editor, then the game.**
   - war2 in an editor preview and across tabs, over WebRTC.
   - Then war2's own roadmap (its `PLAN.md`): combat, then economy, tech, and AI, onto a foundation where every change

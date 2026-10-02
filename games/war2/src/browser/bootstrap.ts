@@ -33,6 +33,14 @@ export interface InitMessage {
 /** The referee worker's host-only calls (RPC, page → referee): its state, and pausing / stepping / its speed. */
 export const REFEREE_INSPECT = `war2.${MATCH}.referee.inspect`;
 export const REFEREE_CONTROL = `war2.${MATCH}.referee.control`;
+/** The referee's flight recorder (src/diag/recorder.ts), host-only too: its pathologies, incidents, tracks. */
+export const REFEREE_DIAG = `war2.${MATCH}.referee.diag`;
+
+export type DiagRequest =
+	| { "op": "pathologies" | "incidents" | "commands" }
+	| { "op": "incident" | "replay" | "fixture"; "id": string }
+	| { "op": "flag"; "label"?: string }
+	| { "op": "track"; "uid": number };
 
 /** A unit as the tools and the debug canvas show it: by name, with what matters to look at. */
 export interface UnitInfo {

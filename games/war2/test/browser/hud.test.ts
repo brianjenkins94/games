@@ -7,7 +7,7 @@ import type { Frame, Page } from "playwright";
 import type { Session } from "./harness.ts";
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { startSession, tool, until } from "./harness.ts";
+import { assertQuiet, startSession, tool, until } from "./harness.ts";
 
 const TILE = 32_000;
 
@@ -115,6 +115,7 @@ test("a worker builds a farm through the card: select it, B for the build menu, 
 
 	assert.equal(farm.team, 0);
 	assert.ok(farm.building!.buildLeft > 0, "under construction");
+	await assertQuiet(page);
 	await page.close();
 });
 
@@ -169,5 +170,6 @@ test("a town hall trains a peasant from its card, the queue shows in the status 
 		return state.units.find((unit) => unit.uid === uid)?.production === undefined;
 	}, { "arg": hall.uid });
 	await instance.locator(".hud-status [data-production]").waitFor({ "state": "detached" });
+	await assertQuiet(page);
 	await page.close();
 });
