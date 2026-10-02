@@ -624,7 +624,33 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
        maps shift (stacked 35 → 38). The corpus is down to pinch-corridor's fixture: production-rally no longer has an
        incident. Still to do from this step's rule: the planner sees only its own team's parked units; enemies in
        sight join it with combat, when enemies park in each other's way.
-    5. Local planning wherever a parked unit blocks the flow.
+    5. ~~Local planning wherever a parked unit blocks the flow.~~ Done (2026-10-02). Where a parked unit sits on the
+       next stretch of the flow's route (`localPath.parkedInTheWay`), or the unit's gone 3 ticks without progress, it
+       plans with the local A* to the farthest route tile up to 5 ahead that's clear of parked units, and rejoins the flow
+       there (`detourAim`). That alone took pinch-corridor's two home, but left most of the random maps' give-ups,
+       so each was traced:
+       - *Fog re-prices the route under a walking unit.* Every wall its team finds recomputes the field, often dearer, so
+         a unit on its route never beat a best from the older field and settled — 72 of 91 give-ups had a reachable slot,
+         most of them this. Each unit now keeps last tick's cost at its tile (`Path.lastCost`); if the field prices that
+         tile differently now, its best shifts by as much (the detector the same). Restore-safe: fields are a pure
+         function of what the team believes.
+       - *A razor of zero width.* Two parked units diagonal leave a gap that's a line, enterable only by landing on it;
+         a unit a pixel off slid to and fro across it. Units now take each other 2 px smaller (`collide.UNIT_SLACK`, in
+         the stepper, the C-space and the push-out alike), so the gap is 4 px wide; units at rest may overlap as much.
+         With it, a slide that gains nothing alone may be taken if the next one gains (a two-step look when blocked).
+       - *A farm placed on a unit* (placement checks only buildings): the unit couldn't move at all. A unit inside
+         terrain or a building is now ejected to the nearest clear spot, as WC2 moves units off a site.
+       - *An enemy parked in the way*: the stepper collides with it, the planner didn't see it. The planner's parked
+         units are now its team's own and the enemies it sees (`computeVisibleUids`), rebuilt every tick.
+       Give-ups on the random maps went from 91 events to 4 — 3 with a slot that's truly unreachable (step 7's), and 1 on
+       terrain, far from its slot, to look at again. The census (98 → 59): settled-short 38 → 3, stuck 40 → 14,
+       oscillating 8 → 4, stacked 38 (step 6's). Arrivals: pinch-corridor's units 1 and 2 now reach their goal (ticks 411
+       and 362; the last tile is step 7's, three units sent to one point); every other hand-written arrival in the same
+       ticks. Traces: group-open and build-farm now deviate (the slack lets passing units come 4 px closer); diagonal-gap-NE
+       and -SW are back on their original trace tick for tick, off the list. The incident corpus: pinch-corridor no longer
+       has an incident, so the moment it used to give up is kept as a fixture expecting unit 1 to reach its goal
+       (`npm run record -- --reaches pinch-corridor 1 544`); the recorder's own test now makes its incident from a gap a
+       parked teammate fills, which no pathing can get past.
     6. Groups travel as a block, and queue where the route narrows — with the detector's *jammed* kind, since only
        now can movers block each other.
     7. Taken goals reassigned; rally points spread.

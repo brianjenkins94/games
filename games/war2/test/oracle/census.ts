@@ -11,6 +11,7 @@ import * as fs from "@brianjenkins94/util/fs";
 import type { Fixture } from "../../src/diag/recorder.ts";
 import { createPathologyDetector } from "../../src/diag/pathology.ts";
 import { createRecorder } from "../../src/diag/recorder.ts";
+import { fpToTile } from "../../src/sim/components.ts";
 import { mapInfo } from "./scenarios.ts";
 import { runSim } from "./sim.ts";
 import { TRACES } from "./trace.ts";
@@ -65,3 +66,32 @@ export function firstIncident(scenario: Scenario): Fixture | undefined {
 
 	return fixture;
 }
+
+/** A moment of a scenario captured as a fixture that expects its focus unit to reach its goal — an incident that's
+ *  been fixed, kept as one that must stay fixed (`npm run record -- --reaches <scenario> <uid> <tick>`): flagged by hand
+ *  at `tick` on `uid`, which must then come within a tile of where it's going in the replay's settle budget. */
+export function reachesFixture(scenario: Scenario, uid: number, tick: number): Fixture | undefined {
+	const recorder = createRecorder();
+	let fixture: Fixture | undefined;
+
+	runSim(scenario, (state, game, applied) => {
+		if (fixture !== undefined || state.tick === 0) {
+			return;
+		}
+
+		recorder.observe(game.world, (applied as Command[]).map((command) => ({ "team": (command as { "team"?: number }).team ?? 0, "command": command })));
+
+		if (state.tick === tick) {
+			const { MoveTarget } = game.world.components;
+			const eid = game.world.eidOf.get(uid)!;
+			const incident = recorder.flag(game.world, `${scenario.name}: uid${uid} reaches its goal`, { "uid": uid, "pathology": "settled-short", "goal": [fpToTile(MoveTarget.tx[eid]), fpToTile(MoveTarget.ty[eid])] });
+
+			fixture = recorder.fixture(incident.id, { "map": mapInfo(scenario.map), "seed": scenario.seed, "teams": 2 });
+			fixture!.id = `${scenario.name}-uid${uid}-reaches`;
+			fixture!.expect = { "reachesGoal": true, "settleBudget": 300 };
+		}
+	});
+
+	return fixture;
+}
+

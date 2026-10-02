@@ -68,6 +68,22 @@ export function depth(a: Shape, b: Shape, dx: number, dy: number): number {
 	return Math.min(a.w + b.w - ax, a.h + b.h - ay, a.d + b.d - ax - ay);
 }
 
+/** How far two UNITS may overlap before they collide: each unit's shape is taken this much smaller against another
+ *  unit (not against terrain or buildings).  Without it the gap between two units parked diagonally is a line of zero
+ *  width — enterable only by landing on it exactly, which a step almost never does, so a unit off it by a pixel slid
+ *  to and fro across it for good (W6 step 5).  With it the gap is 2 × this wide; units at rest may overlap as much. */
+export const UNIT_SLACK = 2 * FP;
+
+/** True if units `a` and `b`, centres (dx, dy) apart, overlap — each taken UNIT_SLACK smaller (see there). */
+export function unitsOverlap(a: Shape, b: Shape, dx: number, dy: number): boolean {
+	return inside(a.w + b.w - 2 * UNIT_SLACK, a.h + b.h - 2 * UNIT_SLACK, a.d + b.d - 2 * UNIT_SLACK, dx, dy);
+}
+
+/** How deep units `a` and `b` overlap, each taken UNIT_SLACK smaller: positive when they do. */
+export function unitsDepth(a: Shape, b: Shape, dx: number, dy: number): number {
+	return depth(a, b, dx, dy) - 2 * UNIT_SLACK;
+}
+
 const HALF_TILE_FP = (TILE_PX >> 1) * FP;
 /** A building's footprint inset, and its corner cut. */
 const BUILD_MARGIN_FP = 8 * FP;

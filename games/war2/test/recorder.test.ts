@@ -6,16 +6,16 @@
 import type { Command } from "../src/sim/command.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { rowsMap } from "../src/browser/maps.ts";
 import { createRecorder } from "../src/diag/recorder.ts";
 import { replayFixture } from "../src/diag/replay.ts";
 import { CmdType } from "../src/sim/command.ts";
 import { tileCenterFP } from "../src/sim/components.ts";
 import { createGame } from "../src/sim/game.ts";
 import { worldHash } from "../src/sim/snapshot.ts";
+import { unitTypeId } from "../src/sim/unitTypes.ts";
 import { revealAll } from "../src/sim/vision.ts";
-import { mapInfo, SCENARIOS } from "./oracle/scenarios.ts";
-import { readCensus } from "./oracle/census.ts";
-import { runSim } from "./oracle/sim.ts";
+import { mapInfo } from "./oracle/scenarios.ts";
 
 function open() {
 	const map = mapInfo({ "rows": Array.from({ "length": 12 }, () => "............") });
@@ -65,26 +65,38 @@ test("it keeps what happened lately: commands with their ticks and teams, each u
 	assert.equal(recorder.incidents().length, 1, "…but not the incidents");
 });
 
-test("it flags an incident by itself when the detector sees a fault — no more than one a cooldown — and the fixture replays it faithfully, the fault again", () => {
-	const scenario = SCENARIOS.find((candidate) => candidate.name === "pinch-corridor")!;
+test("it flags an incident by itself when the detector sees a fault, and the fixture replays it faithfully, the fault again", () => {
+	// A wall whose one gap a parked teammate fills: no way through, so the footman ordered across gives up short.
+	const rows = Array.from({ "length": 7 }, (_, y) => Array.from({ "length": 12 }, (_, x) => (x === 6 && y !== 3 ? "#" : ".")).join(""));
+	const map = rowsMap(rows);
+	const game = createGame(1, map);
 	const recorder = createRecorder();
 
-	runSim(scenario, (state, game, applied) => {
-		if (state.tick > 0) {
-			recorder.observe(game.world, (applied as Command[]).map((command) => ({ "team": 0, "command": command })));
-		}
-	});
+	revealAll(game.world);
+	game.initUnitIdCounter(0);
 
-	const auto = recorder.incidents();
+	const { UnitId } = game.world.components;
+	const [mover] = [UnitId.id[game.spawnUnit(tileCenterFP(2), tileCenterFP(3), 0, undefined, unitTypeId("unit-footman"))]];
 
-	// Units 1 and 2 give up on the same tick, walled behind a parked teammate (W6 step 3: they settle rather than jitter
-	// on): the first is flagged, the second falls inside the cooldown.
-	assert.deepEqual(auto.map((incident) => incident.label), ["auto: settled-short uid1"]);
-	assert.deepEqual([readCensus()["pinch-corridor"]["settled-short:1"], readCensus()["pinch-corridor"]["settled-short:2"]], [auto[0].flagTick, auto[0].flagTick]);
+	game.spawnUnit(tileCenterFP(6), tileCenterFP(3), 0, undefined, unitTypeId("unit-footman"));
 
-	const fixture = recorder.fixture(auto[0].id, { "map": mapInfo(scenario.map), "seed": scenario.seed, "teams": 2 })!;
-	const replay = replayFixture(fixture, mapInfo(scenario.map));
+	const move: Command = { "type": CmdType.MOVE, "unitIds": [mover], "txFP": tileCenterFP(10), "tyFP": tileCenterFP(3) };
+
+	game.applyCommands([move]);
+
+	for (let tick = 0; tick < 200; tick += 1) {
+		game.step();
+		recorder.observe(game.world, tick === 0 ? [{ "team": 0, "command": move }] : []);
+	}
+
+	const auto = recorder.incidents().filter((incident) => incident.label.startsWith("auto:"));
+
+	assert.deepEqual(auto.map((incident) => incident.label), [`auto: settled-short uid${mover}`]);
+
+	const fixture = recorder.fixture(auto[0].id, { "map": map, "seed": 1, "teams": 2 })!;
+	const replay = replayFixture(fixture, map);
 
 	assert.deepEqual(fixture.expect, { "pathology": "settled-short", "settleBudget": 300 });
 	assert.deepEqual([replay.faithful, replay.focusFaults.has("settled-short"), replay.focusReached], [true, true, false]);
 });
+

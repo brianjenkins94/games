@@ -68,6 +68,9 @@ export function createComponents() {
 	// bestDist/bestCost = the closest the unit has come since its order: straight-line to its slot (FP) and along its
 	//   route (its flow field's cost to go). Progress is beating one of them — not merely moving, nor being pushed out of
 	//   an overlap, which is how a unit jittering in and out of a parked one kept resetting stuckTicks forever (W6).
+	// lastCost = its cost to go last tick, at the tile it's on: if the field now prices that tile differently, the field
+	//   changed under it (fog found a wall, or opened a way) and bestCost shifts by as much — else a unit walking its
+	//   route while its team explores never beats a best from an older, more optimistic field (W6 step 5).
 
 	const Path = {
 		"active": new Uint8Array(CAP),   // 1 = following a flow field
@@ -78,6 +81,7 @@ export function createComponents() {
 		"stuckTicks": new Uint8Array(CAP),   // consecutive ticks without progress (arrival/settle)
 		"bestDist": new Int32Array(CAP),   // closest straight-line distance to the slot since the order (FP)
 		"bestCost": new Int32Array(CAP),   // least cost to go along the route since the order
+		"lastCost": new Int32Array(CAP),   // cost to go at its tile last tick, by the field then (rebases bestCost)
 		// Pinch-corridor commitment (movement.ts): when the flow steers a unit into a diagonal pinch (both
 		// flanks walls), it commits to driving CENTRE-to-CENTRE through the corridor (wpFrom→wp tile centres)
 		// without re-sampling the flow until it arrives — so the tile-boundary direction flip and the 4-tile-

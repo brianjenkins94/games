@@ -8,14 +8,15 @@
  *
  * `--census` records the pathology census instead (census.ts): what the detector finds in every scenario, on the new
  * sim — after a deliberate change to the pathing or the detector. `--incident` saves a scenario's first incident as a
- * fixture in test/incidents/ (census.ts firstIncident).
+ * fixture in test/incidents/ (census.ts firstIncident); `--reaches <scenario> <uid> <tick>` saves that moment as a fixture
+ * expecting the unit to reach its goal — a fixed incident kept fixed (census.ts reachesFixture).
  *
  * Re-record the old sim's only to add or change a scenario: they're its behaviour, and the new sim is held to them. The
  * new sim's only after a deliberate change, listed in deviations.ts with why.
  */
 import * as path from "node:path";
 import * as fs from "@brianjenkins94/util/fs";
-import { census, CENSUS_FILE, firstIncident } from "./census.ts";
+import { census, CENSUS_FILE, firstIncident, reachesFixture } from "./census.ts";
 import { DEVIATIONS } from "./deviations.ts";
 import { runLegacy } from "./legacy.ts";
 import { runSim } from "./sim.ts";
@@ -44,6 +45,17 @@ if (process.argv.includes("--incident")) {
 	await fs.mkdir(path.dirname(file), { "recursive": true });
 	fs.writeFileSync(file, JSON.stringify(fixture) + "\n");
 	console.log(`${fixture.label}: ticks ${fixture.baseTick}→${fixture.flagTick}, ${fixture.commands.length} commands, focus ${JSON.stringify(fixture.focus)} → ${path.relative(process.cwd(), file)}`);
+	process.exit(0);
+}
+
+if (process.argv.includes("--reaches")) {
+	const [name, uid, tick] = process.argv.slice(process.argv.indexOf("--reaches") + 1);
+	const fixture = reachesFixture(SCENARIOS.find((scenario) => scenario.name === name)!, Number(uid), Number(tick));
+	const file = path.resolve(import.meta.dirname, "../incidents", `${fixture!.id}.json`);
+
+	await fs.mkdir(path.dirname(file), { "recursive": true });
+	fs.writeFileSync(file, JSON.stringify(fixture) + "\n");
+	console.log(`${fixture!.label}: ticks ${fixture!.baseTick}→${fixture!.flagTick}, ${fixture!.commands.length} commands, expects ${JSON.stringify(fixture!.expect)} → ${path.relative(process.cwd(), file)}`);
 	process.exit(0);
 }
 

@@ -59,6 +59,9 @@ interface Track {
 	"best": number;
 	/** The least cost to go along its route it's had (its flow field's; Infinity without one). */
 	"routeBest": number;
+	/** Its cost to go at its tile last scan, and that tile — to rebase routeBest when the field re-prices the route. */
+	"routeLast": number;
+	"routeLastTile": number;
 	"bestAt": number;
 }
 
@@ -109,7 +112,7 @@ export function createPathologyDetector(): PathologyDetector {
 				const uid = UnitId.id[eid];
 				const moving = MoveTarget.active[eid];
 				const tile = Path.curTy[eid] * 4096 + Path.curTx[eid];
-				const track = tracks.get(uid) ?? { "prevMove": 0, "prevSlotTx": -999, "prevSlotTy": -999, "tiles": [], "stuckSince": -1, "tx": -1, "ty": -1, "best": Infinity, "routeBest": Infinity, "bestAt": world.tick };
+				const track = tracks.get(uid) ?? { "prevMove": 0, "prevSlotTx": -999, "prevSlotTy": -999, "tiles": [], "stuckSince": -1, "tx": -1, "ty": -1, "best": Infinity, "routeBest": Infinity, "routeLast": Infinity, "routeLastTile": -1, "bestAt": world.tick };
 
 				live.add(uid);
 
@@ -143,8 +146,18 @@ export function createPathologyDetector(): PathologyDetector {
 				const away = distance(MoveTarget.tx[eid] - Position.x[eid], MoveTarget.ty[eid] - Position.y[eid]);
 				// Along the route: the cost to go at its tile, by the field it's steering on — if the sim has one cached
 				// (peeked: watching must not change what the sim does next).
-				const routeCost = moving === 1 ? peekFlowField(world, Unit.team[eid], Path.goalTx[eid], Path.goalTy[eid])?.cost[Path.curTy[eid] * mapW + Path.curTx[eid]] : undefined;
+				const field = moving === 1 ? peekFlowField(world, Unit.team[eid], Path.goalTx[eid], Path.goalTy[eid]) : undefined;
+				const routeCost = field?.cost[Path.curTy[eid] * mapW + Path.curTx[eid]];
 				const route = routeCost === undefined || routeCost === INF ? Infinity : routeCost;
+				// The field re-priced the route since the last scan (its team found a wall in the fog): shift the best by
+				// as much, measured at the tile it was on — as movement does with its own best (Path.lastCost).
+				const wasCost = field !== undefined && track.routeLastTile >= 0 ? field.cost[track.routeLastTile] : INF;
+
+				if (wasCost !== INF && track.routeLast !== Infinity && track.routeBest !== Infinity) {
+					track.routeBest += wasCost - track.routeLast;
+				}
+
+				[track.routeLast, track.routeLastTile] = [route, Path.curTy[eid] * mapW + Path.curTx[eid]];
 				const retargeted = moving === 0 || MoveTarget.tx[eid] !== track.tx || MoveTarget.ty[eid] !== track.ty;
 
 				// Each measure keeps its own best, moved only by its own progress, so either one going on counts.

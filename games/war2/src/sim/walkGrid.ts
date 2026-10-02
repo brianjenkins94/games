@@ -20,7 +20,7 @@
  */
 import type { Shape } from "./collide.ts";
 import type { SimWorld } from "./world.ts";
-import { buildingShape, depth, overlaps, unitShape, WALL } from "./collide.ts";
+import { buildingShape, overlaps, unitShape, unitsDepth, unitsOverlap, WALL } from "./collide.ts";
 import { FP, MAX_ENTITIES, TILE_PX, UNIT_SPD } from "./components.ts";
 import { distance } from "./distance.ts";
 import { occupant } from "./occupancy.ts";
@@ -133,7 +133,7 @@ function unitOverlapAt(world: SimWorld, xFP: number, yFP: number, self: Shape, s
 			if (seen[other] === gen) { continue; }
 			seen[other] = gen;
 			if (settledOnly && MoveTarget.active[other] === 1) { continue; }   // pass through moving traffic
-			if (overlaps(self, shapeOf(world, other), xFP - Position.x[other], yFP - Position.y[other])) { return true; }
+			if (unitsOverlap(self, shapeOf(world, other), xFP - Position.x[other], yFP - Position.y[other])) { return true; }
 		}
 	}
 
@@ -179,7 +179,7 @@ export function separateFrom(world: SimWorld, xFP: number, yFP: number, self: Sh
 			if (MoveTarget.active[other] === 1) { continue; }                 // de-penetrate from PARKED units only
 			const dx = xFP - Position.x[other]; const
 				dy = yFP - Position.y[other];
-			const pen = depth(self, shapeOf(world, other), dx, dy);
+			const pen = unitsDepth(self, shapeOf(world, other), dx, dy);
 
 			if (pen <= 0) { continue; }                                       // not overlapping
 			const mag = distance(dx, dy);

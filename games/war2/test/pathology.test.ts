@@ -24,17 +24,18 @@ for (const scenario of SCENARIOS) {
 	});
 }
 
-test("quiet on the old suite's clean scenarios but for stacking; W0's stuck pairs in pinch-corridor and production-rally caught — now settling short", () => {
+test("quiet on the old suite's clean scenarios but for stacking; W0's stuck pairs in pinch-corridor and production-rally now arrive", () => {
 	const faults = (name: string) => Object.keys(recorded[name]).filter((key) => !key.startsWith("stacked:")).sort();
 
 	for (const scenario of SCENARIOS.filter((candidate) => !candidate.name.startsWith("random-") && !["pinch-corridor", "production-rally"].includes(candidate.name))) {
 		assert.deepEqual(faults(scenario.name), [], scenario.name);
 	}
 
-	// W6 step 3: progress means beating the best so far, so they escalate and give up rather than jitter on. Step 4
-	// (one rule for what blocks a mover): production-rally's two, whose rally point is taken, settle beside it (within a
-	// tile: not short); pinch-corridor's, walled behind a parked teammate far from their goal, still give up short.
-	assert.deepEqual(faults("pinch-corridor"), ["settled-short:1", "settled-short:2", "stuck:1", "stuck:2"]);
+	// W6 step 3: progress means beating the best so far, so they escalate rather than jitter on. Step 4 (one rule for
+	// what blocks a mover): production-rally's two, whose rally point is taken, settle beside it (within a tile: not
+	// short). Step 5 (local planning round parked units): pinch-corridor's two go round the teammate parked in their way
+	// and arrive — slowed, so flagged stuck on the way, but not giving up.
+	assert.deepEqual(faults("pinch-corridor"), ["stuck:1", "stuck:2"]);
 	assert.deepEqual(faults("production-rally"), ["stuck:5", "stuck:6"]);
 	assert.ok(Object.values(recorded).every((faults) => Object.keys(faults).every((key) => !key.startsWith("stalled:"))), "nothing stalls any more");
 	// Every group moving together stacks (W6 step 0), the lone movers don't.

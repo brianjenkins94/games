@@ -96,6 +96,26 @@ function losClear(world: SimWorld, pass: Uint8Array, team: number, ax: number, a
 	return true;
 }
 
+/** True if one of `team`'s parked units sits on the straight segment (ax,ay)→(bx,by) — its C-space (pathObstacles), so
+ *  a mover's centre on the segment would overlap it — leaving out the mover's own 8px cell (a unit touching a parked one
+ *  can have its cell flagged).  Terrain isn't asked: the flow field already routes round it. */
+export function parkedInTheWay(world: SimWorld, team: number, ax: number, ay: number, bx: number, by: number): boolean {
+	const dx = bx - ax; const
+		dy = by - ay;
+	const span = Math.abs(dx) > Math.abs(dy) ? Math.abs(dx) : Math.abs(dy);
+	const steps = Math.max(1, (span / 4000) | 0);   // sample ~every 4px
+	const own = ((ay / 8000) | 0) * world.obstacles.cW + ((ax / 8000) | 0);
+
+	for (let i = 1; i <= steps; i++) {
+		const cx = ((ax + ((dx * i / steps) | 0)) / 8000) | 0; const
+			cy = ((ay + ((dy * i / steps) | 0)) / 8000) | 0;
+
+		if (cy * world.obstacles.cW + cx !== own && cspaceBlockedCell(world, team, cx, cy)) { return true; }
+	}
+
+	return false;
+}
+
 /**
  * Sub-tile aim point (FP [x,y]) a mover at (uxFP,uyFP) should steer toward to reach (gxFP,gyFP) while
  * routing its CENTRE around this team's settled units' C-space, or null if there's no local route

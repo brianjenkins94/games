@@ -19,13 +19,13 @@ import { createLocalPath } from "./localPath.ts";
 import { freeRect, occupyRect, rectEmpty } from "./occupancy.ts";
 import { advanceOrderQueues } from "./orders.ts";
 import { buildTerrain } from "./passability.ts";
-import { sum, TILE_MOVER, unitShape } from "./collide.ts";
+import { inset, sum, TILE_MOVER, UNIT_SLACK, unitShape } from "./collide.ts";
 import { addIdleCSpace, createPathObstacles, markIdleDirty, resetIdleGrids } from "./pathObstacles.ts";
 import { productionSystem } from "./production.ts";
 import { rngRange, rngState } from "./rng.ts";
 import { movementSystem } from "./systems/movement.ts";
 import { unitBuildTicks, unitFootprint } from "./unitTypes.ts";
-import { createVision, visionSystem } from "./vision.ts";
+import { computeVisibleUids, createVision, visionSystem } from "./vision.ts";
 import { createWalkGrid, freeUnit, reserveUnit, resetWalkGrid } from "./walkGrid.ts";
 
 export type { UnitSnapshot } from "./types.ts";
@@ -320,21 +320,28 @@ function buildingSystem(world: SimWorld): void {
 }
 
 /**
- * Rebuild the per-team settled-unit obstacle grid (read by the short-range local A*, localPath.ts)
- * when the idle set has changed.  Cheap no-op when nothing settled/moved since the last call.  This
- * deliberately does NOT touch the flow-field cache — the flow field is terrain-only, so units never
- * invalidate it (that separation is what keeps pathing cheap under combat churn).
+ * Rebuild the per-team settled-unit obstacle grid (read by the short-range local A*, localPath.ts): each team's own
+ * parked units, and the enemies' it can see (fog stays honest) — the units the stepper's one rule makes it go round
+ * (W6).  Every tick: what a team sees changes as anyone moves, and the rebuild is a few stamps per unit.  This
+ * deliberately does NOT touch the flow-field cache — the flow field is terrain-only, so units never invalidate it
+ * (that separation is what keeps pathing cheap under combat churn).
  */
 export function refreshPathObstacles(world: SimWorld): void {
-	if (!world.obstacles.dirty) { return; }
 	resetIdleGrids(world);
-	const { Building, MoveTarget, Position, Unit } = world.components;
+	const { Building, MoveTarget, Position, Unit, UnitId } = world.components;
+	const parked = unitEids(world).filter((eid) => !hasComponent(world, eid, Building) && Unit.movable[eid] === 1 && MoveTarget.active[eid] === 0);
+	const teams = [...new Set(unitEids(world).map((eid) => Unit.team[eid]))].sort((a, b) => a - b);
+	const sees = new Map(teams.map((team) => [team, computeVisibleUids(world, team)]));
 
-	for (const eid of unitEids(world)) {
-		if (hasComponent(world, eid, Building) || Unit.movable[eid] !== 1) { continue; }   // buildings / display-only
-		if (MoveTarget.active[eid] === 1) { continue; }                       // moving → not an obstacle
+	for (const eid of parked) {
         // 8px C-space: this unit's shape summed with the assumed mover's (a one-tile land unit, shared by the team).
-		addIdleCSpace(world, Unit.team[eid], Position.x[eid], Position.y[eid], sum(TILE_MOVER, unitShape(Unit.type[eid])));
+		const cspace = inset(sum(TILE_MOVER, unitShape(Unit.type[eid])), 2 * UNIT_SLACK);
+
+		for (const team of teams) {
+			if (team === Unit.team[eid] || sees.get(team)!.has(UnitId.id[eid])) {
+				addIdleCSpace(world, team, Position.x[eid], Position.y[eid], cspace);
+			}
+		}
 	}
 
 	world.obstacles.dirty = false;
