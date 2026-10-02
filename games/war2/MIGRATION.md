@@ -338,7 +338,7 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
       worker. All three are worker wiring, and the workers are W3's. In netsim, pause and step are served on the
       host tab's own hub (its referee worker), out of every client's reach; war2's speed goes there too. In the net
       layer the host's player is already just another client.
-- **W3: the browser.** *In progress.*
+- **W3: the browser.** *Done (2026-10-01).*
   - Pages, instances and lobby from netsim, with PeerJS for players on other machines.
   - The referee and client workers (from W2): the host's player as a client worker like any other, speed as an RPC
     on the host tab's own hub, fog drawn from the client worker's view.
@@ -400,8 +400,28 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
     - **Tests:** the click test now selects a unit where the renderer draws it and right-clicks a tile beside it,
       through Phaser; a new test checks Plains of snow renders its tileset and every unit's sprite. (The browser tests
       reach the mirror, as CI already reaches Pages for its tarballs.)
-    - **Next (W3c-2):** the DOM HUD (resources, portrait, status) and the command card (abilities, building
-      placement, production and cancel), carried with `commandCardController`.
+
+    *HUD and command card done (W3c-2):*
+    - **Carried:** the DOM HUD from the old `client.html` (the holy-grail frame: resource bar, minimap cell, status
+      strip, portrait, command card) in `instance.html`, wired by `render/hud.ts`; `abilities.ts` and
+      `commandCardController.ts` moved out of the sim folder into `src/ui/` (the audit's "client UI living in the
+      sim"). The card is the old navigation stack: B opens the build menu, a letter arms a building's placement (the
+      ghost follows the cursor, green where it fits), a click places it, Escape backs out a level at a time,
+      right-click cancels whatever's armed; a hall's slot trains its worker; the status strip shows a building's
+      production with a progress bar, and clicking an item cancels it. The portrait, empty before, shows the
+      selection's icon and name.
+    - **Placement** is judged in the page, advisory, as the sim judges it (terrain and buildings, not units); the
+      referee re-checks it.
+    - **Starts:** each team now opens as WC2 does: a finished town hall (great hall for orcs) at its start, two
+      workers, soldiers for the rest.
+    - **One player per window:** `play.html` gives its player the whole window, the game edge to edge with the HUD at
+      full size, and the host's sync table folds away under "sync" in the header. `index.html` stays the harness:
+      every player of a match in one tab, side by side.
+    - **Tests:** `test/ui.test.ts` (5) drives the card's logic directly: each selection's card from the game's data,
+      unique hotkeys, the navigation stack, placement (valid, invalid, cancelled), move targeting, training.
+      `test/browser/hud.test.ts` (2) plays it in a real window: select a peasant, B, F, the ghost, a click on open
+      ground, and the referee has a farm under construction there; select the town hall, click its train slot, the
+      peasant's in production and in the status strip, and clicking it there cancels it.
 - **W4: tools and the browser safety net.**
   - war2's page tools: `war2_state`/`unit`/`map`/`trace`/`summarize_move`/`control`/`command`/incidents.
   - The pathology detector, and incident capture → fixture JSON.

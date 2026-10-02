@@ -11,7 +11,7 @@ import { startSession, tool, until } from "./harness.ts";
 
 const TILE = 32_000;
 
-interface Unit { "uid": number; "team": number; "type": string; "x": number; "y": number; "moving": boolean; "target"?: [number, number] }
+interface Unit { "uid": number; "team": number; "type": string; "x": number; "y": number; "moving": boolean; "target"?: [number, number]; "building"?: unknown }
 interface State { "tick": number; "paused": boolean; "units": Unit[]; "clients": { "peer": string; "team": number; "viewTick": number; "view": Unit[]; "predicted": Unit[] }[] }
 interface Divergence { "tick": number; "clients": { "peer": string; "comparable": boolean; "identical"?: boolean; "reason"?: string }[] }
 interface Status { "tick": number; "paused": boolean; "speed": number; "stats": Record<string, number>; "seats": { "team": number; "peer": string; "lastSeq": number }[]; "clients": { "state": string }[] }
@@ -87,7 +87,11 @@ test("speed is the host's: the referee ticks faster at 4×, and its clients keep
 	};
 	const normal = await rate();
 
-	assert.deepEqual(await tool(page, "war2_control", { "action": "speed", "speed": 4 }), { "tick": (await tool<Status>(page, "war2_status")).tick, "paused": false, "speed": 4 });
+	const before = (await tool<Status>(page, "war2_status")).tick;
+	const changed = await tool<{ "tick": number; "paused": boolean; "speed": number }>(page, "war2_control", { "action": "speed", "speed": 4 });
+
+	assert.deepEqual([changed.paused, changed.speed], [false, 4]);
+	assert.ok(changed.tick >= before, "the tick it took effect at");
 
 	const fast = await rate();
 
@@ -103,7 +107,7 @@ test("a player's clicks move a unit, end to end: renderer → instance → clien
 
 	const state = await tool<State>(page, "war2_state", { "client": "client-0" });
 	const [client] = state.clients;
-	const unit = client.view.find((candidate) => candidate.team === client.team)!;
+	const unit = client.view.find((candidate) => candidate.team === client.team && candidate.building === undefined)!;
 	const frame = page.frameLocator("iframe[title=\"client-0\"]");
 	const box = (await page.locator("iframe[title=\"client-0\"]").boundingBox())!;
 	const instance = page.frames().find((candidate) => candidate.url().includes("id=client-0"))!;
@@ -188,8 +192,8 @@ test("war2_command acts as a client, and the client's own check refuses another 
 
 	const state = await tool<State>(page, "war2_state");
 	const ownerOf = (peer: string) => state.clients.find((client) => client.peer === peer)!.team;
-	const mine = state.units.find((unit) => unit.team === ownerOf("client-1"))!;
-	const theirs = state.units.find((unit) => unit.team === ownerOf("client-0"))!;
+	const mine = state.units.find((unit) => unit.team === ownerOf("client-1") && unit.building === undefined)!;
+	const theirs = state.units.find((unit) => unit.team === ownerOf("client-0") && unit.building === undefined)!;
 	const refused = await tool<{ "ok": boolean; "reason": string; "received": boolean }>(page, "war2_command", { "client": "client-1", "type": "move", "units": [theirs.uid], "x": 1.5, "y": 1.5 });
 
 	// Unknown if it can't see the unit, not its own if it can: either way, never sent.
@@ -214,7 +218,7 @@ test("a player who reloads their instance mid-match rejoins their seat, catches 
 	const page = await session.open({ "clients": 2, "bots": 0, "map": "arena" });
 	const before = await tool<Status>(page, "war2_status");
 	const team = before.seats.find((seat) => seat.peer === "client-1")!.team;
-	const mine = (await tool<State>(page, "war2_state")).units.find((candidate) => candidate.team === team)!;
+	const mine = (await tool<State>(page, "war2_state")).units.find((candidate) => candidate.team === team && candidate.building === undefined)!;
 
 	// It has played before the reload (so its seat's command sequence isn't at the start).
 	assert.equal((await tool<{ "received": boolean }>(page, "war2_command", { "client": "client-1", "type": "move", "units": [mine.uid], "x": 16.5, "y": 2.5 })).received, true);

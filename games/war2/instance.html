@@ -5,15 +5,64 @@
 	<link rel="icon" href="data:," />
 	<title>war2 instance</title>
 	<style>
-		html, body { height: 100%; margin: 0; background: #05070a; overflow: hidden; }
+		:root {
+			/* The HUD chrome's thickness per edge: must match render/renderer.ts (MINIMAP_SIZE, UI_RIGHT, UI_BOTTOM). */
+			--ui-top: 28px;
+			--ui-right: 150px;
+			--ui-bottom: 120px;
+			--ui-left: 120px;
+			--icon-w: 46px;   /* icons.json frameWidth */
+			--icon-h: 38px;   /* icons.json frameHeight */
+			--chrome-bg: rgba(17, 17, 34, 0.55);
+			--chrome-line: rgba(120, 140, 200, 0.25);
+			--hud-fg: #9ab;
+		}
+
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		html, body { height: 100%; background: #05070a; overflow: hidden; }
 		#game { position: absolute; inset: 0; }
-		#badge { position: absolute; top: 6px; left: 8px; z-index: 1; font: 12px ui-monospace, monospace; color: #ffb4a8; pointer-events: none; text-shadow: 0 0 3px #000; }
+
+		/* The HUD lets the world (the canvas) have the pointer; the chrome panels take it back. */
+		#hud { position: absolute; inset: 0; z-index: 1; pointer-events: none; font-family: ui-monospace, monospace; color: var(--hud-fg); }
+		.hud-frame {
+			height: 100%;
+			display: grid;
+			grid-template-columns: var(--ui-left) 1fr var(--ui-right);
+			grid-template-rows: var(--ui-top) 1fr var(--ui-bottom);
+			grid-template-areas: "top top top" "mleft centre mright" "mmap bcentre card";
+		}
+		.hud-chrome { background: var(--chrome-bg); border: 1px solid var(--chrome-line); pointer-events: auto; }
+		.hud-top { grid-area: top; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 10px; font-size: 12px; }
+		.hud-top-mid { color: #dd4; }
+		#badge { color: #ffb4a8; }
 		#badge[data-sync="true"] { color: #9fe6b8; }
+		.hud-minimap { grid-area: mmap; }   /* click-through: Phaser draws the minimap */
+		.hud-bottom-centre { grid-area: bcentre; display: grid; grid-template-rows: 1fr 3fr; min-width: 0; }
+		.hud-status { display: flex; align-items: center; border-bottom: 1px solid var(--chrome-line); overflow: hidden; }
+		.hud-portrait { display: flex; align-items: center; padding: 0 10px; font-size: 11px; }
+		.hud-card-cell { grid-area: card; display: flex; align-items: center; justify-content: center; }
+		.hud-card { display: none; grid-template-columns: repeat(3, var(--icon-w)); grid-auto-rows: var(--icon-h); gap: 2px; }
 	</style>
 </head>
 <body>
 	<div id="game"></div>
-	<div id="badge">connecting</div>
+	<div id="hud">
+		<div class="hud-frame">
+			<div class="hud-top hud-chrome">
+				<div>war2</div>
+				<div id="hud-resources" class="hud-top-mid">GOLD —&nbsp;&nbsp; LUMBER —&nbsp;&nbsp; OIL —&nbsp;&nbsp; FOOD —</div>
+				<div id="badge">connecting</div>
+			</div>
+			<div class="hud-minimap"></div>
+			<div class="hud-bottom-centre hud-chrome">
+				<div class="hud-status"></div>
+				<div id="hud-portrait" class="hud-portrait"></div>
+			</div>
+			<div class="hud-card-cell hud-chrome">
+				<div id="hud-card" class="hud-card"></div>
+			</div>
+		</div>
+	</div>
 	<script type="module" src="./src/browser/instance.ts"></script>
 </body>
 </html>

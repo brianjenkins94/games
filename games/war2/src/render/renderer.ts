@@ -22,16 +22,32 @@ import { computeFog, VISIBLE } from "./fog.ts";
 import { Minimap } from "./Minimap.ts";
 import { drawEntities } from "./units.ts";
 
+// The HUD's chrome (instance.html: --ui-*): the minimap fills the bottom-left cell, the card the bottom-right.
 const MINIMAP_SIZE = 120;
+const UI_RIGHT = 150;
+const UI_BOTTOM = 120;
 const CAM_SPEED = 8;
 const TICK_MS = 50;
 
 export interface RendererCallbacks {
 	/** The selection changed (stable unit ids: own units only). */
 	"onSelect": (uids: number[]) => void;
+	/** A left-click on the map, in FP, before it selects: true if it was taken (an armed ability's target, a
+	 *  building's placement), and so doesn't change the selection. */
+	"onPrimaryClick"?: (xFP: number, yFP: number) => boolean;
 	/** A right-click on the map, in FP (shift: queue it). */
 	"onSecondaryClick": (xFP: number, yFP: number, shift: boolean) => void;
+	/** The pointer moved over the map, in FP (drives the placement ghost). */
+	"onHover"?: (xFP: number, yFP: number) => void;
+	/** A letter key: true if it was a command-card hotkey. */
+	"onHotkey"?: (letter: string) => boolean;
+	"onEscape"?: () => void;
+	/** A drag-select started or ended (the HUD lets the pointer through meanwhile), and whether it's over the card. */
+	"onDrag"?: (dragging: boolean, overCard: boolean) => void;
 }
+
+/** A building's placement ghost: its footprint, and whether it may be placed there. */
+export interface Ghost { "tileX": number; "tileY": number; "fw": number; "fh": number; "valid": boolean }
 
 export interface RendererState {
 	"scene": Phaser.Scene;
@@ -62,6 +78,7 @@ export interface RendererState {
 	"centered": boolean;
 	"drag": { "sx": number; "sy": number; "ex": number; "ey": number } | undefined;
 	"minimapDragging": boolean;
+	"ghost": Ghost | null;
 }
 
 function mapPixels(map: GameMap): [number, number] {
@@ -104,6 +121,13 @@ function create(renderer: RendererState): void {
 	renderer.uiGfx = scene.add.graphics().setScrollFactor(0).setDepth(10);
 	renderer.cursors = scene.input.keyboard!.createCursorKeys();
 	scene.input.mouse?.disableContextMenu();
+	scene.input.keyboard!.on("keydown-ESC", () => { renderer.callbacks.onEscape?.(); });
+	// Letter keys are command-card hotkeys (so WASD doesn't pan: the arrows do, as in WC2).
+	scene.input.keyboard!.on("keydown", (event: KeyboardEvent) => {
+		if (event.key.length === 1 && /[a-z]/iu.test(event.key)) {
+			renderer.callbacks.onHotkey?.(event.key);
+		}
+	});
 
 	scene.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
 		if (!pointer.leftButtonDown()) {
@@ -115,6 +139,7 @@ function create(renderer: RendererState): void {
 			renderer.minimap.panCameraTo(pointer.x, pointer.y, pixelW, pixelH);
 		} else {
 			renderer.drag = { "sx": pointer.x, "sy": pointer.y, "ex": pointer.x, "ey": pointer.y };
+			renderer.callbacks.onDrag?.(true, false);
 		}
 	});
 	scene.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
@@ -123,6 +148,13 @@ function create(renderer: RendererState): void {
 		} else if (renderer.drag !== undefined) {
 			renderer.drag.ex = pointer.x;
 			renderer.drag.ey = pointer.y;
+			renderer.callbacks.onDrag?.(true, Math.max(renderer.drag.sx, pointer.x) >= scene.scale.width - UI_RIGHT && Math.max(renderer.drag.sy, pointer.y) >= scene.scale.height - UI_BOTTOM);
+		}
+
+		if (!renderer.minimap.contains(pointer.x, pointer.y)) {
+			const at = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+
+			renderer.callbacks.onHover?.(Math.round(at.x * FP), Math.round(at.y * FP));
 		}
 	});
 	scene.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
@@ -135,8 +167,13 @@ function create(renderer: RendererState): void {
 			const to = camera.getWorldPoint(ex, ey);
 
 			renderer.drag = undefined;
-			renderer.selected = new Set(pick(renderer, from.x, from.y, to.x, to.y));
-			renderer.callbacks.onSelect([...renderer.selected]);
+			renderer.callbacks.onDrag?.(false, false);
+
+			// An armed ability or a placement takes the click as its target, and the selection stays.
+			if (renderer.callbacks.onPrimaryClick?.(Math.round(to.x * FP), Math.round(to.y * FP)) !== true) {
+				renderer.selected = new Set(pick(renderer, from.x, from.y, to.x, to.y));
+				renderer.callbacks.onSelect([...renderer.selected]);
+			}
 		}
 
 		if (pointer.rightButtonReleased() && !renderer.minimap.contains(pointer.x, pointer.y)) {
@@ -164,6 +201,16 @@ function update(renderer: RendererState, delta: number): void {
 	renderer.minimap.reposition();
 	renderer.minimap.draw(renderer.uiGfx, renderer.units, pixelW, pixelH, renderer.team ?? -1, (tx, ty) => renderer.fog[ty * map.info.mapW + tx] === VISIBLE);
 	drawEntities(renderer, renderer.units, delta);
+
+	if (renderer.ghost !== null) {
+		const { tileX, tileY, fw, fh, valid } = renderer.ghost;
+		const color = valid ? 0x33FF33 : 0xFF3333;
+
+		renderer.gfx.fillStyle(color, 0.28);
+		renderer.gfx.fillRect(tileX * TILE_PX, tileY * TILE_PX, fw * TILE_PX, fh * TILE_PX);
+		renderer.gfx.lineStyle(1.5, color, 0.9);
+		renderer.gfx.strokeRect(tileX * TILE_PX, tileY * TILE_PX, fw * TILE_PX, fh * TILE_PX);
+	}
 
 	if (renderer.drag !== undefined) {
 		const { sx, sy, ex, ey } = renderer.drag;
@@ -210,6 +257,22 @@ export function setView(renderer: RendererState, view: InstanceView): void {
 	}
 }
 
+/** Show (or clear, with null) the placement ghost. */
+export function setGhost(renderer: RendererState, ghost: Ghost | null): void {
+	renderer.ghost = ghost;
+}
+
+/** The crosshair while an ability waits for its target. */
+export function setTargetingCursor(renderer: RendererState, on: boolean): void {
+	renderer.scene.input.setDefaultCursor(on ? "crosshair" : "default");
+}
+
+/** Replace the selection (the page's: a building just placed, units just trained…). */
+export function setSelection(renderer: RendererState, uids: number[]): void {
+	renderer.selected = new Set(uids);
+	renderer.callbacks.onSelect([...renderer.selected]);
+}
+
 /** Centre the camera on a world point (FP). */
 export function lookAt(renderer: RendererState, xFP: number, yFP: number): void {
 	renderer.centered = true;
@@ -253,7 +316,8 @@ export async function startRenderer(parent: HTMLElement, map: GameMap, callbacks
 			"snapInterval": TICK_MS,
 			"centered": false,
 			"drag": undefined,
-			"minimapDragging": false
+			"minimapDragging": false,
+			"ghost": null
 		} as RendererState;
 
 		game.scene.add("war2", {

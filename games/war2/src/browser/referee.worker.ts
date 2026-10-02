@@ -10,7 +10,7 @@ import { tileCenterFP } from "../sim/components.ts";
 import { rngRange } from "../sim/rng.ts";
 import { snapshotUnit } from "../sim/snapshot.ts";
 import { unitTypeId } from "../sim/unitTypes.ts";
-import { spawnUnit, unitEids } from "../sim/world.ts";
+import { canPlaceBuilding, spawnBuilding, spawnUnit, unitEids } from "../sim/world.ts";
 import { describe, MATCH, REFEREE_CONTROL, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
 import { loadGameMap } from "./maps.ts";
 
@@ -121,16 +121,28 @@ async function start(settings: InitMessage["settings"]): Promise<void> {
 		"mapInfo": map,
 		"teams": settings.teams,
 		"setup": (world) => {
-			// Each team around its start (the map's, else a band of its own), humans and orcs in turn, on land.
+			// Each team at its start (the map's, else a band of its own), as a WC2 match opens: a town hall, finished,
+			// two workers beside it, and soldiers for the rest. Humans and orcs in turn.
 			for (let team = 0; team < settings.teams; team += 1) {
-				const type = unitTypeId(team % 2 === 0 ? "unit-footman" : "unit-grunt");
+				const orc = team % 2 === 1;
 				const [sx, sy] = gameMap.starts[team] ?? [Math.floor(((team + 0.5) / settings.teams) * map.mapW), Math.floor(map.mapH / 2)];
+				const hallType = unitTypeId(orc ? "unit-great-hall" : "unit-town-hall");
+				const [hx, hy] = [Math.min(map.mapW - 4, Math.max(0, sx - 2)), Math.min(map.mapH - 4, Math.max(0, sy - 2))];
+
+				if (canPlaceBuilding(world, hx, hy, hallType)) {
+					const hall = spawnBuilding(world, hx, hy, team, hallType);
+
+					if (hall !== -1) {
+						world.components.Building.buildLeft[hall] = 0;
+					}
+				}
 
 				for (let placed = 0, tries = 0; placed < settings.perTeam && tries < 1000; tries += 1) {
-					const tx = Math.min(map.mapW - 1, Math.max(0, sx + rngRange(world, -4, 5)));
-					const ty = Math.min(map.mapH - 1, Math.max(0, sy + rngRange(world, -4, 5)));
+					const type = unitTypeId(placed < 2 ? (orc ? "unit-peon" : "unit-peasant") : (orc ? "unit-grunt" : "unit-footman"));
+					const tx = Math.min(map.mapW - 1, Math.max(0, sx + rngRange(world, -5, 6)));
+					const ty = Math.min(map.mapH - 1, Math.max(0, sy + rngRange(world, -5, 6)));
 
-					if (world.terrain.pass[ty * map.mapW + tx] === 0 && spawnUnit(world, tileCenterFP(tx), tileCenterFP(ty), team, undefined, type) !== -1) {
+					if (world.terrain.pass[ty * map.mapW + tx] === 0 && world.occupancy[ty * map.mapW + tx] === 0 && spawnUnit(world, tileCenterFP(tx), tileCenterFP(ty), team, undefined, type) !== -1) {
 						placed += 1;
 					}
 				}
