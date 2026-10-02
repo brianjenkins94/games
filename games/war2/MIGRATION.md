@@ -281,7 +281,7 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
     - **The ring-search helper.** The six ring searches are `orders.ts`'s formation and gather logic, which the
       rewrite replaces. Factoring them now would polish code that's about to go.
   - Must pass the W0 oracle (modulo documented deviations) and restore + replay == continuous as a property test.
-- **W2: the net layer.** *In progress.*
+- **W2: the net layer.** *Done (2026-10-01), bar the worker wiring moved to W3.*
   - First, the PeerJS check: a reliable, ordered PeerJS data channel handed to a worker as it's created, on both the
     dialing and the answering side, in a browser test. If PeerJS won't allow it, decide between relaying through the
     page and owning the peer connection under PeerJS's broker.
@@ -313,8 +313,35 @@ Slow and deliberate, the way netsim was built. Each milestone ends green in CI, 
   - Prediction ported into the client shape. The host's player as a client worker. Speed as a host RPC. Fog in the
     client worker.
   - In-process tests over netsim's virtual network with fault injection.
+
+    *Done, in process* (`src/net`, `test/net`): netsim's protocol, referee, client and virtual network, with war2's sim
+    inside.
+    - **What a team sees** (`view.ts`): its own units whole (every sim field, orders, production, rally); enemies in
+      sight reduced to what they show (position, type, team, moving and facing, a building's footprint and
+      progress), never their move target, path or queues; and what the team has explored, as runs in keyframes and new
+      tiles in deltas. Both ends hash exactly that.
+    - **The referee** validates every command against the sender's seat (`validate.ts`) as it applies it, so a
+      seated client's bad command is refused alone, not its batch.
+    - **The client predicts** on a world of its own: its units simulated, visible enemies as display-only colliders,
+      exploring switched off (`world.exploring`) with what its team has explored taken from the view, so its pathing
+      believes what authority's does. MOVE and STOP apply at once; each update snaps back a unit that has drifted
+      8 ticks' travel, or, with nothing in flight, disagrees on where it's headed or where it stopped. Not on
+      whether it's still moving: the prediction runs a round trip ahead and arrives first.
+    - **Tests:** netsim's match suite ported (17, 0.7s): seats; every client's view equal to the referee's view of
+      its team, every tick; fog (nothing out of sight, nothing private of an enemy); exactly-once ordered commands
+      over a lossy, duplicating, reordering link; views delayed but never corrupted, converging once it heals;
+      prediction at once, settling where authority does with no snaps; permissions (own team's state only, nothing
+      before joining, no speaking for another); garbage; rejoin with a token; hash-caught corruption repaired by
+      resync; drift snapped back; a closed referee; the per-tick summary; sync while paused. Plus netsim's six
+      network tests. Coverage floors are now lines 92, branches 87, functions 86.
+    - **Moved to W3:** the host's player as a client worker, speed as a host RPC, and fog drawn in the client
+      worker. All three are worker wiring, and the workers are W3's. In netsim, pause and step are served on the
+      host tab's own hub (its referee worker), out of every client's reach; war2's speed goes there too. In the net
+      layer the host's player is already just another client.
 - **W3: the browser.**
   - Pages, instances and lobby from netsim, with PeerJS for players on other machines.
+  - The referee and client workers (from W2): the host's player as a client worker like any other, speed as an RPC
+    on the host tab's own hub, fog drawn from the client worker's view.
   - Phaser 4 bundled.
   - The renderer fed `RenderState` over the hub.
   - HUD and command card.

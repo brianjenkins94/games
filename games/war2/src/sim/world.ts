@@ -53,6 +53,9 @@ export interface SimWorld {
 	"flow": FlowFields;
 	/** Each team's explored map and believed passability (vision.ts). */
 	"vision": Map<number, TeamVision>;
+	/** Whether stepping explores from its units' sight (visionSystem). A client's prediction doesn't: what its team has
+	 *  explored comes from the referee (exploreTiles), so its pathing believes exactly what authority's does. */
+	"exploring": boolean;
 	"tick": number;
     /** Last MOVE per team — target tile + a signature of the selected unit set.  A repeat
      *  click by the *same* selection on the *same* tile converges the group on the point
@@ -141,7 +144,8 @@ export interface MapInfo {
 	"terrainArr": number[];   // terrain.json[tilesetName], indexed by GID
 }
 
-export function createSimWorld(seed: number, mapInfo?: MapInfo): SimWorld {
+/** A world for `teams` teams (each keeps its own vision) on `mapInfo`'s map — or none (pre-map dev mode). */
+export function createSimWorld(seed: number, mapInfo?: MapInfo, teams = 2): SimWorld {
 	const components = createComponents();
 	const { mapW = 0, mapH = 0 } = mapInfo ?? {};
 
@@ -157,8 +161,9 @@ export function createSimWorld(seed: number, mapInfo?: MapInfo): SimWorld {
 		"obstacles": createPathObstacles(mapW, mapH),                 // per-team settled-unit grid for pathing
 		"local": mapInfo ? createLocalPath(mapW, mapH) : null,        // scratch for the short-range unit-aware A*
 		"flow": createFlowFields(),
-		// The referee holds per-team vision for both teams (each paths on its own knowledge).
-		"vision": mapInfo ? createVision(mapW, mapH, [0, 1]) : new Map(),
+		// Per-team vision for every team (each paths on its own knowledge).
+		"vision": mapInfo ? createVision(mapW, mapH, [...Array.from({ "length": teams }).keys()]) : new Map(),
+		"exploring": true,
 		"tick": 0
 	});
 }

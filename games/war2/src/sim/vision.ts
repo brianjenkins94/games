@@ -46,7 +46,7 @@ export function createVision(mapW: number, mapH: number, teams: number[]): Map<n
  *  adopt their real passability; if that reveals a blocked tile, mark that team's
  *  flow cache dirty. */
 export function visionSystem(world: SimWorld): void {
-	if (world.vision.size === 0) { return; }
+	if (!world.exploring || world.vision.size === 0) { return; }
 	const realPass = world.terrain.pass;
 
 	if (!realPass) { return; }
@@ -104,6 +104,44 @@ export function revealAll(world: SimWorld): void {
 		tv.explored.fill(1);
 		if (realPass) { tv.believedPass.set(realPass); } else { tv.believedPass.fill(0); }
 		tv.dirty = true;   // force each team's flow cache to rebuild against the now-known terrain
+	}
+}
+
+/** `team`'s explored tiles, as runs: [start, length, start, length, …] over the flat tile index. */
+export function exploredRuns(world: SimWorld, team: number): number[] {
+	const explored = world.vision.get(team)?.explored;
+	const runs: number[] = [];
+
+	if (explored === undefined) {
+		return runs;
+	}
+
+	for (let i = 0; i < explored.length; i++) {
+		if (explored[i] === 1 && (i === 0 || explored[i - 1] === 0)) {
+			runs.push(i, 1);
+		} else if (explored[i] === 1) {
+			runs[runs.length - 1] += 1;
+		}
+	}
+
+	return runs;
+}
+
+/** Mark `tiles` (flat indices) explored for `team`, learning their real terrain — as visionSystem would on sight. For
+ *  a world told what its team has explored rather than exploring itself (`world.exploring` false). */
+export function exploreTiles(world: SimWorld, team: number, tiles: Iterable<number>): void {
+	const tv = world.vision.get(team);
+	const realPass = world.terrain.pass;
+
+	if (tv === undefined || !realPass) {
+		return;
+	}
+
+	for (const i of tiles) {
+		if (tv.explored[i] === 1 || i < 0 || i >= tv.explored.length) { continue; }
+		tv.explored[i] = 1;
+		tv.believedPass[i] = realPass[i];
+		if (realPass[i]) { tv.dirty = true; }
 	}
 }
 
