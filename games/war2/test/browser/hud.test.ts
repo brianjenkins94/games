@@ -125,7 +125,15 @@ test("a town hall trains a peasant from its card, the queue shows in the status 
 
 	await clickWorld(page, instance, hall.x, hall.y);
 	await until(instance as unknown as Page, "the hall's card", () => (globalThis as unknown as { "__war2Instance": Instance }).__war2Instance.card()?.[0] === "train:unit-peasant");
+	// Paused from before the order, the peasant can't finish training (45 ticks) before we've looked — the view stays,
+	// the strip with it. (Pausing once it showed queued lost that race on a starved CI runner: 45 ticks went by first.)
+	await tool(page, "war2_control", { "action": "pause" });
+
+	const ordered = await lastSeq(page);
+
 	await instance.locator("#hud-card [data-ability=\"train:unit-peasant\"]").click();
+	await until(page, "the referee to take the order", async (from: number) => (await (globalThis as unknown as { "__war2": { "tool": (name: string) => Promise<{ "seats": { "peer": string; "lastSeq": number }[] }> } }).__war2.tool("war2_status")).seats.find((seat) => seat.peer === "player-0")!.lastSeq > from, { "arg": ordered });
+	await tool(page, "war2_control", { "action": "step", "ticks": 1 });
 
 	const queued = await until(page, "a peasant in training", async (uid: number) => {
 		const state = await (globalThis as unknown as { "__war2": { "tool": (name: string) => Promise<State> } }).__war2.tool("war2_state");
@@ -134,8 +142,6 @@ test("a town hall trains a peasant from its card, the queue shows in the status 
 	}, { "arg": hall.uid });
 
 	assert.deepEqual(queued.queue, ["unit-peasant"]);
-	// Paused, the peasant can't finish training (45 ticks) before we've looked — the view stays, the strip with it.
-	await tool(page, "war2_control", { "action": "pause" });
 	await instance.locator(".hud-status [data-production=\"0\"]").waitFor({ "timeout": 15_000 }).catch(async (error: unknown) => {
 		// What the instance and the referee had instead (a CI failure can't be watched).
 		const seen = {

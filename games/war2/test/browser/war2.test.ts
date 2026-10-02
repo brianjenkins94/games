@@ -56,6 +56,12 @@ test("two instances, two workers, one referee: every client stays in sync, and p
 
 	assert.ok(status.stats["commandsApplied"] > 0, "the bots played");
 	assert.equal(status.stats["commandsRejected"], 0);
+
+	// Each update reaches its client once: in the referee's own tab, not a second time down the tab's tree too.
+	const sent = status.stats["keyframes"] + status.stats["deltas"];
+	const received = status.clients.reduce((sum, client) => sum + client.stats["updates"], 0);
+
+	assert.ok(received <= sent, `the clients got ${received} updates of the ${sent} sent`);
 	await page.close();
 });
 
