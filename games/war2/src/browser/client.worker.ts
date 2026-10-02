@@ -28,6 +28,8 @@ import { wireGauge } from "./metrics.ts";
 async function start({ channel, bots = true, token }: PortMessage): Promise<void> {
 	// Its own name is a placeholder that nobody sees (both its links name it): who it is comes from the referee.
 	const hub: Hub = createHub({ "id": "client" });
+	// What its data channel carries (metrics.ts), weighed from the start: wrapped before the link sends anything on it.
+	const wire = wireGauge(channel);
 
 	// The referee is its uplink: the hub that decides who it is (only an uplink's hello can name a hub). Its link is
 	// confined — to nothing until the client knows its id, then to the game (hostPermissions).
@@ -54,7 +56,7 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 	const metrics = reportMetrics(hub, { "source": id });
 
 	metrics.gauge("units", () => client.view().size);
-	metrics.gauge("wire", wireGauge(hub, "referee"));
+	metrics.gauge("wire", wire);
 	let seed = [...id].reduce((sum, char) => sum + char.charCodeAt(0), 7);
 	const random = (bound: number): number => {
 		seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;

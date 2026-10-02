@@ -8,7 +8,6 @@
  * `tickMs`; the host page each client's `lag` — how many ticks its view is behind the referee's (the old chart's
  * round-trip time has no counterpart yet: nothing times a round trip to the referee).
  */
-import type { Hub } from "@brianjenkins94/hub";
 import type { Gauge } from "@brianjenkins94/observability";
 
 /** Frames this window drew per second since the last reading (requestAnimationFrame callbacks). */
@@ -42,24 +41,28 @@ export function heapGauge(): Gauge {
 	};
 }
 
-/** KB/s this hub sent and received on its link to `peer` since the last reading — `in` and `out`, frames counted by their
- *  JSON size (what a data channel carries). */
-export function wireGauge(hub: Hub, peer: string): Gauge {
+/** What a message on a data channel weighs: its text's length, or its binary's. */
+function weight(data: unknown): number {
+	if (typeof data === "string") {
+		return data.length;
+	}
+
+	return (data as { "byteLength"?: number; "size"?: number } | null)?.byteLength ?? (data as { "size"?: number } | null)?.size ?? 0;
+}
+
+/** KB/s `channel` sent and received since the last reading — `in` and `out`, what it actually carried (the hub's frames,
+ *  already serialized: nothing is serialized again to weigh them). Wrap the channel before anything sends on it. */
+export function wireGauge(channel: RTCDataChannel): Gauge {
 	let sent = 0;
 	let received = 0;
 	let since = performance.now();
+	const send = channel.send.bind(channel) as (data: unknown) => void;
 
-	hub.tap((event) => {
-		if ((event.type === "send" || event.type === "receive") && event.link.peerId === peer) {
-			const bytes = JSON.stringify(event.frame)?.length ?? 0;
-
-			if (event.type === "send") {
-				sent += bytes;
-			} else {
-				received += bytes;
-			}
-		}
-	});
+	channel.send = ((data: unknown) => {
+		sent += weight(data);
+		send(data);
+	}) as RTCDataChannel["send"];
+	channel.addEventListener("message", (event) => { received += weight(event.data); });
 
 	return () => {
 		const now = performance.now();
