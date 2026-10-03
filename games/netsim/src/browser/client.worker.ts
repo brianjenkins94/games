@@ -1,6 +1,6 @@
 /**
  * One client, in its instance's worker: links to its instance page (for drawing and input) and, over the data
- * channel its page handed it (rtc.ts), to the referee. Nobody tells it who it is: the referee's hub assigns its id
+ * channel its page handed it (hub's answerLink), to the referee. Nobody tells it who it is: the referee's hub assigns its id
  * (LinkOptions.peer) and says so in its hello (hub's knownAs) — the id it's stamped with, permitted as, and names its
  * subjects by. Its logs and reports go out under its hub's own id, to its own tab, and the edge names them: its
  * instance.

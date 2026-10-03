@@ -87,7 +87,7 @@ that opens that match after it joins as the next player (`player-1`, `player-2`,
 link opens one: another tab on the same server, as on any desktop — in the editor, another preview window onto the
 same server.
 
-The lobby (`src/browser/lobby.ts`) is scoped to the origin — one server — not to a URL, so tabs meet whatever page
+The lobby (hub's `joinLobby`) is scoped to the origin — one server — not to a URL, so tabs meet whatever page
 or path they were loaded from:
 
 - **Who hosts** is a Web Lock per match: the first tab to take it hosts; the browser releases it when that tab goes,
@@ -97,7 +97,7 @@ or path they were loaded from:
 - **Introductions and signaling** ride a BroadcastChannel per match: a player's instance asks for a link under a fresh
   id, the host accepts, and the two pages trade the link's WebRTC offer, answer and candidates over the same channel.
 
-Every client — in the host's own tab or another — links the referee over a WebRTC data channel (`src/browser/rtc.ts`).
+Every client — in the host's own tab or another — links the referee over a WebRTC data channel (hub's `offerLink` / `answerLink`).
 Each end's page makes its peer connection and hands the data channel straight to its worker (a channel can be
 transferred as it's created; a worker can't make a peer connection), so the game runs worker to worker and the pages
 only signal: in memory within a page, over the lobby between tabs. The referee's side of each link is heartbeat-checked

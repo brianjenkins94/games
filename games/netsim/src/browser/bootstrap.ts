@@ -1,9 +1,9 @@
 /**
  * The browser runtime's wiring, shared by the pages, the instance iframes and the workers.
  *
- * One transport for every client: each links to the referee over a WebRTC data channel (rtc.ts; hub's
+ * One transport for every client: each links to the referee over a WebRTC data channel (hub's offerLink / answerLink and
  * dataChannelTransport), handed straight to the workers at both ends — a client of the host's own page as much as a
- * player in another tab (the two pages signal over the match's lobby: lobby.ts) — and the referee's hub holds every
+ * player in another tab (the two pages signal over the match's lobby: hub's joinLobby) — and the referee's hub holds every
  * client link: it assigns each client its id (LinkOptions.peer; its hello tells the
  * client, whose uplink it is) and permissions. That link carries only the game, both ways (lobby / seat permissions
  * on the referee's side, hostPermissions on the client's). Everything else of a client — its logs, its architecture,
@@ -18,7 +18,7 @@
  * tree (it has no loop protection). It's there on purpose (the host's own player takes every player's path) and safe
  * because the worker is a leaf on both sides: nothing crosses it, and each link carries one way only what its side is
  * for (client.worker.ts). Same-origin tabs trust each other to signal
- * (lobby.ts); across machines, signaling would need a relay or a copy-paste invite.
+ * (hub's joinLobby); across machines, signaling would need a relay or a copy-paste invite.
  */
 import type { WorldConfig } from "../sim/index.ts";
 
@@ -65,14 +65,14 @@ export interface ClientInspection {
 	"predicted": number[][];
 }
 
-/** page → referee worker: the data channel a client links over (transferred: rtc.ts), and the id to know it by. */
+/** page → referee worker: the data channel a client links over (transferred: hub's offerLink), and the id to know it by. */
 export interface AttachMessage {
 	"type": "netsim-attach";
 	"peer": string;
 	"channel": RTCDataChannel;
 }
 
-/** page → instance iframe → its client worker: the data channel to the referee (transferred on, as it arrives: rtc.ts —
+/** page → instance iframe → its client worker: the data channel to the referee (transferred on, as it arrives: hub's answerLink —
  *  who the client is, the referee tells it: hub's knownAs). On every load of the iframe, so a reloaded instance gets a
  *  fresh link (and the referee drops the old one). */
 export interface PortMessage {

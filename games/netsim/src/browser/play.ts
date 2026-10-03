@@ -2,16 +2,14 @@
  * Players in separate tabs (play.html?match=<id>): the first tab at a match hosts it — the referee, and its own player
  * (`player-0`) — and every tab of this origin that opens the same match after it joins as another player (whatever
  * page or path it was loaded from), its client linked to the host's referee over WebRTC, the two pages signaling
- * through the lobby (lobby.ts, rtc.ts). Each tab is its own hub tree, observed on its own (its own tab in debug-mcp); the host's also serves
+ * through the lobby (hub's joinLobby). Each tab is its own hub tree, observed on its own (its own tab in debug-mcp); the host's also serves
  * netsim's tools over the whole match.
  */
 import type { InstanceView, PortMessage } from "./bootstrap.ts";
 import type { RtcLink } from "@brianjenkins94/hub";
-import { createHub, windowTransport } from "@brianjenkins94/hub";
+import { createHub, joinLobby, windowTransport } from "@brianjenkins94/hub";
 import { instanceSubjects, readSettings } from "./bootstrap.ts";
 import { createInstanceFrame, startHost } from "./host.ts";
-import { joinLobby } from "./lobby.ts";
-import { answerLink } from "@brianjenkins94/hub";
 import { observeApp } from "@brianjenkins94/observability";
 
 const params = new URLSearchParams(location.search);
@@ -32,7 +30,7 @@ invite.href = location.href;
 // Observed first — every channel of this realm's, its lobby's BroadcastChannel and Web Locks included — then the lobby.
 const hub = createHub({ "id": "page" });
 const telemetry = observeApp(hub, { "network": true, "messages": true });
-const lobby = await joinLobby(match);
+const lobby = await joinLobby("netsim", match);
 
 role.textContent = `match ${match} · you are ${lobby.peer} (${lobby.role === "host" ? "hosting" : "joined"})`;
 document.body.dataset["role"] = lobby.role;
@@ -48,9 +46,9 @@ if (lobby.role === "host") {
 	});
 
 	host.addInstance(lobby.peer);
-	lobby.onPlayer((peer, signaling) => {
+	lobby.onPlayer((peer, link) => {
 		host.telemetry.log.info("player connected", { "peer": peer });
-		host.attachRemote(peer, signaling);
+		host.attachRemote(peer, link);
 	});
 } else {
 	const bots = params.get("bots") !== "0";
@@ -58,12 +56,10 @@ if (lobby.role === "host") {
 	// The client's end of its link, made here (its worker is in the instance frame), its data channel passed on to it.
 	let link: RtcLink | undefined;
 	const frame = createInstanceFrame(grid, { "id": lobby.peer, "matchId": match, "bots": bots }, (loaded) => {
-		void lobby.connect().then((signaling) => {
-			link?.close();
-			link = answerLink(signaling, (channel) => {
-				loaded.contentWindow!.postMessage({ "type": "netsim-port", "channel": channel } satisfies PortMessage, location.origin, [channel as unknown as Transferable]);
-			});
-		});
+		link?.close();
+		void lobby.link((channel) => {
+			loaded.contentWindow!.postMessage({ "type": "netsim-port", "channel": channel } satisfies PortMessage, location.origin, [channel as unknown as Transferable]);
+		}).then((made) => { link = made; });
 	});
 
 	// This tab's tree: page ─ instance ─ client worker (which also links, non-transit, to the host's referee) — as the

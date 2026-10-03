@@ -8,13 +8,13 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
 ### WebRTC (M4)
 
 - **Signaling is same-browser only.** The pages trade offers, answers and candidates in memory (one page) or over the
-  match's lobby BroadcastChannel (tabs of one origin) — the `Signaling` seam in `src/browser/rtc.ts`. Across machines
+  match's lobby BroadcastChannel (tabs of one origin) — the `Signaling` seam behind hub's `joinLobby`, `offerLink` and `answerLink`. Across machines
   it needs a relay (a Worker, or a third party's) or a copy-paste invite; and ICE servers (STUN, maybe TURN) — the
   host candidates are enough only on one machine.
 - **Two channels between one pair are one line** in the architecture view (it draws one per pair of ends): two tabs'
   pages meet through the lobby and through their peer connection, and only one shows. The comparison report keys by
   pair the same way.
-- **Data channels can only be handed to a worker as they're created** — before anything's sent on them. rtc.ts does it
+- **Data channels can only be handed to a worker as they're created** — before anything's sent on them. hub's offerLink / answerLink do it
   at once (`take`); a page that waited would be refused (`DataCloneError`).
 
 ### hub (`editor/packages/hub`)
