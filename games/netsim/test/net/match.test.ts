@@ -2,9 +2,9 @@ import type { JoinReply, RefereeTick, StateUpdate } from "../../src/net/index.ts
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createHub, createRpcClient, serve } from "@brianjenkins94/hub";
-import { createClient, createNetwork, hostPermissions, lobbyPermissions, subjects } from "../../src/net/index.ts";
+import { createClient, hostPermissions, lobbyPermissions, subjects } from "../../src/net/index.ts";
 import { decodeUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
-import { isConverged, MATCH, pump, randomOrders, startMatch, TICK_MS } from "./match.ts";
+import { gameNetwork, isConverged, MATCH, pump, randomOrders, startMatch, TICK_MS } from "./match.ts";
 
 test("each client gets its own seat, and a full match turns the next one away", async () => {
 	const match = await startMatch({ "clients": 3, "config": { "teams": 3 } });
@@ -455,7 +455,7 @@ test("a client in another tab plays through a host it confines: neither tab's tr
 });
 
 test("a client confines a hostile host to the game: its state and replies in, the client's game traffic out", () => {
-	const network = createNetwork({ "seed": 1 });
+	const network = gameNetwork(1);
 	const host = createHub({ "id": "page" });
 	const hub = createHub({ "id": "remote" });
 	const names = subjects(MATCH);

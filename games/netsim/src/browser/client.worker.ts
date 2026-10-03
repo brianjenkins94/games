@@ -39,13 +39,13 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 	} });
 	await toReferee.ready;
 
-	const id = hub.knownAs()[0];
+	const id = toReferee.knownAs;
 
 	if (id === undefined) {
 		throw new Error("the referee didn't say who this client is");
 	}
 
-	hub.permit("referee", hostPermissions(MATCH, id));
+	toReferee.permit(hostPermissions(MATCH, id));
 
 	const names = subjects(MATCH);
 	const local = instanceSubjects(id);

@@ -6,13 +6,14 @@
  */
 import type { ClientDiag, RefereeTick } from "../net/index.ts";
 import type { AttachMessage, InitMessage, PortMessage, Settings } from "./bootstrap.ts";
-import type { RtcLink, Signaling } from "./rtc.ts";
+import type { RtcLink, Signaling } from "@brianjenkins94/hub";
 import type { Hub } from "@brianjenkins94/hub";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { subjects } from "../net/index.ts";
 import { tiles } from "../sim/index.ts";
 import { MATCH } from "./bootstrap.ts";
-import { answerLink, linkLabel, localSignaling, offerLink } from "./rtc.ts";
+import { answerLink, localSignaling, offerLink } from "@brianjenkins94/hub";
+import { linkLabel } from "./rtc.ts";
 import { observeApp, ownWorker } from "@brianjenkins94/observability";
 import { netsimTools } from "./tools.ts";
 

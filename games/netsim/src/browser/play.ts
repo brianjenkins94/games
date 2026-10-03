@@ -6,12 +6,12 @@
  * netsim's tools over the whole match.
  */
 import type { InstanceView, PortMessage } from "./bootstrap.ts";
-import type { RtcLink } from "./rtc.ts";
+import type { RtcLink } from "@brianjenkins94/hub";
 import { createHub, windowTransport } from "@brianjenkins94/hub";
 import { instanceSubjects, readSettings } from "./bootstrap.ts";
 import { createInstanceFrame, startHost } from "./host.ts";
 import { joinLobby } from "./lobby.ts";
-import { answerLink } from "./rtc.ts";
+import { answerLink } from "@brianjenkins94/hub";
 import { observeApp } from "@brianjenkins94/observability";
 
 const params = new URLSearchParams(location.search);

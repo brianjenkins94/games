@@ -1,12 +1,22 @@
 /** Test helper: a referee and N clients, each on its own hub, linked in a star over a virtual network. */
-import type { Hub } from "@brianjenkins94/hub";
-import type { Client, Faults, JoinReply, Network, Referee } from "../../src/net/index.ts";
+import type { Faults, Hub, Network } from "@brianjenkins94/hub";
+import type { Client, JoinReply, Referee } from "../../src/net/index.ts";
 import type { WorldConfig } from "../../src/sim/index.ts";
-import { createHub } from "@brianjenkins94/hub";
-import { createClient, createNetwork, createReferee, lobbyPermissions } from "../../src/net/index.ts";
-import { createRng, hashUnits, nextInt, spawnUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
+import { createHub, createNetwork, matches } from "@brianjenkins94/hub";
+import { createClient, createReferee, lobbyPermissions } from "../../src/net/index.ts";
+import { createRng, hashUnits, nextInt, nextU32, spawnUnit, tiles, visibleUnits } from "../../src/sim/index.ts";
 
 export const TICK_MS = 50;
+
+const GAME_TRAFFIC = ["netsim.*.commands", "netsim.*.state.*"];
+
+/** hub's virtual network as netsim's tests use it: faults on the game's traffic only (commands, state), from netsim's
+ *  own seeded generator, so a run's losses and reorderings repeat exactly. */
+export function gameNetwork(seed = 1): Network {
+	const rng = createRng(seed);
+
+	return createNetwork({ "random": () => nextU32(rng), "faulty": (subject) => GAME_TRAFFIC.some((pattern) => matches(pattern, subject)) });
+}
 export const MATCH = "m";
 
 export interface MatchOptions {
@@ -57,7 +67,7 @@ export async function pump<T>(network: Network, promise: Promise<T>): Promise<T>
 }
 
 export async function startMatch({ "clients": count = 2, config = {}, faults = {}, seed = 1, perTeam = 3, keyframeEvery = 10 }: MatchOptions = {}): Promise<Match> {
-	const network = createNetwork({ "seed": seed });
+	const network = gameNetwork(seed);
 	const refereeHub = createHub({ "id": "referee" });
 	const teams = config.teams ?? Math.max(count, 2);
 	const referee = createReferee({

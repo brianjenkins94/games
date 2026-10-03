@@ -6,7 +6,7 @@
 import type { Hub } from "@brianjenkins94/hub";
 import type { PageTool } from "@brianjenkins94/observability";
 import type { ClientInspection, RefereeControl, RefereeInspection } from "./bootstrap.ts";
-import { createRpcClient, rpcCallSubject } from "@brianjenkins94/hub";
+import { createRpcClient } from "@brianjenkins94/hub";
 import { diffUnits, isEmpty, subjects } from "../net/index.ts";
 import { decodeUnit, FP } from "../sim/index.ts";
 import { MATCH, REFEREE_CONTROL, REFEREE_INSPECT } from "./bootstrap.ts";
@@ -20,11 +20,16 @@ export function netsimTools(hub: Hub, status: () => unknown): PageTool[] {
 	const inspectClient = async (peer: string) => await rpc.request(names.debug(peer, "inspect"), undefined, CALL) as ClientInspection;
 	/** A client this tab can reach — its own (through its instance); another tab's player is that tab's to inspect. */
 	const reachable = async (peer: string): Promise<ClientInspection | undefined> => {
-		if (!await hub.whenInterested(rpcCallSubject(names.debug(peer, "inspect")), CALL.waitForResponderMs)) {
-			return undefined;
-		}
+		try {
+			return await inspectClient(peer);
+		} catch (error) {
+			// (hub's RpcError — by its code: `instanceof` fails across realms.)
+			if ((error as { "code"?: string }).code === "no-responder") {
+				return undefined;
+			}
 
-		return inspectClient(peer);
+			throw error;
+		}
 	};
 	const ELSEWHERE = "in another tab — its own tab inspects it (the referee's link carries only the game)";
 	/** The named client, or every seated one. */

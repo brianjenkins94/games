@@ -15,7 +15,7 @@
  * editor's preview and a local dev server; across machines, players would need another way to signal.
  */
 
-import type { Signal, Signaling } from "./rtc.ts";
+import type { Signal, Signaling } from "@brianjenkins94/hub";
 
 /** On the match's lobby channel. */
 type LobbyMessage =
