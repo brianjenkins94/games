@@ -12,7 +12,7 @@
     "test:oracle": "tsx --test \"test/oracle.test.ts\"",
     "test:browser": "node --test --test-concurrency=1 \"test/browser/*.test.ts\"",
     "record": "tsx test/oracle/record.ts",
-    "compare:zero-knowledge": "node test/browser/zero-knowledge/compare.ts"
+    "compare:zero-knowledge": "node ../../packages/game-test/zero-knowledge/compare.ts --harness test/browser/harness.ts"
   },
   "dependencies": {
     "@brianjenkins94/hub": "https://brianjenkins94.github.io/editor/packages/hub@latest.tgz",

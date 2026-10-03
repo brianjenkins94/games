@@ -1,6 +1,6 @@
 /**
  * A tab's way into a match with players on other machines (W3, see MIGRATION.md): PeerJS — its broker to find each
- * other, its STUN and TURN servers to get through NATs — where lobby.ts is for tabs of one browser.
+ * other, its STUN and TURN servers to get through NATs — where hub's joinLobby is for tabs of one browser.
  *
  * - **Who hosts:** whoever registers the match's PeerJS id (`war2-<match>`) with the broker first. A tab that finds it
  *   taken is a player, and dials it. (A reloaded host's id can still be held for a while: the match ends with its host,
@@ -19,7 +19,7 @@
  * free and shared, for playtesting.
  */
 import type { DataConnection, PeerOptions } from "peerjs";
-import type { Lobby } from "./lobby.ts";
+import type { Lobby } from "@brianjenkins94/hub";
 import { Peer } from "peerjs";
 
 export interface PeerLobbyOptions {

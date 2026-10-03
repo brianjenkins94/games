@@ -1,19 +1,17 @@
 /**
  * Hosting a match, in a page (netsim's, W3 — see MIGRATION.md): starts the referee worker, makes each client's link to
  * it — for an instance iframe of this page's (`addInstance`, both ends here, WebRTC) or a player in another tab or on
- * another machine (`attachRemote`, the referee's end of a link its lobby made: lobby.ts, peerLobby.ts) — and shows
+ * another machine (`attachRemote`, the referee's end of a link its lobby made: hub's joinLobby, peerLobby.ts) — and shows
  * every client's status checked against the referee (its view hash at that tick must match the referee's hash of what
  * that team can see).
  */
 import type { ClientDiag, RefereeTick } from "../net/index.ts";
 import type { AttachMessage, InitMessage, PortMessage, Settings } from "./contract.ts";
-import type { Hub, RtcLink } from "@brianjenkins94/hub";
-import type { MakeLink } from "./rtc.ts";
+import type { Hub, MakeLink, RtcLink } from "@brianjenkins94/hub";
 import { answerLink, createHub, localSignaling, offerLink, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { observeApp, ownWorker, reportMetrics } from "@brianjenkins94/observability";
 import { subjects } from "../net/index.ts";
 import { MATCH } from "./contract.ts";
-import { linkLabel } from "./rtc.ts";
 import { war2Tools } from "./tools.ts";
 
 /** A client reports every tick, paused or not (see client.worker.ts); this long without one, it's stalled. */
@@ -173,7 +171,7 @@ export function startHost({ observed, settings, matchId, grid, status, summary }
 			const frame = createInstanceFrame(grid, { "id": id, "matchId": matchId, "bots": settings.bots }, (loaded) => {
 				const [refereeEnd, clientEnd] = localSignaling();
 
-				attach(id, (take) => offerLink(linkLabel(MATCH, id), refereeEnd, take)).push(answerLink(clientEnd, (channel) => {
+				attach(id, (take) => offerLink(`war2.${MATCH}.link.${id}`, refereeEnd, take)).push(answerLink(clientEnd, (channel) => {
 					loaded.contentWindow!.postMessage({ "type": "war2-port", "channel": channel } satisfies PortMessage, location.origin, [channel as unknown as Transferable]);
 				}));
 			});

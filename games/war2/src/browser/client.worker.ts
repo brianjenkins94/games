@@ -1,7 +1,7 @@
 /**
  * One client, in its instance's worker — the host's own player as much as another tab's (W3, see MIGRATION.md: the
  * host's player as a client worker like any other). It links to its instance page (for drawing and input) and, over
- * the data channel its page handed it (rtc.ts), to the referee. Nobody tells it who it is: the referee's hub assigns its
+ * the data channel its page handed it (hub's answerLink), to the referee. Nobody tells it who it is: the referee's hub assigns its
  * id (LinkOptions.peer) and says so in its hello (hub's knownAs).
  *
  * It belongs to two trees — its own tab's and the referee's — and joins neither to the other: both links are

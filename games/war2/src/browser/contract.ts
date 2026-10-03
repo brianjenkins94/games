@@ -3,9 +3,9 @@
  * messages, subjects and settings (netsim's, W3 — see MIGRATION.md, carrying war2). What a client sees (UnitInfo,
  * InstanceView) is net/view.ts's.
  *
- * One transport for every client: each links to the referee over a WebRTC data channel (rtc.ts; hub's
+ * One transport for every client: each links to the referee over a WebRTC data channel (hub's offerLink / answerLink and
  * dataChannelTransport), handed straight to the workers at both ends — the host's own player as much as a player in
- * another tab (the two pages signal over the match's lobby: lobby.ts) — and the referee's hub holds every client link:
+ * another tab (the two pages signal over the match's lobby: hub's joinLobby) — and the referee's hub holds every client link:
  * it assigns each client its id (LinkOptions.peer; its hello tells the client, whose uplink it is) and permissions.
  * That link carries only the game, both ways. Everything else of a client — its logs, its architecture, its debugging
  * — rides its own tab's tree: page ─ instance ─ client worker. Both of the client worker's links are non-transit, so
@@ -83,7 +83,7 @@ export interface ClientInspection {
 	"predicted": UnitInfo[];
 }
 
-/** page → referee worker: the data channel a client links over (transferred: rtc.ts), and the id to know it by. */
+/** page → referee worker: the data channel a client links over (transferred: hub's offerLink), and the id to know it by. */
 export interface AttachMessage {
 	"type": "war2-attach";
 	"peer": string;

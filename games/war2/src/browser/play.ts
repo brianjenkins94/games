@@ -2,18 +2,17 @@
  * Players in separate tabs (play.html?match=<id>; netsim's, W3 — see MIGRATION.md): the first tab at a match hosts it
  * — the referee, and its own player (`player-0`) — and every tab of this origin that opens the same match after it
  * joins as another player (whatever page or path it was loaded from), its client linked to the host's referee over
- * WebRTC, the two pages signaling through the lobby (lobby.ts, rtc.ts). With `&lobby=peerjs` the tabs can be on other
+ * WebRTC, the two pages signaling through the lobby (hub's joinLobby). With `&lobby=peerjs` the tabs can be on other
  * machines: they meet through PeerJS's broker and link over its peer connections instead (peerLobby.ts). Each tab is
  * its own hub tree, observed on its own (its own tab in debug-mcp); the host's also serves war2's tools over the whole
  * match.
  */
 import type { PortMessage } from "./contract.ts";
 import type { InstanceView } from "../net/view.ts";
-import { createHub, windowTransport } from "@brianjenkins94/hub";
+import { createHub, joinLobby, windowTransport } from "@brianjenkins94/hub";
 import { observeApp } from "@brianjenkins94/observability";
 import { readSettings } from "./contract.ts";
 import { createInstanceFrame, startHost } from "./host.ts";
-import { joinLobby } from "./lobby.ts";
 
 const params = new URLSearchParams(location.search);
 const grid = document.querySelector<HTMLElement>("#instances")!;
@@ -38,7 +37,7 @@ const telemetry = observeApp(hub, { "network": true, "messages": true });
 const online = params.get("lobby") === "peerjs";
 // (PeerJS is imported only then: it opens a test peer connection the moment it loads — the zero-knowledge probes saw
 // it in every tab.)
-const lobby = online ? await (await import("./peerLobby.ts")).joinPeerLobby(match, { ...params.has("broker") ? { "broker": params.get("broker")! } : {}, ...params.get("ice") === "none" ? { "iceServers": [] } : {} }) : await joinLobby(match);
+const lobby = online ? await (await import("./peerLobby.ts")).joinPeerLobby(match, { ...params.has("broker") ? { "broker": params.get("broker")! } : {}, ...params.get("ice") === "none" ? { "iceServers": [] } : {} }) : await joinLobby("war2", match);
 
 role.textContent = `match ${match} · you are ${lobby.peer} (${lobby.role === "host" ? "hosting" : "joined"}${online ? ", online — send the link to another machine" : ""})`;
 document.body.dataset["role"] = lobby.role;
