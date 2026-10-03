@@ -33,7 +33,10 @@ Every gap it turns up goes here — open ones at the top, fixed ones kept below 
   owner's job (debug-mcp's socket retries; netsim's referee relinks a seat). Kept: a hub doesn't own its transports.
 - **No loop detection.** Hubs must be wired as a tree; a cycle would carry a message round it forever. It was built
   (NATS's `$sys.lds` subjects) and taken out again: heuristic and timing-dependent, for a wiring mistake we don't make —
-  the architecture view's duplicate-peer check flags the common one.
+  the architecture view's duplicate-peer check flags the common one. One loop is wired on purpose: the host tab's
+  (page ─ referee ┄ host's client worker ─ instance ─ page), safe only because that worker's two links are both
+  non-transit and each carries one way only what its side needs (`client.worker.ts`). A guard, or a named
+  "multi-homed leaf" pattern, would make that more than a convention.
 - **A lost interest frame isn't repaired** until the link's next `hello`. The transport contract (reliable, ordered after
   the handshake) rules it out; an RTCDataChannel must be opened `ordered` with no retransmit limit.
 
@@ -96,10 +99,10 @@ missing. What's left:
 - **An app's own new window has no handle.** The editor turns a same-server `window.open` into another preview window,
   so the call returns `null` (as a blocked popup does): an app that talks to the window it opened — `postMessage` to
   it, `close()` — can't. netsim doesn't; its windows meet through the lobby.
-- **A server on another port that isn't HTTP is out of reach of a preview.** war2's dev loop runs a WebSocket
-  signaling server on :9000 beside Vite; a preview's `ws://localhost:9000` goes to the real network (through the
-  capability gate), where nothing in the editor listens. Untried with war2 itself; the editor serves only HTTP
-  servers (`/__virtual__/<port>/`).
+- **A server on another port that isn't HTTP is out of reach of a preview.** The editor serves only HTTP servers
+  (`/__virtual__/<port>/`), so a preview's `ws://localhost:<port>` goes to the real network (through the capability
+  gate), where nothing in the editor listens. war2 no longer has one (its :9000 signaling server is gone): across
+  machines it signals through PeerJS (`?lobby=peerjs`) — a wss to PeerJS's broker, not yet tried from a preview.
 - **netsim itself across editor windows is checked only by hand.** `play.test.ts` plays across tabs of a plain
   browser; the editor's architecture fixture now plays a tiny lobby like netsim's (editor `b4206eb`) (a Web Lock picks
   the host, a BroadcastChannel carries hello/welcome) across two preview windows on one server — the primitives

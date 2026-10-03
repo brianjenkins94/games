@@ -1,6 +1,6 @@
 /**
  * netsim in a real browser: the page, the referee worker, N instance iframes and their client workers, linked by
- * MessageChannels, observed end to end. Built and served as it ships (see harness.ts).
+ * ports, windows and WebRTC data channels, observed end to end. Built and served as it ships (see harness.ts).
  */
 import type { Page } from "playwright";
 import type { Session } from "./harness.ts";

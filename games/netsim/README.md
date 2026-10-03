@@ -75,9 +75,9 @@ They're also callable from the page itself: `await __netsim.tool("netsim_diverge
 (`vite` in `games/netsim`), netsim joins the editor's hub tree instead of linking a debug-mcp itself: its logs and
 architecture show in the editor, and the editor's debug-mcp serves these tools.
 
-The client tools reach a client over its `netsim.<match>.debug.<peer>.*` subjects, which its link permits only when
-the page starts the referee with a `debugHost` — and then only the page may call them (`debugPermissions`): no client
-can call another's, see those calls, or answer anyone but the page.
+The client tools reach a client over its `netsim.<match>.debug.<peer>.*` subjects, from its own tab only: the client
+worker takes debug calls on its page link alone (`client.worker.ts`), and its referee link (`hostPermissions`) carries
+the game and nothing else — no client can call another's, see those calls, or answer anyone but its own page.
 
 ## Players in separate tabs (`play.html`)
 

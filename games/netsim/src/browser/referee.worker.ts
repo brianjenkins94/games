@@ -28,9 +28,9 @@ let paused = false;
 let current: Referee | undefined;
 
 // The page's calls (its link is the trusted one; clients may not publish these). Debugging, when the page enables it.
-serve(hub, REFEREE_INSPECT, (): RefereeInspection | undefined => {
+serve(hub, REFEREE_INSPECT, (): RefereeInspection => {
 	if (current === undefined) {
-		return undefined;
+		throw new Error("the match hasn't started yet");
 	}
 
 	const { world } = current;

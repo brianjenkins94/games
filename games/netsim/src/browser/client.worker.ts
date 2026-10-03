@@ -20,16 +20,23 @@ import { instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
 async function start({ channel, bots = true, token }: PortMessage): Promise<void> {
 	// Its own name is a placeholder that nobody sees (both its links name it): who it is comes from the referee.
 	const hub: Hub = createHub({ "id": "client" });
+	// Observed before it opens anything: the probes see only what's created after them (GAPS).
+	const { log } = observe(hub, { "network": true });
 
 	// The referee is its uplink: the hub that decides who it is (only an uplink's hello can name a hub). Its link is
 	// confined — to nothing until the client knows its id, then to the game (hostPermissions). The hello that carries the
 	// id is a control frame, which permissions don't stop.
 	const toReferee = hub.link(dataChannelTransport(channel), { "uplink": true, "transit": false, "permissions": { "publish": [], "subscribe": [] } });
 
-	// Its page sends it only clicks, debug calls from its own tab, and observability's traffic. In the host's tab the
-	// referee is in the page's tree too, so without this its team's state came twice — over the data channel and down
-	// the tab — and the host's clients did every update twice (half of them stale).
-	hub.link(portTransport(globalThis), { "transit": false, "permissions": { "publish": [`netsim.${MATCH}.input.*`, rpcCallSubject(`netsim.${MATCH}.debug.*.*`), "$sys.>"] } });
+	// Its page sends it only clicks, debug calls from its own tab, and observability's traffic — and gets back only its
+	// view, the debug calls' replies, and observability's. In the host's tab the referee is in the page's tree too (the
+	// tab's one loop: this worker is a leaf on both sides), so without the first its team's state came twice — over the
+	// data channel and down the tab — and without the second its diag reached the host page twice: the referee's way
+	// (every client's, remote ones too) and this one.
+	hub.link(portTransport(globalThis), { "transit": false, "permissions": {
+		"publish": [`netsim.${MATCH}.input.*`, rpcCallSubject(`netsim.${MATCH}.debug.*.*`), "$sys.>"],
+		"subscribe": [`netsim.${MATCH}.view.*`, "$rpc.reply.>", "$sys.>"]
+	} });
 	await toReferee.ready;
 
 	const id = hub.knownAs()[0];
@@ -45,8 +52,6 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 	const client: Client = createClient({ "hub": hub, "match": MATCH });
 	const rng = createRng([...id].reduce((sum, char) => sum + char.charCodeAt(0), 7));
 	let selected: number | undefined;
-
-	const { log } = observe(hub, { "network": true });
 	const reported = { "gaps": 0, "desyncs": 0, "snaps": 0 };
 
 	// Debugging, from its own tab (its page reaches it through its instance; the referee's link carries no calls to these).

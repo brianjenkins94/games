@@ -14,7 +14,10 @@
  *                      └─ player-0 instance ─ player-0 worker
  *   player tab:  page ─ player-1 instance ─ player-1 worker
  *
- * (Each tree must stay a tree — hub has no loop protection beyond that.) Same-origin tabs trust each other to signal
+ * In the host tab that is one loop — page ─ referee ┄ player-0 worker ─ player-0 instance ─ page — where hub wants a
+ * tree (it has no loop protection). It's there on purpose (the host's own player takes every player's path) and safe
+ * because the worker is a leaf on both sides: nothing crosses it, and each link carries one way only what its side is
+ * for (client.worker.ts). Same-origin tabs trust each other to signal
  * (lobby.ts); across machines, signaling would need a relay or a copy-paste invite.
  */
 import type { WorldConfig } from "../sim/index.ts";

@@ -27,12 +27,11 @@ type LobbyMessage =
 	| { "type": "signal"; "link": string; "from": "host" | "player"; "signal": Signal };
 
 /** Signaling for link `link` over the lobby, as `me`: it hears only the other end's signals for that link — and holds
- *  any that come before it has a handler. */
+ *  any that come before it has a handler — until the link's connection is up or gone (rtc.ts closes it). */
 function lobbySignaling(lobby: BroadcastChannel, link: string, me: "host" | "player"): Signaling {
 	let handler: ((signal: Signal) => void) | undefined;
 	const early: Signal[] = [];
-
-	lobby.addEventListener("message", (event: MessageEvent<LobbyMessage>) => {
+	const heard = (event: MessageEvent<LobbyMessage>): void => {
 		const message = event.data;
 
 		if (message.type === "signal" && message.link === link && message.from !== me) {
@@ -42,7 +41,9 @@ function lobbySignaling(lobby: BroadcastChannel, link: string, me: "host" | "pla
 				handler(message.signal);
 			}
 		}
-	});
+	};
+
+	lobby.addEventListener("message", heard);
 
 	return {
 		"send": (signal) => { lobby.postMessage({ "type": "signal", "link": link, "from": me, "signal": signal } satisfies LobbyMessage); },
@@ -52,7 +53,8 @@ function lobbySignaling(lobby: BroadcastChannel, link: string, me: "host" | "pla
 			for (const signal of early.splice(0)) {
 				next(signal);
 			}
-		}
+		},
+		"close": () => { lobby.removeEventListener("message", heard); }
 	};
 }
 
