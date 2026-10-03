@@ -1,0 +1,17 @@
+{
+  "name": "game-test",
+  "description": "What every game here tests itself with in a real browser: a harness that builds and serves the game as it ships and drives its pages, and the zero-knowledge line (probes alone must draw what the game reports about itself). Games import it by path: see harness.ts.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@brianjenkins94/hub": "https://brianjenkins94.github.io/editor/packages/hub@latest.tgz",
+    "@brianjenkins94/observability": "https://brianjenkins94.github.io/editor/packages/observability@latest.tgz",
+    "@brianjenkins94/util": "https://brianjenkins94.github.io/lib/util@latest.tgz",
+    "playwright": "^1.63.0",
+    "vite": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
