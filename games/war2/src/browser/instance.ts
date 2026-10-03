@@ -47,9 +47,7 @@ let latest: InstanceView | undefined;
 ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); });
 // This page made the worker, and names it on its link — the same id the page assigned at the referee — and, the
 // worker's reports reaching its page through here, it's the edge that names them.
-// (The referee is kept by name: observability keeps what the worker reaches over its uplinks only when the worker
-// reports under the id the link gives it, and it reports as "client" — it learns its id from the referee, after.)
-hub.link(scopedTransport(portTransport(worker), id, { "keep": (other) => other === hub.id || other === "referee" }), { "peer": id });
+hub.link(scopedTransport(portTransport(worker), id, { "keep": (other) => other === hub.id }), { "peer": id });
 
 // Its page is its tab's root: link up to it at once, so the tab observes (and debugs) its own client — whether or not
 // a link to the referee ever comes. (Opened on its own, it has no page.)

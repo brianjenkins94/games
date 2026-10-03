@@ -27,9 +27,7 @@ ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); 
 // This page made the worker, and names it on its link — the same id the page assigned at the referee — and, the
 // worker's reports reaching its page through here, it's the edge that names them: the worker as `client-0`. What they
 // name outside the client — this page, the referee its game links to — keeps its name.
-// (The referee is kept by name: observability keeps what the worker reaches over its uplinks only when the worker
-// reports under the id the link gives it, and it reports as "client" — it learns its id from the referee, after.)
-hub.link(scopedTransport(portTransport(worker), id, { "keep": (other) => other === hub.id || other === "referee" }), { "peer": id });
+hub.link(scopedTransport(portTransport(worker), id, { "keep": (other) => other === hub.id }), { "peer": id });
 
 let linkedUp = false;
 
