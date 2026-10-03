@@ -1,5 +1,5 @@
 /**
- * Commands: a player's intents, as the sim applies them (systems/commands.ts). Moved here from the old wire protocol
+ * Commands: a player's intents, as the sim applies them (commandSystem.ts). Moved here from the old wire protocol
  * (net/protocol.ts), whose packets and framing W2 replaces with netsim's — these are the sim's, not the wire's.
  *
  * Commands are intents. The referee assigns unit ids for SPAWN/BUILD (clients don't mint them); `team` is the issuing

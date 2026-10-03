@@ -1,13 +1,13 @@
 /**
  * Fog of war, as drawn: each tile unexplored, explored, or visible now — for the viewing team only. What the team has
  * explored comes from its client worker (the referee's own record, sent with the view); what it sees now is within
- * sight of its own units, by the same dodecagonal metric the sim uses (sim/vision.ts), so the drawn fog matches the
+ * sight of its own units, by the sim's own shape of sight (sim/distance.ts forEachInSight), so the drawn fog matches the
  * game's. Pushed to the ChunkRenderer, which dims or blacks terrain accordingly. (The old renderer kept its own
  * explored record and recomputed visibility for the whole map three times a frame; W3, see MIGRATION.md.)
  */
-import type { UnitInfo } from "../browser/bootstrap.ts";
+import type { UnitInfo } from "../net/view.ts";
 import { FP, TILE_PX } from "../sim/components.ts";
-import { inRange } from "../sim/distance.ts";
+import { forEachInSight } from "../sim/distance.ts";
 import { unitSight, unitTypeId } from "../sim/unitTypes.ts";
 
 export const UNEXPLORED = 0;
@@ -23,16 +23,8 @@ export function computeFog(vis: Uint8Array, mapW: number, mapH: number, explored
 	}
 
 	for (const unit of own) {
-		const sight = unitSight(unitTypeId(unit.type));
-		const utx = Math.floor(unit.x / FP / TILE_PX);
-		const uty = Math.floor(unit.y / FP / TILE_PX);
-
-		for (let ty = Math.max(0, uty - sight); ty <= Math.min(mapH - 1, uty + sight); ty++) {
-			for (let tx = Math.max(0, utx - sight); tx <= Math.min(mapW - 1, utx + sight); tx++) {
-				if (inRange(tx - utx, ty - uty, sight)) {
-					vis[ty * mapW + tx] = VISIBLE;
-				}
-			}
-		}
+		forEachInSight(Math.floor(unit.x / FP / TILE_PX), Math.floor(unit.y / FP / TILE_PX), unitSight(unitTypeId(unit.type)), mapW, mapH, (index) => {
+			vis[index] = VISIBLE;
+		});
 	}
 }

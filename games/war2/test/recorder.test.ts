@@ -6,12 +6,12 @@
 import type { Command } from "../src/sim/command.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { rowsMap } from "../src/browser/maps.ts";
+import { rowsMap } from "../src/maps.ts";
 import { createRecorder } from "../src/diag/recorder.ts";
 import { replayFixture } from "../src/diag/replay.ts";
 import { CmdType } from "../src/sim/command.ts";
 import { tileCenterFP } from "../src/sim/components.ts";
-import { createGame } from "../src/sim/game.ts";
+import { createGame } from "./game.ts";
 import { worldHash } from "../src/sim/snapshot.ts";
 import { unitTypeId } from "../src/sim/unitTypes.ts";
 import { revealAll } from "../src/sim/vision.ts";

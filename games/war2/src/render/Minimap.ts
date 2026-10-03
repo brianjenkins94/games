@@ -10,7 +10,7 @@
  * MIGRATION.md).
  */
 import type Phaser from "phaser";
-import type { UnitInfo } from "../browser/bootstrap.ts";
+import type { UnitInfo } from "../net/view.ts";
 import { FP, TILE_PX } from "../sim/components.ts";
 import { unitBoxHalfPx, unitTypeId } from "../sim/unitTypes.ts";
 

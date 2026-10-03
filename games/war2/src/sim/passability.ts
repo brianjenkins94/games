@@ -42,3 +42,23 @@ export function buildTerrain(gids: number[], mapW: number, mapH: number, terrain
 
 	return { "w": mapW, "h": mapH, "pass": pass };
 }
+
+/** True if a `fw`×`fh` footprint at top-left (tileX, tileY) is on the map and on passable terrain — the terrain half of
+ *  where a building may go (world.ts canPlaceBuilding adds what's standing there; a client's cursor, what it can see). */
+export function terrainFits(terrain: Terrain, tileX: number, tileY: number, fw: number, fh: number): boolean {
+	const { pass, w, h } = terrain;
+
+	if (pass === null) {
+		return true; // no map (pre-map dev mode): nothing to stand on or off
+	}
+
+	for (let y = tileY; y < tileY + fh; y++) {
+		for (let x = tileX; x < tileX + fw; x++) {
+			if (x < 0 || y < 0 || x >= w || y >= h || pass[y * w + x] !== 0) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}

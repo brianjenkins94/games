@@ -7,10 +7,11 @@
  * its own hub tree, observed on its own (its own tab in debug-mcp); the host's also serves war2's tools over the whole
  * match.
  */
-import type { InstanceView, PortMessage } from "./bootstrap.ts";
+import type { PortMessage } from "./contract.ts";
+import type { InstanceView } from "../net/view.ts";
 import { createHub, windowTransport } from "@brianjenkins94/hub";
 import { observeApp } from "@brianjenkins94/observability";
-import { instanceSubjects, readSettings } from "./bootstrap.ts";
+import { instanceSubjects, readSettings } from "./contract.ts";
 import { createInstanceFrame, startHost } from "./host.ts";
 import { joinLobby } from "./lobby.ts";
 

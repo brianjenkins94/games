@@ -17,11 +17,11 @@
  * Slot/hotkey assignments are "sensible defaults" pending an exact-WC2 pass. Carried from the old war2, out of its sim
  * folder (W3, see MIGRATION.md: client UI, not sim).
  */
-import factionsJson from "../assets/factions.json" with { "type": "json" };
-import iconsJson from "../assets/icons.json" with { "type": "json" };
-import productionJson from "../assets/production.json" with { "type": "json" };
-import unitsJson from "../assets/units.json" with { "type": "json" };
-import upgradesJson from "../assets/upgrades.json" with { "type": "json" };
+import factionsJson from "../data/factions.json" with { "type": "json" };
+import iconsJson from "../data/icons.json" with { "type": "json" };
+import productionJson from "../data/production.json" with { "type": "json" };
+import unitsJson from "../data/units.json" with { "type": "json" };
+import upgradesJson from "../data/upgrades.json" with { "type": "json" };
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

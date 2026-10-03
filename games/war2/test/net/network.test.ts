@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createHub } from "@brianjenkins94/hub";
-import { createNetwork } from "../../src/net/index.ts";
+import { createNetwork } from "./network.ts";
 
 function linked(faults = {}, seed = 1) {
 	const network = createNetwork({ "seed": seed });

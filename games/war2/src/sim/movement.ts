@@ -32,19 +32,19 @@
  * snapshot/replay reproduces.  UnitAnim is render-only (excluded from hash).
  */
 
-import type { Shape } from "../collide.ts";
-import type { SimWorld } from "../world.ts";
+import type { Shape } from "./collide.ts";
+import type { SimWorld } from "./world.ts";
 import { hasComponent } from "bitecs";
-import { unitShape } from "../collide.ts";
-import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, UNIT_SPD } from "../components.ts";
-import { distance, octant } from "../distance.ts";
-import type { FlowField } from "../flowField.ts";
-import { DIR_DX, DIR_DY, getOrComputeFlowField, INF, UNREACHABLE } from "../flowField.ts";
-import { LOCAL_RANGE, localNextAim, parkedInTheWay } from "../localPath.ts";
-import { markIdleDirty } from "../pathObstacles.ts";
-import { getBelievedPassability } from "../vision.ts";
-import { unitEids } from "../world.ts";
-import { footprintSoftFreeAt, freeUnit, reserveUnit, separateFrom, terrainClearForPass } from "../walkGrid.ts";
+import { unitShape } from "./collide.ts";
+import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, UNIT_SPD } from "./components.ts";
+import { distance, octant } from "./distance.ts";
+import type { FlowField } from "./flowField.ts";
+import { DIR_DX, DIR_DY, getOrComputeFlowField, INF, UNREACHABLE } from "./flowField.ts";
+import { LOCAL_RANGE, localNextAim, parkedInTheWay } from "./localPath.ts";
+import { markIdleDirty } from "./pathObstacles.ts";
+import { getBelievedPassability } from "./vision.ts";
+import { unitEids } from "./world.ts";
+import { footprintSoftFreeAt, freeUnit, reserveUnit, separateFrom, terrainClearForPass } from "./walkGrid.ts";
 
 // ── Tunables ──────────────────────────────────────────────────────────────────
 const ARRIVE_FP = 2 * FP;          // within this of the goal point → settle.  Small, because the

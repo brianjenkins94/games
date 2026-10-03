@@ -1,14 +1,11 @@
 /**
- * GameInstance — the public API surface of the sim.
- *
- * Wraps world.ts helpers into a single object so client/main.ts (the netcode
- * orchestrator) never imports from game/world.ts directly, and game logic
- * stays fully decoupled from transport concerns.
+ * GameInstance — the sim's helpers as one object, the shape the old client drove it through. Only the tests and the
+ * oracle use it now (the runtime calls the sim's modules directly), so it lives with them.
  */
-import type { Command } from "./command.ts";
-import type { WorldSnapshot } from "./snapshot.ts";
-import type { MapInfo, SimWorld, UnitLifecycle, UnitSnapshot } from "./world.ts";
-import { previewMoveTarget as _previewMoveTarget, setMoveTarget as _setMoveTarget } from "./orders.ts";
+import type { Command } from "../src/sim/command.ts";
+import type { WorldSnapshot } from "../src/sim/snapshot.ts";
+import type { MapInfo, SimWorld, UnitLifecycle, UnitSnapshot } from "../src/sim/world.ts";
+import { previewMoveTarget as _previewMoveTarget, setMoveTarget as _setMoveTarget } from "../src/sim/orders.ts";
 import {
 	addKnownUnit as _addKnownUnit,
 	addOwnUnit as _addOwnUnit,
@@ -21,9 +18,9 @@ import {
 	ownSnapshotsVisibleTo,
 	worldHashOwn
 
-} from "./snapshot.ts";
-import { applyCommands as _applyCommands } from "./systems/commands.ts";
-import { computeVisibleUids, isTileVisible } from "./vision.ts";
+} from "../src/sim/snapshot.ts";
+import { applyCommands as _applyCommands } from "../src/sim/commandSystem.ts";
+import { computeVisibleUids, isTileVisible } from "../src/sim/vision.ts";
 import {
 	canPlaceBuilding as _canPlaceBuilding,
 	registerObservers as _registerObservers,
@@ -39,7 +36,7 @@ import {
 	setNextUnitId,
 	stepWorld
 
-} from "./world.ts";
+} from "../src/sim/world.ts";
 
 export type { UnitSnapshot, WorldSnapshot };
 

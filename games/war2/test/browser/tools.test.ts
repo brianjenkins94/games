@@ -7,7 +7,7 @@ import type { Fixture } from "../../src/diag/recorder.ts";
 import type { Session } from "./harness.ts";
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { loadGameMap } from "../../src/browser/maps.ts";
+import { loadGameMap } from "../../src/maps.ts";
 import { replayFixture } from "../../src/diag/replay.ts";
 import { assertQuiet, startSession, tool, until } from "./harness.ts";
 

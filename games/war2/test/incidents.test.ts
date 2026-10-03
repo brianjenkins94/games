@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import * as path from "node:path";
 import { test } from "node:test";
 import * as fs from "@brianjenkins94/util/fs";
-import { loadGameMap } from "../src/browser/maps.ts";
+import { loadGameMap } from "../src/maps.ts";
 import { replayFixture } from "../src/diag/replay.ts";
 
 const DIR = path.resolve(import.meta.dirname, "incidents");

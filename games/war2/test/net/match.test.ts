@@ -280,6 +280,29 @@ test("a client that drops off and rejoins with its token gets its seat back, and
 	assert.equal(match.referee.seats().length, 2, "no new seat was taken");
 });
 
+test("a seat goes only to its token: a new link called what a seated player is called, without the token, is refused", async () => {
+	const match = await startMatch({ "clients": 2 });
+	const seated = match.hubs[0].id;
+	const { team, token } = match.replies[0];
+
+	// Its link replaced, as a relinked name's is (a remote player names itself: anyone can claim the name).
+	match.unlinks[0]();
+	match.clients[0].close();
+
+	const hub = createHub({ "id": "client-claiming" });
+
+	match.linkHub(hub, {}, seated);
+
+	const claiming = createClient({ "hub": hub, "match": MATCH, "loadMap": loadMap });
+
+	await assert.rejects(pump(match.network, claiming.join()), /seated already/u);
+	assert.equal(match.referee.seats().length, 2, "no seat taken, none given away");
+
+	const reply = await pump(match.network, claiming.join({ "token": token }));
+
+	assert.equal(reply.team, team, "the token reclaims it");
+});
+
 test("a corrupted view is caught by the hash check and repaired by a resync", async () => {
 	const match = await startMatch({ "clients": 2 });
 	const [client] = match.clients;

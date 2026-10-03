@@ -168,7 +168,7 @@ export interface WorldSnapshot {
 	"orders"?: Record<number, Order[]>;
 	"production"?: Record<number, ProductionState>;
 	"rally"?: Record<number, { "txFP": number; "tyFP": number }>;
-    // The repeat-move memo (systems/commands.ts), per team: a repeat click after a restore takes the same branch.
+    // The repeat-move memo (commandSystem.ts), per team: a repeat click after a restore takes the same branch.
 	"lastMove"?: SimWorld["lastMove"];
 }
 

@@ -2,11 +2,13 @@
  *  (W2, see MIGRATION.md), with war2's sim: every world — the referee's and each client's prediction — side by side in
  *  this one process. */
 import type { Hub } from "@brianjenkins94/hub";
-import type { Client, Faults, JoinReply, Network, Referee } from "../../src/net/index.ts";
+import type { Client, JoinReply, Referee } from "../../src/net/index.ts";
+import type { Faults, Network } from "./network.ts";
 import type { UnitSnapshot } from "../../src/sim/types.ts";
 import type { MapInfo, SimWorld } from "../../src/sim/world.ts";
 import { createHub } from "@brianjenkins94/hub";
-import { createClient, createNetwork, createReferee, hashView, lobbyPermissions, teamView } from "../../src/net/index.ts";
+import { createClient, createReferee, hashView, lobbyPermissions, teamView } from "../../src/net/index.ts";
+import { createNetwork } from "./network.ts";
 import { CmdType } from "../../src/sim/command.ts";
 import { tileCenterFP } from "../../src/sim/components.ts";
 import { rngRange } from "../../src/sim/rng.ts";

@@ -8,7 +8,9 @@
  * `tickMs`; the host page each client's `lag` — how many ticks its view is behind the referee's (the old chart's
  * round-trip time has no counterpart yet: nothing times a round trip to the referee).
  */
+import type { Transport } from "@brianjenkins94/hub";
 import type { Gauge } from "@brianjenkins94/observability";
+import { dataChannelTransport } from "@brianjenkins94/hub";
 
 /** Frames this window drew per second since the last reading (requestAnimationFrame callbacks). */
 export function frameRateGauge(): Gauge {
@@ -41,39 +43,42 @@ export function heapGauge(): Gauge {
 	};
 }
 
-/** What a message on a data channel weighs: its text's length, or its binary's. */
-function weight(data: unknown): number {
-	if (typeof data === "string") {
-		return data.length;
-	}
-
-	return (data as { "byteLength"?: number; "size"?: number } | null)?.byteLength ?? (data as { "size"?: number } | null)?.size ?? 0;
-}
-
-/** KB/s `channel` sent and received since the last reading — `in` and `out`, what it actually carried (the hub's frames,
- *  already serialized: nothing is serialized again to weigh them). Wrap the channel before anything sends on it. */
-export function wireGauge(channel: RTCDataChannel): Gauge {
+/** The hub transport over `channel`, metered: `gauge` reads the KB/s it sent and received since the last reading — `in`
+ *  and `out`, what it actually carried (the hub's frames, already serialized: nothing is serialized again to weigh
+ *  them). It meters the transport, not the channel — the channel's own `send` is left alone, so observability's data
+ *  channel probe still sees it. */
+export function meteredDataChannel(channel: RTCDataChannel): { "transport": Transport; "gauge": Gauge } {
+	const inner = dataChannelTransport(channel);
 	let sent = 0;
 	let received = 0;
 	let since = performance.now();
-	const send = channel.send.bind(channel) as (data: unknown) => void;
 
-	channel.send = ((data: unknown) => {
-		sent += weight(data);
-		send(data);
-	}) as RTCDataChannel["send"];
-	channel.addEventListener("message", (event) => { received += weight(event.data); });
+	channel.addEventListener("message", (event) => {
+		received += typeof event.data === "string" ? event.data.length : (event.data as { "byteLength"?: number }).byteLength ?? 0;
+	});
 
-	return () => {
-		const now = performance.now();
-		const seconds = (now - since) / 1000;
-		const rates = { "in": received / 1024 / seconds, "out": sent / 1024 / seconds };
+	return {
+		"transport": {
+			...inner,
+			// What one frame added to the backlog is its weight: queued (or held until the channel opens) synchronously.
+			"send": (message) => {
+				const before = inner.backlog!();
 
-		sent = 0;
-		received = 0;
-		since = now;
+				inner.send(message);
+				sent += inner.backlog!() - before;
+			}
+		},
+		"gauge": () => {
+			const now = performance.now();
+			const seconds = (now - since) / 1000;
+			const rates = { "in": received / 1024 / seconds, "out": sent / 1024 / seconds };
 
-		return rates;
+			sent = 0;
+			received = 0;
+			since = now;
+
+			return rates;
+		}
 	};
 }
 

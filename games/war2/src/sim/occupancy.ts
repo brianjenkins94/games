@@ -2,7 +2,7 @@
  * Occupancy grid — tracks which BUILDING (eid) occupies each tile.
  *
  * Since SC-style movement, mobile units no longer reserve tiles here; they collide
- * continuously via their boxes (see systems/movement.ts).  The grid now records only
+ * continuously via their boxes (see movement.ts).  The grid now records only
  * building footprints, making it the authoritative *static* obstacle map: a tile is
  * statically blocked for movement/pathing iff terrain is impassable OR a building
  * sits on it (see buildingAtIdx).

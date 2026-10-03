@@ -44,7 +44,7 @@ export interface Incident {
 
 /** An incident as a regression fixture: everything to rebuild the match and replay it, and what to expect. */
 export interface Fixture extends Omit<Incident, "flagHash"> {
-	/** The match's map, by name (browser/maps.ts) — or the map itself, for one that has none (a test scenario's). */
+	/** The match's map, by name (maps.ts) — or the map itself, for one that has none (a test scenario's). */
 	"map": string | MapInfo;
 	"seed": number;
 	"teams": number;

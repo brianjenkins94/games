@@ -2,7 +2,7 @@
  * Unit orders — translating a player command (move / formation / gather / stop / preview) into the
  * per-unit MoveTarget + flow-field goal the movement system steers on.  This is the "intent" layer:
  * it decides WHERE each unit should go (slot assignment, passable-tile snapping, the shared per-group
- * flow goal) and hands off to systems/movement.ts for the per-tick stepping.  Split out of world.ts.
+ * flow goal) and hands off to movement.ts for the per-tick stepping.  Split out of world.ts.
  *
  * Determinism: every function here is a pure function of shared sim state (positions, believed
  * passability, the flow-field cache) — no wall-clock, no RNG — so issuing the same order on both peers
@@ -16,7 +16,7 @@ import { FP, fpToTile, snapWalkFP, TILE_PX, tileCenterFP, WALK_PX } from "./comp
 import { distance, octant } from "./distance.ts";
 import { getOrComputeFlowField, UNREACHABLE } from "./flowField.ts";
 import { markIdleDirty } from "./pathObstacles.ts";
-import { resetProgress, stopUnit as _stopUnit } from "./systems/movement.ts";
+import { resetProgress, stopUnit as _stopUnit } from "./movement.ts";
 import { getBelievedPassability } from "./vision.ts";
 import { footprintSoftFreeAt } from "./walkGrid.ts";
 import { unitEids } from "./world.ts";
@@ -523,7 +523,7 @@ export function setFormationTargets(world: SimWorld, eids: number[], txFP: numbe
  * a converging cluster barely shuffles — minimal travel, minimal jostling, a tidy block.
  *
  * Used for "converge" moves (re-click the same spot, or a too-scattered selection) — see
- * systems/commands.ts.  Deterministic: spiral order, passability and the nearest-first assignment
+ * commandSystem.ts.  Deterministic: spiral order, passability and the nearest-first assignment
  * (eid tie-breaks) are all pure functions of shared state.
  */
 export function setGatherTargets(world: SimWorld, eids: number[], txFP: number, tyFP: number): void {

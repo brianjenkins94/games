@@ -3,7 +3,7 @@
  * (`?clients=2&teams=2&seed=1&map=arena…`).
  * For players in separate tabs, see play.ts.
  */
-import { readSettings } from "./bootstrap.ts";
+import { readSettings } from "./contract.ts";
 import { startHost } from "./host.ts";
 
 const settings = readSettings(location.search);

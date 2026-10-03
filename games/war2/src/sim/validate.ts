@@ -8,7 +8,7 @@
  * call the sim directly), and SPEED is a referee control, not a sim command: both are refused here.
  *
  * Apply-time still re-checks what depends on the tick the command lands in (placement, a building being finished, a
- * queue index still existing): systems/commands.ts is the deterministic source of truth for those.
+ * queue index still existing): commandSystem.ts is the deterministic source of truth for those.
  */
 import type { Command } from "./command.ts";
 import type { SimWorld } from "./world.ts";

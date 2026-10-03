@@ -8,8 +8,8 @@
  *   war2 booted on): a Tiled map, its tileset's terrain classes from `terrain.json`, its players' start positions from
  *   its properties.
  */
-import type { MapInfo } from "../sim/world.ts";
-import terrainJson from "../assets/terrain.json" with { "type": "json" };
+import type { MapInfo } from "./sim/world.ts";
+import terrainJson from "./data/terrain.json" with { "type": "json" };
 import { assetUrl } from "./assets.ts";
 
 /** A map, as the sim needs it and as the renderer draws it. */

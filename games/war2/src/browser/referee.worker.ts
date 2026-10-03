@@ -3,18 +3,18 @@
  *  (W3, see MIGRATION.md: speed as a host RPC). */
 import type { Referee } from "../net/index.ts";
 import type { Recorder } from "../diag/recorder.ts";
-import type { AttachMessage, DiagRequest, InitMessage, RefereeControl, RefereeInspection } from "./bootstrap.ts";
+import type { AttachMessage, DiagRequest, InitMessage, RefereeControl, RefereeInspection } from "./contract.ts";
 import { createHub, dataChannelTransport, portTransport, serve } from "@brianjenkins94/hub";
 import { observe, reportMetrics } from "@brianjenkins94/observability";
 import { createReferee, lobbyPermissions, teamView } from "../net/index.ts";
-import { tileCenterFP } from "../sim/components.ts";
-import { rngRange } from "../sim/rng.ts";
 import { snapshotUnit } from "../sim/snapshot.ts";
-import { unitTypeId } from "../sim/unitTypes.ts";
-import { canPlaceBuilding, spawnBuilding, spawnUnit, unitEids } from "../sim/world.ts";
+import { setupMatch } from "../sim/setup.ts";
+import { unitEids } from "../sim/world.ts";
 import { createRecorder } from "../diag/recorder.ts";
-import { describe, MATCH, REFEREE_CONTROL, REFEREE_DIAG, REFEREE_INSPECT, TICK_MS } from "./bootstrap.ts";
-import { loadGameMap } from "./maps.ts";
+import { MATCH, REFEREE_CONTROL, REFEREE_DIAG, REFEREE_INSPECT } from "./contract.ts";
+import { describe } from "../net/view.ts";
+import { TICK_MS } from "../sim/components.ts";
+import { loadGameMap } from "../maps.ts";
 import { durationGauge } from "./metrics.ts";
 
 const hub = createHub({ "id": "referee" });
@@ -27,10 +27,14 @@ reportMetrics(hub).gauge("tickMs", stepTime.gauge);
 hub.link(portTransport(globalThis));
 
 // What link permissions refuse is worth seeing: a client asking for another team's view, or sending what it may not.
-// And a client's link going: its data channel closed (its tab went), or it stopped answering.
+// So is what a link's limits drop (maxPayload, maxBacklog, below): a frame too big, or a peer too slow — dropped
+// otherwise without a word, and a dropped keyframe is a client stuck resyncing. And a client's link going: its data
+// channel closed (its tab went), or it stopped answering.
 hub.tap((event) => {
 	if (event.type === "deny" && !event.envelope.subject.startsWith("$sys.")) {
 		log.warn("denied", { "peer": event.link.peerId, "direction": event.direction, "subject": event.envelope.subject });
+	} else if (event.type === "fault" && (event.kind === "payload" || event.kind === "backlog")) {
+		log.warn("dropped", { "peer": event.link?.peerId, "why": event.kind, "detail": event.detail });
 	} else if (event.type === "fault" && (event.kind === "closed" || event.kind === "stale")) {
 		log.info("client gone", { "peer": event.link?.peerId, "why": event.detail });
 	}
@@ -73,9 +77,9 @@ function run(): void {
 	timer = setInterval(tick, TICK_MS / speed);
 }
 
-serve(hub, REFEREE_INSPECT, (): RefereeInspection | undefined => {
+serve(hub, REFEREE_INSPECT, (): RefereeInspection => {
 	if (current === undefined) {
-		return undefined;
+		throw new Error("the match hasn't started yet");
 	}
 
 	const { world } = current;
@@ -144,34 +148,7 @@ async function start(settings: InitMessage["settings"]): Promise<void> {
 				log.warn("incident", { "id": incident.id, "label": incident.label, "tick": incident.flagTick });
 			}
 		},
-		"setup": (world) => {
-			// Each team at its start (the map's, else a band of its own), as a WC2 match opens: a town hall, finished,
-			// two workers beside it, and soldiers for the rest. Humans and orcs in turn.
-			for (let team = 0; team < settings.teams; team += 1) {
-				const orc = team % 2 === 1;
-				const [sx, sy] = gameMap.starts[team] ?? [Math.floor(((team + 0.5) / settings.teams) * map.mapW), Math.floor(map.mapH / 2)];
-				const hallType = unitTypeId(orc ? "unit-great-hall" : "unit-town-hall");
-				const [hx, hy] = [Math.min(map.mapW - 4, Math.max(0, sx - 2)), Math.min(map.mapH - 4, Math.max(0, sy - 2))];
-
-				if (canPlaceBuilding(world, hx, hy, hallType)) {
-					const hall = spawnBuilding(world, hx, hy, team, hallType);
-
-					if (hall !== -1) {
-						world.components.Building.buildLeft[hall] = 0;
-					}
-				}
-
-				for (let placed = 0, tries = 0; placed < settings.perTeam && tries < 1000; tries += 1) {
-					const type = unitTypeId(placed < 2 ? (orc ? "unit-peon" : "unit-peasant") : (orc ? "unit-grunt" : "unit-footman"));
-					const tx = Math.min(map.mapW - 1, Math.max(0, sx + rngRange(world, -5, 6)));
-					const ty = Math.min(map.mapH - 1, Math.max(0, sy + rngRange(world, -5, 6)));
-
-					if (world.terrain.pass[ty * map.mapW + tx] === 0 && world.occupancy[ty * map.mapW + tx] === 0 && spawnUnit(world, tileCenterFP(tx), tileCenterFP(ty), team, undefined, type) !== -1) {
-						placed += 1;
-					}
-				}
-			}
-		}
+		"setup": (world) => { setupMatch(world, map.mapW, map.mapH, { "teams": settings.teams, "perTeam": settings.perTeam, "starts": gameMap.starts }); }
 	});
 	log.info("referee started", { "teams": settings.teams, "map": settings.map, "units": current.world.eidOf.size });
 	run();

@@ -12,8 +12,8 @@
  * unit renumbers nothing. (It began as the sorted keys of `units.json`, which is what ids were derived from before,
  * and why every type kept its id.) A test holds `units.json` to it.
  */
-import unitsJson from "../assets/units.json" with { "type": "json" };
-import unitTypeIds from "../assets/unitTypeIds.json" with { "type": "json" };
+import unitsJson from "../data/units.json" with { "type": "json" };
+import unitTypeIds from "../data/unitTypeIds.json" with { "type": "json" };
 import { TILE_PX } from "./components.ts";
 
 export const UNIT_TYPE_NONE = 0;

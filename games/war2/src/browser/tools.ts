@@ -8,13 +8,15 @@ import type { Hub } from "@brianjenkins94/hub";
 import type { PageTool } from "@brianjenkins94/observability";
 import type { UnitSnapshot } from "../sim/types.ts";
 import type { AppliedCommand, Fixture } from "../diag/recorder.ts";
-import type { ClientInspection, DiagRequest, RefereeControl, RefereeInspection, UnitInfo } from "./bootstrap.ts";
+import type { ClientInspection, DiagRequest, RefereeControl, RefereeInspection } from "./contract.ts";
+import type { UnitInfo } from "../net/view.ts";
 import { createRpcClient, rpcCallSubject } from "@brianjenkins94/hub";
 import { CmdType } from "../sim/command.ts";
 import { FP, TILE_PX } from "../sim/components.ts";
 import { createComponents, simFields } from "../sim/components.ts";
 import { unitRadiusPx, unitTypeId } from "../sim/unitTypes.ts";
-import { describe, instanceSubjects, REFEREE_CONTROL, REFEREE_DIAG, REFEREE_INSPECT } from "./bootstrap.ts";
+import { instanceSubjects, REFEREE_CONTROL, REFEREE_DIAG, REFEREE_INSPECT } from "./contract.ts";
+import { describe } from "../net/view.ts";
 
 const CALL = { "timeoutMs": 3000, "waitForResponderMs": 1000 };
 const FIELDS = simFields(createComponents()).map(([name]) => name);

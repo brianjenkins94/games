@@ -1,7 +1,7 @@
 /**
  * Sprite registry — the single, data-driven source of truth for entity graphics.
  *
- * Every graphic is a path on the assets mirror (browser/assets.ts), fetched the first time it's drawn; geometry and
+ * Every graphic is a path on the assets mirror (assets.ts), fetched the first time it's drawn; geometry and
  * animation come straight from the asset JSON (no dimensions or frame sequences are hardcoded):
  *   • mobile units  → sprites.json  (file, frameWidth/Height, numDirections,
  *                     animations: Still/Move/Attack/Death/… with per-frame durations)
@@ -15,10 +15,10 @@
  * Texture keys:  unit → "unit:<type>", building → "bld:<type>",
  *                construction site → "con:<construction-type>".
  */
-import constructionsJson from "../assets/constructions.json" with { "type": "json" };
-import spritesJson from "../assets/sprites.json" with { "type": "json" };
-import unitsJson from "../assets/units.json" with { "type": "json" };
-import { assetUrl } from "../browser/assets.ts";
+import constructionsJson from "../data/constructions.json" with { "type": "json" };
+import spritesJson from "../data/sprites.json" with { "type": "json" };
+import unitsJson from "../data/units.json" with { "type": "json" };
+import { assetUrl } from "../assets.ts";
 import { TILE_PX } from "../sim/components.ts";
 
 /** A graphic's URL on the mirror, from its path under graphics/. */

@@ -1,11 +1,11 @@
-import type { Command } from "../command.ts";
-import type { SimWorld } from "../world.ts";
-import { CmdType } from "../command.ts";
-import { FP, fpToTile, TILE_PX } from "../components.ts";
-import { distance } from "../distance.ts";
-import { clearOrderQueue, enqueueOrder, setFormationTargets, setGatherTargets, setMoveTarget, stopUnit } from "../orders.ts";
-import { buildingTrains, cancelProduction, enqueueProduction, setRally } from "../production.ts";
-import { canPlaceBuilding, eidForUnitId, spawnBuilding, spawnUnit } from "../world.ts";
+import type { Command } from "./command.ts";
+import type { SimWorld } from "./world.ts";
+import { CmdType } from "./command.ts";
+import { FP, fpToTile, TILE_PX } from "./components.ts";
+import { distance } from "./distance.ts";
+import { clearOrderQueue, enqueueOrder, setFormationTargets, setGatherTargets, setMoveTarget, stopUnit } from "./orders.ts";
+import { buildingTrains, cancelProduction, enqueueProduction, setRally } from "./production.ts";
+import { canPlaceBuilding, eidForUnitId, spawnBuilding, spawnUnit } from "./world.ts";
 
 // A cohesive multi-unit MOVE keeps its formation (each unit holds its offset from the group
 // centroid).  A scattered selection, or re-clicking the same spot, gathers into a compact block.

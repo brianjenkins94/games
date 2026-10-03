@@ -10,35 +10,43 @@
  */
 import type { Hub } from "@brianjenkins94/hub";
 import type { Client } from "../net/index.ts";
-import type { Command } from "../sim/command.ts";
-import type { ClientInspection, InstanceInput, InstanceView, PortMessage, UnitInfo } from "./bootstrap.ts";
-import { createHub, dataChannelTransport, portTransport, rpcCallSubject, serve } from "@brianjenkins94/hub";
+import type { ClientInspection, InstanceInput, PortMessage } from "./contract.ts";
+import type { InstanceView, UnitInfo } from "../net/view.ts";
+import { createHub, portTransport, rpcCallSubject, serve } from "@brianjenkins94/hub";
 import { observe, reportMetrics } from "@brianjenkins94/observability";
 import { createClient, hostPermissions, subjects } from "../net/index.ts";
-import { CmdType } from "../sim/command.ts";
-import { tileCenterFP } from "../sim/components.ts";
+import { createBot } from "../sim/bot.ts";
 import { snapshotUnit } from "../sim/snapshot.ts";
 import { validateCommand } from "../sim/validate.ts";
 import { exploredRuns } from "../sim/vision.ts";
 import { unitEids } from "../sim/world.ts";
-import { describe, instanceSubjects, MATCH, TICK_MS } from "./bootstrap.ts";
-import { loadMap } from "./maps.ts";
-import { wireGauge } from "./metrics.ts";
+import { instanceSubjects, MATCH } from "./contract.ts";
+import { describe } from "../net/view.ts";
+import { TICK_MS } from "../sim/components.ts";
+import { loadMap } from "../maps.ts";
+import { meteredDataChannel } from "./metrics.ts";
 
 async function start({ channel, bots = true, token }: PortMessage): Promise<void> {
 	// Its own name is a placeholder that nobody sees (both its links name it): who it is comes from the referee.
 	const hub: Hub = createHub({ "id": "client" });
-	// What its data channel carries (metrics.ts), weighed from the start: wrapped before the link sends anything on it.
-	const wire = wireGauge(channel);
+	// Observed before it opens anything: the probes see only what's created after them (GAPS).
+	const { log } = observe(hub, { "network": true });
+	// What its data channel carries (metrics.ts), weighed from the start: the link sends through the meter.
+	const wire = meteredDataChannel(channel);
 
 	// The referee is its uplink: the hub that decides who it is (only an uplink's hello can name a hub). Its link is
 	// confined — to nothing until the client knows its id, then to the game (hostPermissions).
-	const toReferee = hub.link(dataChannelTransport(channel), { "uplink": true, "transit": false, "permissions": { "publish": [], "subscribe": [] } });
+	const toReferee = hub.link(wire.transport, { "uplink": true, "transit": false, "permissions": { "publish": [], "subscribe": [] } });
 
-	// Its page sends it only clicks, debug calls from its own tab, and observability's traffic. In the host's tab the
-	// referee is in the page's tree too, so without this its team's state came twice — over the data channel and down
-	// the tab — and the host's clients did every update twice (half of them stale), falling behind on a busy machine.
-	hub.link(portTransport(globalThis), { "transit": false, "permissions": { "publish": [`war2.${MATCH}.input.*`, rpcCallSubject(`war2.${MATCH}.debug.*.*`), "$sys.>"] } });
+	// Its page sends it only clicks, debug calls from its own tab, and observability's traffic — and gets back only its
+	// view, the debug calls' replies, and observability's. In the host's tab the referee is in the page's tree too (the
+	// tab's one loop: this worker is a leaf on both sides), so without the first its team's state came twice — over the
+	// data channel and down the tab — and without the second its diag reached the host page twice: the referee's way
+	// (every client's, remote ones too) and this one.
+	hub.link(portTransport(globalThis), { "transit": false, "permissions": {
+		"publish": [`war2.${MATCH}.input.*`, rpcCallSubject(`war2.${MATCH}.debug.*.*`), "$sys.>"],
+		"subscribe": [`war2.${MATCH}.view.*`, "$rpc.reply.>", "$sys.>"]
+	} });
 	await toReferee.ready;
 
 	const id = hub.knownAs()[0];
@@ -53,18 +61,12 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 	const local = instanceSubjects(id);
 	const client: Client = createClient({ "hub": hub, "match": MATCH, "loadMap": loadMap });
 	// Its gauges (metrics.ts): what it sees, and its wire. (How far behind the referee its view is, the host knows: `lag`.)
-	const metrics = reportMetrics(hub, { "source": id });
+	// Unnamed: its instance's link names it, as it does its logs.
+	const metrics = reportMetrics(hub);
 
 	metrics.gauge("units", () => client.view().size);
-	metrics.gauge("wire", wire);
-	let seed = [...id].reduce((sum, char) => sum + char.charCodeAt(0), 7);
-	const random = (bound: number): number => {
-		seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
-
-		return (seed >>> 8) % bound;
-	};
+	metrics.gauge("wire", wire.gauge);
 	let selected: number[] = [];
-	const { log } = observe(hub, { "network": true });
 	const reported = { "gaps": 0, "desyncs": 0, "snaps": 0 };
 	const own = (): UnitInfo[] => [...client.view().values()].map(describe).filter((unit) => unit.team === client.team());
 	const predicted = (): UnitInfo[] => {
@@ -144,17 +146,14 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 
 	void joinWhenServed().then(async (seat) => {
 		const map = await loadMap(seat.map);
+		const bot = bots ? createBot(id, map.mapW, map.mapH) : undefined;
 
 		log.info(token === seat.token ? "rejoined" : "joined", { "team": seat.team, "map": seat.map });
 		setInterval(() => {
-			if (bots && random(100) < 10) {
-				const units = own().filter((unit) => unit.building === undefined && !selected.includes(unit.uid));
+			const command = bot?.(own(), selected);
 
-				if (units.length > 0) {
-					const command: Command = { "type": CmdType.MOVE, "unitIds": [units[random(units.length)].uid], "txFP": tileCenterFP(random(map.mapW)), "tyFP": tileCenterFP(random(map.mapH)) };
-
-					client.command(command);
-				}
+			if (command !== undefined) {
+				client.command(command);
 			}
 
 			client.tick();

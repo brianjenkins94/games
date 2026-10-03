@@ -23,7 +23,7 @@ import { CmdType } from "../sim/command.ts";
 import { UNIT_SPD } from "../sim/components.ts";
 import { distance } from "../sim/distance.ts";
 import { addKnownUnit, addOwnUnit, reconcileOwnUnit, removeKnownUnit, updateKnownUnit } from "../sim/snapshot.ts";
-import { applyCommands } from "../sim/systems/commands.ts";
+import { applyCommands } from "../sim/commandSystem.ts";
 import { exploredRuns, exploreTiles } from "../sim/vision.ts";
 import { createSimWorld, eidForUnitId, stepWorld } from "../sim/world.ts";
 import { subjects } from "./protocol.ts";

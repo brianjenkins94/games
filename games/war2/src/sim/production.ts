@@ -13,7 +13,7 @@
 import type { ProductionState } from "./types.ts";
 import type { SimWorld } from "./world.ts";
 import { hasComponent } from "bitecs";
-import productionJson from "../assets/production.json" with { "type": "json" };
+import productionJson from "../data/production.json" with { "type": "json" };
 import { tileCenterFP } from "./components.ts";
 import { isEmpty } from "./occupancy.ts";
 import { enqueueOrder } from "./orders.ts";

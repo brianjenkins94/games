@@ -9,7 +9,7 @@ import { test } from "node:test";
 import * as fs from "@brianjenkins94/util/fs";
 import { CmdType } from "../src/sim/command.ts";
 import { tileCenterFP } from "../src/sim/components.ts";
-import { createGame } from "../src/sim/game.ts";
+import { createGame } from "./game.ts";
 import { worldHash } from "../src/sim/snapshot.ts";
 import { revealAll } from "../src/sim/vision.ts";
 

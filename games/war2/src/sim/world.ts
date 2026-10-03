@@ -18,12 +18,12 @@ import { clearFlowFieldCache, createFlowFields } from "./flowField.ts";
 import { createLocalPath } from "./localPath.ts";
 import { freeRect, occupyRect, rectEmpty } from "./occupancy.ts";
 import { advanceOrderQueues } from "./orders.ts";
-import { buildTerrain } from "./passability.ts";
+import { buildTerrain, terrainFits } from "./passability.ts";
 import { inset, sum, TILE_MOVER, UNIT_SLACK, unitShape } from "./collide.ts";
 import { addIdleCSpace, createPathObstacles, markIdleDirty, resetIdleGrids } from "./pathObstacles.ts";
 import { productionSystem } from "./production.ts";
 import { rngRange, rngState } from "./rng.ts";
-import { movementSystem } from "./systems/movement.ts";
+import { movementSystem } from "./movement.ts";
 import { unitBuildTicks, unitFootprint } from "./unitTypes.ts";
 import { computeVisibleUids, createVision, visionSystem } from "./vision.ts";
 import { createWalkGrid, freeUnit, reserveUnit, resetWalkGrid } from "./walkGrid.ts";
@@ -60,13 +60,13 @@ export interface SimWorld {
 	"tick": number;
     /** Last MOVE per team — target tile + a signature of the selected unit set.  A repeat
      *  click by the *same* selection on the *same* tile converges the group on the point
-     *  instead of holding formation (see systems/commands.ts).  Keying on the selection
+     *  instead of holding formation (see commandSystem.ts).  Keying on the selection
      *  lets a player cycle control groups onto one spot, each getting its own first-click
      *  formation. */
 	"lastMove"?: Record<number, { "tileX": number; "tileY": number; "sig": number }>;
     /** Active gather target block per team (slot centres, fixed-point).  Set by a converge
      *  move; a settling unit of this team claims the nearest still-free slot so the block
-     *  fills in contiguously with no holes (see systems/movement.ts).  Cleared by any
+     *  fills in contiguously with no holes (see movement.ts).  Cleared by any
      *  non-converge move for the team. */
 	"gatherSlots"?: Record<number, [number, number][]>;
     /** Per-unit action queue, keyed by stable UnitId (survives eid recycling / resync).  Shift-queued
@@ -248,15 +248,8 @@ export function despawnUnit(world: SimWorld, eid: number): void {
  *  every footprint tile in-bounds, passable terrain, and unoccupied. */
 export function canPlaceBuilding(world: SimWorld, tileX: number, tileY: number, typeId: number): boolean {
 	const [fw, fh] = unitFootprint(typeId);
-	const { pass, w: mapW } = world.terrain;
 
-	if (pass) {
-		for (let y = 0; y < fh; y++) {
-			for (let x = 0; x < fw; x++) { if (pass[(tileY + y) * mapW + (tileX + x)]) { return false; } }
-		} // terrain-blocked
-	}
-
-	return rectEmpty(world, tileX, tileY, fw, fh);
+	return terrainFits(world.terrain, tileX, tileY, fw, fh) && rectEmpty(world, tileX, tileY, fw, fh);
 }
 
 /** Spawn a building entity occupying its footprint, with construction in progress.

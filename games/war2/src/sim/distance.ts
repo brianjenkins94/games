@@ -43,3 +43,16 @@ export function octant(dx: number, dy: number): number {
 
 	return Math.round(a / (Math.PI / 4)) & 7;
 }
+
+/** Each tile (as its index) a unit at tile (utx, uty) with sight `sight` sees on a mapW×mapH map — by the
+ *  dodecagonal metric (inRange). The one shape of sight: the sim's explored maps (vision.ts), a client's drawn fog
+ *  (render/fog.ts). */
+export function forEachInSight(utx: number, uty: number, sight: number, mapW: number, mapH: number, visit: (index: number) => void): void {
+	for (let ty = Math.max(0, uty - sight); ty <= Math.min(mapH - 1, uty + sight); ty++) {
+		for (let tx = Math.max(0, utx - sight); tx <= Math.min(mapW - 1, utx + sight); tx++) {
+			if (inRange(tx - utx, ty - uty, sight)) {
+				visit(ty * mapW + tx);
+			}
+		}
+	}
+}

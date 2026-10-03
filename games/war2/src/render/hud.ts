@@ -5,8 +5,8 @@
  * portrait — empty before — showing the selection.
  */
 import type { CommandCard } from "../ui/abilities.ts";
-import iconsJson from "../assets/icons.json" with { "type": "json" };
-import { assetUrl } from "../browser/assets.ts";
+import iconsJson from "../data/icons.json" with { "type": "json" };
+import { assetUrl } from "../assets.ts";
 
 // Icon sheet geometry: 46×38 frames in a 5-column grid.
 const ICON_W = (iconsJson as { "frameWidth": number }).frameWidth;

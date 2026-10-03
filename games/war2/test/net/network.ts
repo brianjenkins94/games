@@ -11,6 +11,7 @@
  */
 import type { Hub, LinkOptions, Transport } from "@brianjenkins94/hub";
 import { frameOf, matches, pipe } from "@brianjenkins94/hub";
+import { createRng } from "../../src/sim/rng.ts";
 
 export interface Faults {
 	/** Probability (0–1) that a faultable frame is dropped. */
@@ -46,20 +47,8 @@ export interface Network {
 
 const GAME_TRAFFIC = ["war2.*.commands", "war2.*.state.*"];
 
-/** xorshift32, for the faults: the network's own, seeded, so a run's losses and reorderings repeat exactly. */
-function createRng(seed: number): () => number {
-	let state = (seed >>> 0) || 1;
-
-	return () => {
-		state ^= state << 13;
-		state ^= state >> 17;
-		state ^= state << 5;
-
-		return state >>> 0;
-	};
-}
-
 export function createNetwork({ seed = 1, faulty = (subject: string) => GAME_TRAFFIC.some((pattern) => matches(pattern, subject)) } = {}): Network {
+	// Seeded, so a run's losses and reorderings repeat exactly.
 	const next = createRng(seed);
 	const chance = (probability: number): boolean => probability > 0 && next() / 0x100000000 < probability;
 	const queue: { "at": number; "order": number; "deliver": () => void }[] = [];

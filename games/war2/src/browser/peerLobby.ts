@@ -5,8 +5,10 @@
  * - **Who hosts:** whoever registers the match's PeerJS id (`war2-<match>`) with the broker first. A tab that finds it
  *   taken is a player, and dials it. (A reloaded host's id can still be held for a while: the match ends with its host,
  *   as in netsim — see "Host restore" in MIGRATION.md.)
- * - **Who's who:** a player names itself (`player-<random>`, kept across a reload of its tab), in its connection's
- *   metadata. A name that links again (its tab reloaded) replaces its old link, as a relinked instance does.
+ * - **Who's who:** a player names itself (`player-<6 hex>`, kept across a reload of its tab), in its connection's
+ *   metadata. A name that links again (its tab reloaded) replaces its old link, as a relinked instance does — but a name
+ *   proves nothing: its seat goes only to a link that presents the seat's token (net/referee.ts), and the host's own
+ *   `player-0` is never a player's name.
  * - **The links:** PeerJS makes each peer connection and its data channel — reliable and ordered, raw (hub's frames)
  *   — and the channel goes to the worker the moment it exists: the dialing side's straight from `connect()`, the host's
  *   from the peer connection's `datachannel` event (test/browser/peerjs.test.ts pins both). PeerJS's own events stop on
@@ -27,7 +29,8 @@ export interface PeerLobbyOptions {
 	"iceServers"?: RTCIceServer[];
 }
 
-const NAME = /^player-[\w-]{1,24}$/u;
+/** A player's name, as a player makes it: `player-` and six hex digits — never the host's own `player-0`. */
+const NAME = /^player-[\da-f]{6}$/u;
 
 function remembered(key: string): string | undefined {
 	try {
@@ -114,7 +117,7 @@ export async function joinPeerLobby(match: string, lobbyOptions: PeerLobbyOption
 			});
 		});
 
-		return { "role": "host", "match": match, "peer": "player-0", "close": () => { hosting.destroy(); }, "onPlayer": (handler) => { onPlayer = handler; } };
+		return { "role": "host", "peer": "player-0", "onPlayer": (handler) => { onPlayer = handler; } };
 	}
 
 	const key = `war2.${match}.name`;
@@ -127,9 +130,7 @@ export async function joinPeerLobby(match: string, lobbyOptions: PeerLobbyOption
 
 	return {
 		"role": "player",
-		"match": match,
 		"peer": name,
-		"close": () => { peer.destroy(); },
 		"link": async (take) => {
 			const connection = peer.connect(hostId, { "reliable": true, "serialization": "raw", "metadata": { "name": name } });
 			const pc = connection.peerConnection;

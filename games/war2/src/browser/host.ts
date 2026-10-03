@@ -6,13 +6,13 @@
  * that team can see).
  */
 import type { ClientDiag, RefereeTick } from "../net/index.ts";
-import type { AttachMessage, InitMessage, PortMessage, Settings } from "./bootstrap.ts";
+import type { AttachMessage, InitMessage, PortMessage, Settings } from "./contract.ts";
 import type { MakeLink, RtcLink } from "./rtc.ts";
 import type { Hub } from "@brianjenkins94/hub";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { observeApp, ownWorker, reportMetrics } from "@brianjenkins94/observability";
 import { subjects } from "../net/index.ts";
-import { MATCH } from "./bootstrap.ts";
+import { MATCH } from "./contract.ts";
 import { answerLink, linkLabel, localSignaling, offerLink } from "./rtc.ts";
 import { war2Tools } from "./tools.ts";
 

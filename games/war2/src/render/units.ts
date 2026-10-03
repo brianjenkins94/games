@@ -4,7 +4,7 @@
  * Carried from the old war2's renderer (W3, see MIGRATION.md). Own units come from the client worker's prediction —
  * they turn and walk the moment a command is given — so the old renderer's separate prediction overlay is gone.
  */
-import type { UnitInfo } from "../browser/bootstrap.ts";
+import type { UnitInfo } from "../net/view.ts";
 import type { RendererState } from "./renderer.ts";
 import type { SheetDef } from "./sprites.ts";
 import { FP, TILE_PX } from "../sim/components.ts";

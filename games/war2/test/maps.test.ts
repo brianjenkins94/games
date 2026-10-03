@@ -1,11 +1,11 @@
 /**
- * The maps a match can be played on (W3, src/browser/maps.ts): the built-in ones, and the game's own from the assets
+ * The maps a match can be played on (W3, src/maps.ts): the built-in ones, and the game's own from the assets
  * mirror — here, a small Tiled map served by a stubbed fetch, so the test needs no network.
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { assetUrl } from "../src/browser/assets.ts";
-import { BUILT_IN, loadGameMap, loadMap, rowsMap } from "../src/browser/maps.ts";
+import { assetUrl } from "../src/assets.ts";
+import { BUILT_IN, loadGameMap, loadMap, rowsMap } from "../src/maps.ts";
 
 test("a built-in map: blocked where its rows say, drawn in the forest tileset's grass and wall, a start each side", async () => {
 	const arena = await loadGameMap("arena");

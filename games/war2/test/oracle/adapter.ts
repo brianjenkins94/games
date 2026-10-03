@@ -9,7 +9,7 @@
 import type { CanonicalState, CanonicalUnit } from "./canonical.ts";
 import type { Scenario, ScriptCommand } from "./scenarios.ts";
 import type { Components } from "../../src/sim/components.ts";
-import type * as GameModule from "../../src/sim/game.ts";
+import type * as GameModule from "../game.ts";
 import { hasComponent } from "bitecs";
 import { fnv } from "./canonical.ts";
 import { mapInfo } from "./scenarios.ts";

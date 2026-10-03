@@ -20,7 +20,7 @@
  */
 import type { SimWorld } from "./world.ts";
 import { query } from "bitecs";
-import { inRange } from "./distance.ts";
+import { forEachInSight, inRange } from "./distance.ts";
 import { unitSight } from "./unitTypes.ts";
 
 /** Default/fallback sight radius in tiles (per-unit sight comes from unitSight()).
@@ -57,25 +57,12 @@ export function visionSystem(world: SimWorld): void {
 		const tv = world.vision.get(Unit.team[eid]);
 
 		if (!tv) { continue; }
-		const sight = unitSight(Unit.type[eid]);
-		const utx = Path.curTx[eid];
-		const uty = Path.curTy[eid];
-		const tx0 = Math.max(0, utx - sight);
-		const tx1 = Math.min(mapW - 1, utx + sight);
-		const ty0 = Math.max(0, uty - sight);
-		const ty1 = Math.min(mapH - 1, uty + sight);
-
-		for (let ty = ty0; ty <= ty1; ty++) {
-			for (let tx = tx0; tx <= tx1; tx++) {
-				if (!inRange(tx - utx, ty - uty, sight)) { continue; }
-				const i = ty * mapW + tx;
-
-				if (tv.explored[i]) { continue; }          // already known
-				tv.explored[i] = 1;
-				tv.believedPass[i] = realPass[i];      // learn the real terrain here
-				if (realPass[i]) { tv.dirty = true; }
-			}
-		}
+		forEachInSight(Path.curTx[eid], Path.curTy[eid], unitSight(Unit.type[eid]), mapW, mapH, (i) => {
+			if (tv.explored[i]) { return; }          // already known
+			tv.explored[i] = 1;
+			tv.believedPass[i] = realPass[i];      // learn the real terrain here
+			if (realPass[i]) { tv.dirty = true; }
+		});
 	}
 }
 

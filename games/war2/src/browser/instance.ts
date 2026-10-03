@@ -10,19 +10,22 @@ import type { Hud } from "../render/hud.ts";
 import type { RendererState } from "../render/renderer.ts";
 import type { Command } from "../sim/command.ts";
 import type { CommandCardController } from "../ui/commandCardController.ts";
-import type { GameMap } from "./maps.ts";
-import type { InstanceInput, InstanceView, PortMessage, UnitInfo } from "./bootstrap.ts";
+import type { Terrain } from "../sim/passability.ts";
+import type { GameMap } from "../maps.ts";
+import type { InstanceInput, PortMessage } from "./contract.ts";
+import type { InstanceView, UnitInfo } from "../net/view.ts";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
 import { observe, ownWorker, reportMetrics, scopedTransport } from "@brianjenkins94/observability";
-import productionJson from "../assets/production.json" with { "type": "json" };
+import productionJson from "../data/production.json" with { "type": "json" };
 import { createHud } from "../render/hud.ts";
 import { lookAt, setGhost, setTargetingCursor, setView, startRenderer, worldToScreen } from "../render/renderer.ts";
 import { CmdType } from "../sim/command.ts";
 import { fpToTile, snapWalkFP } from "../sim/components.ts";
+import { buildTerrain, terrainFits } from "../sim/passability.ts";
 import { unitFootprint, unitTypeId } from "../sim/unitTypes.ts";
 import { createCommandCardController } from "../ui/commandCardController.ts";
-import { instanceSubjects, seatKey } from "./bootstrap.ts";
-import { loadGameMap } from "./maps.ts";
+import { instanceSubjects, seatKey } from "./contract.ts";
+import { loadGameMap } from "../maps.ts";
 import { frameRateGauge, heapGauge } from "./metrics.ts";
 
 const params = new URLSearchParams(location.search);
@@ -47,17 +50,15 @@ ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); 
 // worker's reports reaching its page through here, it's the edge that names them.
 hub.link(scopedTransport(portTransport(worker), id, { "keep": (other) => other === hub.id || other === "referee" }), { "peer": id });
 
-let linkedUp = false;
+// Its page is its tab's root: link up to it at once, so the tab observes (and debugs) its own client — whether or not
+// a link to the referee ever comes. (Opened on its own, it has no page.)
+if (parent !== globalThis.window) {
+	hub.link(windowTransport(parent, location.origin));
+}
 
 globalThis.addEventListener("message", (event: MessageEvent<PortMessage | undefined>) => {
 	if (event.source === parent && event.data?.type === "war2-port") {
 		const message: PortMessage = { "type": "war2-port", "channel": event.data.channel, "bots": params.get("bots") !== "0", ...storedToken() };
-
-		// Its page is its tab's root: link up to it, so the tab observes (and debugs) its own client.
-		if (!linkedUp) {
-			linkedUp = true;
-			hub.link(windowTransport(parent, location.origin));
-		}
 
 		// On to the worker at once: a data channel can be passed on only as it arrives.
 		worker.postMessage(message, [message.channel as unknown as Transferable]);
@@ -101,33 +102,32 @@ function rallyableBuilding(): number | undefined {
 	return selected.length === 1 && selected[0].building !== undefined && PRODUCTION[selected[0].type]?.trains !== undefined ? selected[0].uid : undefined;
 }
 
-/** Placement, advisory (the referee re-checks it, as the deterministic source of truth — world.ts canPlaceBuilding):
- *  every footprint tile on the map, passable, and clear of the buildings the team can see. */
+/** Each map's terrain, as the sim reads it (passability.ts), worked out once. */
+const terrains = new WeakMap<GameMap, Terrain>();
+
+/** Placement, advisory (the referee re-checks it, as the deterministic source of truth — world.ts canPlaceBuilding): the
+ *  sim's terrain rule (passability.ts terrainFits), and clear of the buildings the team can see. */
 function canPlace(map: GameMap, tileX: number, tileY: number, typeId: number): boolean {
 	const [fw, fh] = unitFootprint(typeId);
 	const { gids, mapW, mapH, terrainArr } = map.info;
-	const taken = new Set<number>();
+	let terrain = terrains.get(map);
+
+	if (terrain === undefined) {
+		terrain = buildTerrain(gids, mapW, mapH, terrainArr);
+		terrains.set(map, terrain);
+	}
+
+	if (!terrainFits(terrain, tileX, tileY, fw, fh)) {
+		return false;
+	}
 
 	for (const unit of latest?.units ?? []) {
 		if (unit.building !== undefined) {
 			const { w, h } = unit.building;
 			const [left, top] = [fpToTile(unit.x) - (w >> 1), fpToTile(unit.y) - (h >> 1)];
 
-			for (let y = 0; y < h; y++) {
-				for (let x = 0; x < w; x++) {
-					taken.add((top + y) * mapW + left + x);
-				}
-			}
-		}
-	}
-
-	for (let y = tileY; y < tileY + fh; y++) {
-		for (let x = tileX; x < tileX + fw; x++) {
-			const index = y * mapW + x;
-			// (As passability.ts: an empty tile is blocked; land and coast are walkable.)
-			const terrain = gids[index] === 0 ? 3 : terrainArr[gids[index]] ?? 3;
-
-			if (x < 0 || y < 0 || x >= mapW || y >= mapH || (terrain !== 0 && terrain !== 2) || taken.has(index)) {
+			// Overlapping footprints: the two rectangles intersect.
+			if (left < tileX + fw && tileX < left + w && top < tileY + fh && tileY < top + h) {
 				return false;
 			}
 		}

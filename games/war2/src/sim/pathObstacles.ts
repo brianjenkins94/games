@@ -8,7 +8,7 @@
  * Why C-space (obstacle grown by the mover's radius) rather than the live walk-grid reservations:
  * only SETTLED units are stable enough to plan around (baking in movers would thrash the path);
  * own-team only (routing around enemies would leak fog — enemy avoidance is the continuous collision
- * in systems/movement.ts).
+ * in movement.ts).
  *
  * Determinism: a pure function of which units are settled and where.  Rebuilt from world state at
  * deterministic points (tick boundary / command application) and after snapshot restore, so host and

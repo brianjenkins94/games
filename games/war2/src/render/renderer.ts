@@ -12,10 +12,10 @@
  * Coordinate spaces: screen (pixels from the canvas's top-left: pointer events), world (pixels from the map's
  * top-left: where units are drawn), FP (world × FP: the sim's fixed point).
  */
-import type { InstanceView, UnitInfo } from "../browser/bootstrap.ts";
-import type { GameMap } from "../browser/maps.ts";
+import type { InstanceView, UnitInfo } from "../net/view.ts";
+import type { GameMap } from "../maps.ts";
 import Phaser from "phaser";
-import { FP, TILE_PX } from "../sim/components.ts";
+import { FP, TICK_MS, TILE_PX } from "../sim/components.ts";
 import { unitBoxHalfPx, unitTypeId } from "../sim/unitTypes.ts";
 import { ChunkRenderer } from "./ChunkRenderer.ts";
 import { computeFog, VISIBLE } from "./fog.ts";
@@ -27,7 +27,6 @@ const MINIMAP_SIZE = 120;
 const UI_RIGHT = 150;
 const UI_BOTTOM = 120;
 const CAM_SPEED = 8;
-const TICK_MS = 50;
 
 export interface RendererCallbacks {
 	/** The selection changed (stable unit ids: own units only). */

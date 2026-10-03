@@ -4,11 +4,11 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import unitsJson from "../src/assets/units.json" with { "type": "json" };
-import unitTypeIds from "../src/assets/unitTypeIds.json" with { "type": "json" };
+import unitsJson from "../src/data/units.json" with { "type": "json" };
+import unitTypeIds from "../src/data/unitTypeIds.json" with { "type": "json" };
 import { CmdType } from "../src/sim/command.ts";
 import { MAX_ENTITIES, tileCenterFP } from "../src/sim/components.ts";
-import { createGame } from "../src/sim/game.ts";
+import { createGame } from "./game.ts";
 import { unitTypeId, unitTypeName } from "../src/sim/unitTypes.ts";
 import { MAX_LIVE_UNITS, MAX_QUEUED_ORDERS, MAX_QUEUED_PRODUCTION, validateCommand } from "../src/sim/validate.ts";
 import { revealAll } from "../src/sim/vision.ts";

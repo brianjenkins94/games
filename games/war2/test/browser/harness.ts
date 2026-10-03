@@ -1,6 +1,6 @@
 /**
  * Browser-mode test harness: the real runtime — page, referee worker, instance iframes, client workers, hub links
- * over MessageChannels, observability — in headless Chromium.
+ * (ports and windows within a tab, WebRTC data channels to the referee), observability — in headless Chromium.
  *
  * By default it tests what ships: it builds war2 (util's buildApp) into a temp dir and serves that under the same
  * base Pages would (`/games/war2/`). `WAR2_URL` points it at a running server instead (a dev server:

@@ -1,6 +1,7 @@
 /**
- * The browser runtime's wiring, shared by the pages, the instance iframes and the workers — netsim's (W3, see
- * MIGRATION.md), carrying war2.
+ * What the browser runtime's realms say to each other — the pages, the instance iframes and the workers: their
+ * messages, subjects and settings (netsim's, W3 — see MIGRATION.md, carrying war2). What a client sees (UnitInfo,
+ * InstanceView) is net/view.ts's.
  *
  * One transport for every client: each links to the referee over a WebRTC data channel (rtc.ts; hub's
  * dataChannelTransport), handed straight to the workers at both ends — the host's own player as much as a player in
@@ -14,15 +15,19 @@
  *                      └─ player-0 instance ─ player-0 worker
  *   player tab:  page ─ player-1 instance ─ player-1 worker
  *
+ * In the host tab that is one loop — page ─ referee ┄ player-0 worker ─ player-0 instance ─ page — where hub wants a
+ * tree. It's there on purpose (the host's own player takes the path every other player does) and it's safe because
+ * the worker is a leaf on both sides: nothing crosses it from one link to the other, and each link carries one way
+ * only what its side is for (client.worker.ts) — the game to the referee, the view and observability to the tab.
+ *
  * The host's controls (inspect, pause / step / speed) are served by the referee worker on the host tab's own tree: no
  * client's link carries them.
  */
+
+import type { UnitInfo } from "../net/view.ts";
 import type { UnitSnapshot } from "../sim/types.ts";
-import { createComponents, simFields } from "../sim/components.ts";
-import { unitTypeName } from "../sim/unitTypes.ts";
 
 export const MATCH = "local";
-export const TICK_MS = 50;
 
 /** page → referee worker: start the match. */
 export interface InitMessage {
@@ -41,62 +46,6 @@ export type DiagRequest =
 	| { "op": "incident" | "replay" | "fixture"; "id": string }
 	| { "op": "flag"; "label"?: string }
 	| { "op": "track"; "uid": number };
-
-/** A unit as the tools and the debug canvas show it: by name, with what matters to look at. */
-export interface UnitInfo {
-	"uid": number;
-	"team": number;
-	"type": string;
-	/** Fixed-point centre. */
-	"x": number;
-	"y": number;
-	"moving": boolean;
-	/** Facing, 0–7 clockwise from north. */
-	"dir": number;
-	/** Its move target, while it has one (absent for an enemy: the view doesn't carry it). */
-	"target"?: [number, number];
-	"building"?: { "w": number; "h": number; "buildLeft": number };
-	/** An own unit's queue state (an enemy's isn't in the view): shift-queued orders, a building's production
-	 *  (product type names) and rally point. */
-	"orders"?: UnitSnapshot["orders"];
-	"production"?: { "queue": string[]; "ticksLeft": number; "ticksTotal": number };
-	"rally"?: [number, number];
-}
-
-/** The sim's field names, in order (every world's are the same): how a UnitSnapshot's values are read. */
-const FIELDS = simFields(createComponents()).map(([name]) => name);
-const INDEX = new Map(FIELDS.map((name, index) => [name, index]));
-
-/** A field of a unit snapshot, by name. */
-export function valueOf(unit: UnitSnapshot, name: string): number {
-	return unit.values[INDEX.get(name)];
-}
-
-export function describe(unit: UnitSnapshot): UnitInfo {
-	const info: UnitInfo = { "uid": unit.uid, "team": valueOf(unit, "Unit.team"), "type": unitTypeName(valueOf(unit, "Unit.type")), "x": valueOf(unit, "Position.x"), "y": valueOf(unit, "Position.y"), "moving": valueOf(unit, "UnitAnim.moving") === 1, "dir": valueOf(unit, "UnitAnim.dir") };
-
-	if (valueOf(unit, "MoveTarget.active") === 1 && (valueOf(unit, "MoveTarget.tx") !== 0 || valueOf(unit, "MoveTarget.ty") !== 0)) {
-		info.target = [valueOf(unit, "MoveTarget.tx"), valueOf(unit, "MoveTarget.ty")];
-	}
-
-	if (valueOf(unit, "Building.fw") > 0) {
-		info.building = { "w": valueOf(unit, "Building.fw"), "h": valueOf(unit, "Building.fh"), "buildLeft": valueOf(unit, "Building.buildLeft") };
-	}
-
-	if (unit.orders !== undefined) {
-		info.orders = unit.orders;
-	}
-
-	if (unit.prod !== undefined) {
-		info.production = { "queue": unit.prod.queue.map(unitTypeName), "ticksLeft": unit.prod.ticksLeft, "ticksTotal": unit.prod.ticksTotal };
-	}
-
-	if (unit.rally !== undefined) {
-		info.rally = [unit.rally.txFP, unit.rally.tyFP];
-	}
-
-	return info;
-}
 
 export interface RefereeInspection {
 	"tick": number;
@@ -161,25 +110,6 @@ export function instanceSubjects(id: string) {
 /** Where an instance keeps its seat token across a reload: per match (a new page is a new match), per client. */
 export function seatKey(match: string, id: string): string {
 	return `war2.${match}.${id}.token`;
-}
-
-export interface InstanceView {
-	"id": string;
-	"team": number | undefined;
-	"viewTick": number;
-	"inSync": boolean;
-	/** The match's map, by name (the instance loads it itself). */
-	"map": string | undefined;
-	/** The authoritative view. */
-	"units": UnitInfo[];
-	/** This team's units as predicted locally. */
-	"predicted": UnitInfo[];
-	/** What this team has explored, as runs ([start, length, …] over flat tile indices). */
-	"explored": number[];
-	"selected": number[];
-	"stats": Record<string, number>;
-	/** The seat token, for the instance to keep across a reload. State, sent with every view. */
-	"token": string | undefined;
 }
 
 /** page → its client worker: the player's selection (for the worker's view and tools), or a command to give — which

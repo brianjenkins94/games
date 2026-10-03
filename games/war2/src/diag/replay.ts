@@ -10,7 +10,7 @@ import type { MapInfo } from "../sim/world.ts";
 import type { Fixture } from "./recorder.ts";
 import type { Pathology } from "./pathology.ts";
 import { applySnapshot, worldHash } from "../sim/snapshot.ts";
-import { applyCommands } from "../sim/systems/commands.ts";
+import { applyCommands } from "../sim/commandSystem.ts";
 import { createSimWorld, stepWorld } from "../sim/world.ts";
 import { createPathologyDetector } from "./pathology.ts";
 

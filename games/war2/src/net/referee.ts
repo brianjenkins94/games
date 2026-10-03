@@ -16,7 +16,7 @@ import type { MapInfo, SimWorld } from "../sim/world.ts";
 import type { CommandBatch, JoinReply, JoinRequest, RefereeTick, ResyncRequest, StateUpdate } from "./protocol.ts";
 import { serve } from "@brianjenkins94/hub";
 import { applySnapshot } from "../sim/snapshot.ts";
-import { applyCommands } from "../sim/systems/commands.ts";
+import { applyCommands } from "../sim/commandSystem.ts";
 import { validateCommand } from "../sim/validate.ts";
 import { exploredRuns } from "../sim/vision.ts";
 import { createSimWorld, stepWorld } from "../sim/world.ts";
@@ -141,11 +141,17 @@ export function createReferee({ hub, match, seed, map, mapInfo, teams = 2, setup
 		}
 
 		const request = (args ?? {}) as JoinRequest;
-		// A reconnect presents its token (it may be on a new link); a repeat join from the same hub keeps its seat.
-		const existing = (typeof request.token === "string" ? seats.get(request.token) : undefined) ?? seatOf(from);
+		// A seat is reclaimed by its token alone (a reconnect, perhaps on a new link): a name is only a name — a remote
+		// player picks its own — so a link that's called what a seated player is called, without that seat's token, is
+		// refused rather than handed the seat.
+		const existing = typeof request.token === "string" ? seats.get(request.token) : undefined;
 
 		if (existing !== undefined) {
 			return seatPeer(existing, from);
+		}
+
+		if (seatOf(from) !== undefined) {
+			throw new Error(`${from} is seated already: rejoin with its token`);
 		}
 
 		const taken = new Set([...seats.values()].map((seat) => seat.team));

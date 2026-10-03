@@ -6,11 +6,11 @@
 import type { Command } from "../src/sim/command.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { rowsMap } from "../src/browser/maps.ts";
+import { rowsMap } from "../src/maps.ts";
 import { createPathologyDetector, STACK_TICKS, STALL_TICKS } from "../src/diag/pathology.ts";
 import { CmdType } from "../src/sim/command.ts";
 import { tileCenterFP } from "../src/sim/components.ts";
-import { createGame } from "../src/sim/game.ts";
+import { createGame } from "./game.ts";
 import { unitTypeId } from "../src/sim/unitTypes.ts";
 import { revealAll } from "../src/sim/vision.ts";
 import { census, readCensus } from "./oracle/census.ts";

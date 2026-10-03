@@ -29,12 +29,11 @@ type LobbyMessage =
 	| { "type": "signal"; "link": string; "from": "host" | "player"; "signal": Signal };
 
 /** Signaling for link `link` over the lobby, as `me`: it hears only the other end's signals for that link — and holds
- *  any that come before it has a handler. */
+ *  any that come before it has a handler — until the link's connection is up or gone (rtc.ts closes it). */
 function lobbySignaling(lobby: BroadcastChannel, link: string, me: "host" | "player"): Signaling {
 	let handler: ((signal: Signal) => void) | undefined;
 	const early: Signal[] = [];
-
-	lobby.addEventListener("message", (event: MessageEvent<LobbyMessage>) => {
+	const heard = (event: MessageEvent<LobbyMessage>): void => {
 		const message = event.data;
 
 		if (message.type === "signal" && message.link === link && message.from !== me) {
@@ -44,7 +43,9 @@ function lobbySignaling(lobby: BroadcastChannel, link: string, me: "host" | "pla
 				handler(message.signal);
 			}
 		}
-	});
+	};
+
+	lobby.addEventListener("message", heard);
 
 	return {
 		"send": (signal) => { lobby.postMessage({ "type": "signal", "link": link, "from": me, "signal": signal } satisfies LobbyMessage); },
@@ -54,16 +55,14 @@ function lobbySignaling(lobby: BroadcastChannel, link: string, me: "host" | "pla
 			for (const signal of early.splice(0)) {
 				next(signal);
 			}
-		}
+		},
+		"close": () => { lobby.removeEventListener("message", heard); }
 	};
 }
 
 interface Common {
-	"match": string;
 	/** This tab's player id: `player-0` for the host. */
 	"peer": string;
-	/** Leave the match (a host's leaving ends it). */
-	"close": () => void;
 }
 
 /** A tab's place in a match — through this module's lobby (tabs of one browser) or PeerJS's (peerLobby.ts: players on
@@ -89,14 +88,15 @@ function remember(key: string, value: string): void {
 	} catch { /* no storage: a reload joins as a new player */ }
 }
 
-/** Take lock `name` if it's free, and hold it until `release` resolves (or the tab goes). Resolves whether it got it. */
-async function hold(name: string, release: Promise<void>): Promise<boolean> {
+/** Take lock `name` if it's free, and hold it for the tab's life (a tab leaves a match by going). Resolves whether it
+ *  got it. */
+async function hold(name: string): Promise<boolean> {
 	return new Promise<boolean>((resolve) => {
 		void navigator.locks.request(name, { "ifAvailable": true }, async (lock) => {
 			resolve(lock !== null);
 
 			if (lock !== null) {
-				await release;
+				await new Promise<never>(() => { /* never resolves: the browser releases it when the tab goes */ });
 			}
 		});
 	});
@@ -108,21 +108,8 @@ export async function joinLobby(match: string): Promise<Lobby> {
 	const peerKey = `${prefix}.peer`;
 	const hostLock = `${prefix}.host`;
 	const lobby = new BroadcastChannel(`${prefix}.lobby`);
-	let leave = (): void => undefined;
-	const released = new Promise<void>((resolve) => { leave = resolve; });
-	// What leaving also stops: a player's unanswered connects, and its wait for the host to go.
-	const stops = new Set<() => void>();
-	const close = (): void => {
-		leave();
 
-		for (const stop of stops) {
-			stop();
-		}
-
-		lobby.close();
-	};
-
-	if (await hold(hostLock, released)) {
+	if (await hold(hostLock)) {
 		const accepted = new Set<string>();
 		let onPlayer: (peer: string, link: MakeLink) => void = () => undefined;
 
@@ -145,15 +132,15 @@ export async function joinLobby(match: string): Promise<Lobby> {
 		});
 		remember(peerKey, "player-0");
 
-		return { "role": "host", "match": match, "peer": "player-0", "close": close, "onPlayer": (handler) => { onPlayer = handler; } };
+		return { "role": "host", "peer": "player-0", "onPlayer": (handler) => { onPlayer = handler; } };
 	}
 
 	// A player: the id it had before a reload if that's free, else the lowest free one.
 	const want = remembered(peerKey);
-	let peer = want !== undefined && /^player-[1-9]\d*$/u.test(want) && await hold(`${prefix}.${want}`, released) ? want : undefined;
+	let peer = want !== undefined && /^player-[1-9]\d*$/u.test(want) && await hold(`${prefix}.${want}`) ? want : undefined;
 
 	for (let index = 1; peer === undefined; index += 1) {
-		if (await hold(`${prefix}.player-${index}`, released)) {
+		if (await hold(`${prefix}.player-${index}`)) {
 			peer = `player-${index}`;
 		}
 	}
@@ -164,19 +151,14 @@ export async function joinLobby(match: string): Promise<Lobby> {
 	let hostLeft = false;
 	let onHostLeft = (): void => undefined;
 
-	const waiting = new AbortController();
-
-	stops.add(() => { waiting.abort(); });
-	navigator.locks.request(hostLock, { "mode": "shared", "signal": waiting.signal }, () => {
+	void navigator.locks.request(hostLock, { "mode": "shared" }, () => {
 		hostLeft = true;
 		onHostLeft();
-	}).catch(() => undefined); // aborted: this tab left first
+	});
 
 	return {
 		"role": "player",
-		"match": match,
 		"peer": peer,
-		"close": close,
 		"link": async (take) => {
 			const link = crypto.randomUUID();
 			// Listening before asking: the host's offer can follow its acceptance straight away.
@@ -185,19 +167,13 @@ export async function joinLobby(match: string): Promise<Lobby> {
 			await new Promise<void>((resolve) => {
 				const send = (): void => { lobby.postMessage({ "type": "connect", "peer": peer, "link": link } satisfies LobbyMessage); };
 				const timer = setInterval(send, RETRY_MS);
-				const stop = (): void => {
-					clearInterval(timer);
-					lobby.removeEventListener("message", answered);
-					stops.delete(stop);
-				};
 				const answered = (event: MessageEvent<LobbyMessage>): void => {
 					if (event.data.type === "accepted" && event.data.link === link) {
-						stop();
+						clearInterval(timer);
+						lobby.removeEventListener("message", answered);
 						resolve();
 					}
 				};
-
-				stops.add(stop); // left before the host answered: stop asking (the connect never resolves)
 
 				lobby.addEventListener("message", answered);
 				send();

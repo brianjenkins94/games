@@ -16,6 +16,8 @@ export interface Signaling {
 	"send": (signal: Signal) => void;
 	/** The other end's signals; any that came before a handler was set go to it then. */
 	"onSignal": (handler: (signal: Signal) => void) => void;
+	/** Done with: the connection is up, or gone — nothing more to signal. Called once or more. */
+	"close"?: () => void;
 }
 
 /** One end's connection: closing it ends the link (both ends' data channels close, and their hubs unlink). */
@@ -42,6 +44,12 @@ export function linkLabel(match: string, peer: string): string {
 function connect(signaling: Signaling): RTCPeerConnection {
 	const connection = new RTCPeerConnection(CONFIG);
 	const early: RTCIceCandidateInit[] = [];
+
+	connection.addEventListener("connectionstatechange", () => {
+		if (["connected", "failed", "closed"].includes(connection.connectionState)) {
+			signaling.close?.();
+		}
+	});
 
 	connection.addEventListener("icecandidate", (event) => {
 		if (event.candidate !== null) {
@@ -83,7 +91,7 @@ export function offerLink(label: string, signaling: Signaling, take: (channel: R
 		signaling.send({ "description": connection.localDescription!.toJSON() });
 	})().catch(() => undefined);
 
-	return { "close": () => { connection.close(); } };
+	return { "close": () => { connection.close(); signaling.close?.(); } };
 }
 
 /** A client's end: answer the referee's offer, and hand the data channel to `take` the moment it arrives. */
@@ -92,7 +100,7 @@ export function answerLink(signaling: Signaling, take: (channel: RTCDataChannel)
 
 	connection.addEventListener("datachannel", (event) => { take(event.channel); }, { "once": true });
 
-	return { "close": () => { connection.close(); } };
+	return { "close": () => { connection.close(); signaling.close?.(); } };
 }
 
 /** Two ends of a signaling path within one page. */
