@@ -20,6 +20,11 @@
  * the worker is a leaf on both sides: nothing crosses it from one link to the other, and each link carries one way
  * only what its side is for (client.worker.ts) — the game to the referee, the view and observability to the tab.
  *
+ * The metrics plane (observability's reportMetrics: `$sys.metrics.<source>`, once a second) carries what war2's old
+ * dashboard charted, and any viewer on the tree draws it (the editor's monitor, debug-mcp's query_metrics): each
+ * instance its `fps` and `heap`, each client worker its `units` and `wire`, the referee its `tickMs`, the host page
+ * each client's `lag` (ticks behind the referee).
+ *
  * The host's controls (inspect, pause / step / speed) are served by the referee worker on the host tab's own tree: no
  * client's link carries them.
  */

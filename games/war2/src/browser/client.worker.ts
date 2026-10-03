@@ -13,7 +13,7 @@ import type { Client } from "../net/index.ts";
 import type { ClientInspection, InstanceInput, PortMessage } from "./contract.ts";
 import type { InstanceView, UnitInfo } from "../net/view.ts";
 import { createHub, portTransport, rpcCallSubject, serve } from "@brianjenkins94/hub";
-import { observe, reportMetrics } from "@brianjenkins94/observability";
+import { meteredDataChannel, observe, reportMetrics } from "@brianjenkins94/observability";
 import { createClient, hostPermissions, subjects } from "../net/index.ts";
 import { createBot } from "../sim/bot.ts";
 import { snapshotUnit } from "../sim/snapshot.ts";
@@ -24,14 +24,13 @@ import { instanceSubjects, MATCH } from "./contract.ts";
 import { describe } from "../net/view.ts";
 import { TICK_MS } from "../sim/components.ts";
 import { loadMap } from "../maps.ts";
-import { meteredDataChannel } from "./metrics.ts";
 
 async function start({ channel, bots = true, token }: PortMessage): Promise<void> {
 	// Its own name is a placeholder that nobody sees (both its links name it): who it is comes from the referee.
 	const hub: Hub = createHub({ "id": "client" });
 	// Observed before it opens anything: the probes see only what's created after them (GAPS).
 	const { log } = observe(hub, { "network": true });
-	// What its data channel carries (metrics.ts), weighed from the start: the link sends through the meter.
+	// What its data channel carries (observability's), weighed from the start: the link sends through the meter.
 	const wire = meteredDataChannel(channel);
 
 	// The referee is its uplink: the hub that decides who it is (only an uplink's hello can name a hub). Its link is
@@ -49,18 +48,18 @@ async function start({ channel, bots = true, token }: PortMessage): Promise<void
 	} });
 	await toReferee.ready;
 
-	const id = hub.knownAs()[0];
+	const id = toReferee.knownAs;
 
 	if (id === undefined) {
 		throw new Error("the referee didn't say who this client is");
 	}
 
-	hub.permit("referee", hostPermissions(MATCH, id));
+	toReferee.permit(hostPermissions(MATCH, id));
 
 	const names = subjects(MATCH);
 	const local = instanceSubjects(id);
 	const client: Client = createClient({ "hub": hub, "match": MATCH, "loadMap": loadMap });
-	// Its gauges (metrics.ts): what it sees, and its wire. (How far behind the referee its view is, the host knows: `lag`.)
+	// Its gauges (observability's): what it sees, and its wire. (How far behind the referee its view is, the host knows: `lag`.)
 	// Unnamed: its instance's link names it, as it does its logs.
 	const metrics = reportMetrics(hub);
 

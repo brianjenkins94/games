@@ -4,6 +4,7 @@
  */
 /* eslint-disable ts/no-unused-vars */
 import type { Transport } from "@brianjenkins94/hub";
+import { dataChannelTransport } from "@brianjenkins94/hub";
 
 export type PageTool = unknown;
 
@@ -29,4 +30,21 @@ export function reportMetrics(_hub: unknown, _options?: unknown) {
 
 export function scopedTransport(transport: Transport, _scope: string, _options?: unknown): Transport {
 	return transport;
+}
+
+export function frameRateGauge(): Gauge {
+	return () => undefined;
+}
+
+export function heapGauge(): Gauge {
+	return () => undefined;
+}
+
+export function durationGauge() {
+	return { "record": (_ms: number) => undefined, "gauge": () => undefined };
+}
+
+/** Not metered — but still the link's transport: the game runs over it. */
+export function meteredDataChannel(channel: RTCDataChannel) {
+	return { "transport": dataChannelTransport(channel), "gauge": () => undefined };
 }

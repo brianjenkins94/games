@@ -1,7 +1,5 @@
 export type { Client, ClientOptions, ClientStats } from "./client.ts";
 export { createClient } from "./client.ts";
-export type { Faults, Network, NetworkStats } from "../../test/net/network.ts";
-export { createNetwork } from "../../test/net/network.ts";
 export type { ClientDiag, CommandBatch, JoinReply, JoinRequest, RefereeTick, ResyncRequest, StateUpdate } from "./protocol.ts";
 export { hostPermissions, lobbyPermissions, seatPermissions, subjects } from "./protocol.ts";
 export type { Referee, RefereeOptions, RefereeStats } from "./referee.ts";

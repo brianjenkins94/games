@@ -1,20 +1,21 @@
 /** Test helper: a war2 referee and N clients, each on its own hub, linked in a star over a virtual network. netsim's
  *  (W2, see MIGRATION.md), with war2's sim: every world — the referee's and each client's prediction — side by side in
  *  this one process. */
-import type { Hub } from "@brianjenkins94/hub";
+import type { Faults, Hub, Network } from "@brianjenkins94/hub";
 import type { Client, JoinReply, Referee } from "../../src/net/index.ts";
-import type { Faults, Network } from "./network.ts";
 import type { UnitSnapshot } from "../../src/sim/types.ts";
 import type { MapInfo, SimWorld } from "../../src/sim/world.ts";
-import { createHub } from "@brianjenkins94/hub";
+import { createHub, createNetwork, matches } from "@brianjenkins94/hub";
 import { createClient, createReferee, hashView, lobbyPermissions, teamView } from "../../src/net/index.ts";
-import { createNetwork } from "./network.ts";
+import { createRng } from "../../src/sim/rng.ts";
 import { CmdType } from "../../src/sim/command.ts";
 import { tileCenterFP } from "../../src/sim/components.ts";
 import { rngRange } from "../../src/sim/rng.ts";
 import { unitTypeId } from "../../src/sim/unitTypes.ts";
 import { exploredRuns } from "../../src/sim/vision.ts";
 import { spawnUnit } from "../../src/sim/world.ts";
+
+const GAME_TRAFFIC = ["war2.*.commands", "war2.*.state.*"];
 
 export const TICK_MS = 50;
 export const MATCH = "m";
@@ -78,7 +79,8 @@ export async function pump<T>(network: Network, promise: Promise<T>): Promise<T>
 }
 
 export async function startMatch({ "clients": count = 2, teams = Math.max(count, 2), faults = {}, seed = 1, perTeam = 3, keyframeEvery = 10 }: MatchOptions = {}): Promise<Match> {
-	const network = createNetwork({ "seed": seed });
+	// Faults on the game's traffic only (commands, state), and war2's own seeded generator: runs repeat exactly.
+	const network = createNetwork({ "random": createRng(seed), "faulty": (subject) => GAME_TRAFFIC.some((pattern) => matches(pattern, subject)) });
 	const refereeHub = createHub({ "id": "referee" });
 	const footman = unitTypeId("unit-footman");
 	const referee = createReferee({

@@ -11,7 +11,7 @@ import type { PortMessage } from "./contract.ts";
 import type { InstanceView } from "../net/view.ts";
 import { createHub, windowTransport } from "@brianjenkins94/hub";
 import { observeApp } from "@brianjenkins94/observability";
-import { instanceSubjects, readSettings } from "./contract.ts";
+import { readSettings } from "./contract.ts";
 import { createInstanceFrame, startHost } from "./host.ts";
 import { joinLobby } from "./lobby.ts";
 
@@ -60,7 +60,6 @@ if (lobby.role === "host") {
 	});
 } else {
 	const bots = params.get("bots") !== "0";
-	let latest: InstanceView | undefined;
 	// The client's end of its link, made here (its worker is in the instance frame), its data channel passed on to it.
 	let link: { "close": () => void } | undefined;
 	const frame = createInstanceFrame(grid, { "id": lobby.peer, "matchId": match, "bots": bots }, (loaded) => {
@@ -74,16 +73,13 @@ if (lobby.role === "host") {
 	// host's own player's is.
 	hub.link(windowTransport(frame.contentWindow!, location.origin));
 	telemetry.log.info("joined", { "match": match, "peer": lobby.peer });
-	hub.subscribe(instanceSubjects(lobby.peer).view, (data) => { latest = data as InstanceView; });
+	// How its player is doing (team, tick, in sync) is its instance's badge: the page only says when the match is over.
+	summary.textContent = "";
 	lobby.onHostLeft(() => {
 		telemetry.log.warn("the host left", { "match": match });
 		document.body.dataset["hostLeft"] = "true";
+		summary.textContent = "the host left — reload to host or join again";
 	});
-	setInterval(() => {
-		summary.textContent = document.body.dataset["hostLeft"] === "true"
-			? "the host left — reload to host or join again"
-			: latest === undefined ? "joining…" : `team ${latest.team ?? "–"} · tick ${latest.viewTick} · ${latest.inSync ? "in sync" : "out of sync"}`;
-	}, 250);
 
 	/** For scripts and debugging. */
 	(globalThis as unknown as { "__war2": unknown }).__war2 = {
@@ -91,7 +87,8 @@ if (lobby.role === "host") {
 		"logs": (source?: string) => telemetry.records.filter((record) => source === undefined || record.context?.["source"] === source),
 		"architecture": () => telemetry.store.snapshot(),
 		"tab": telemetry.tab,
-		"view": () => latest
+		/** What its client last drew — read from its instance (same origin), not sent up to the page. */
+		"view": (): InstanceView | undefined => (frame.contentWindow as unknown as { "__war2Instance"?: { "latest": () => InstanceView | undefined } } | null)?.__war2Instance?.latest()
 	};
 }
 

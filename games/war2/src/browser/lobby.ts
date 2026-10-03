@@ -16,8 +16,10 @@
  * editor's preview and a local dev server; across machines, players would need another way to signal.
  */
 
-import type { MakeLink, Signal, Signaling } from "./rtc.ts";
-import { answerLink, linkLabel, offerLink } from "./rtc.ts";
+import type { Signal, Signaling } from "@brianjenkins94/hub";
+import type { MakeLink } from "./rtc.ts";
+import { answerLink, offerLink } from "@brianjenkins94/hub";
+import { linkLabel } from "./rtc.ts";
 
 /** On the match's lobby channel. */
 type LobbyMessage =

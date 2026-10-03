@@ -15,7 +15,7 @@ import type { GameMap } from "../maps.ts";
 import type { InstanceInput, PortMessage } from "./contract.ts";
 import type { InstanceView, UnitInfo } from "../net/view.ts";
 import { createHub, portTransport, windowTransport } from "@brianjenkins94/hub";
-import { observe, ownWorker, reportMetrics, scopedTransport } from "@brianjenkins94/observability";
+import { frameRateGauge, heapGauge, observe, ownWorker, reportMetrics, scopedTransport } from "@brianjenkins94/observability";
 import productionJson from "../data/production.json" with { "type": "json" };
 import { createHud } from "../render/hud.ts";
 import { lookAt, setGhost, setTargetingCursor, setView, startRenderer, worldToScreen } from "../render/renderer.ts";
@@ -26,7 +26,6 @@ import { unitFootprint, unitTypeId } from "../sim/unitTypes.ts";
 import { createCommandCardController } from "../ui/commandCardController.ts";
 import { instanceSubjects, seatKey } from "./contract.ts";
 import { loadGameMap } from "../maps.ts";
-import { frameRateGauge, heapGauge } from "./metrics.ts";
 
 const params = new URLSearchParams(location.search);
 const id = params.get("id") ?? "client";
@@ -36,7 +35,7 @@ const local = instanceSubjects(id);
 const hub = createHub({ "id": id + "/ui" });
 const { log } = observe(hub, { "network": true, "messages": { "window": (source) => (source === parent ? "page" : undefined) } });
 const worker = new Worker(new URL("client.worker.ts", import.meta.url), { "type": "module", "name": id });
-// Its gauges (metrics.ts): the rate it draws at, and its heap.
+// Its gauges (observability's): the rate it draws at, and its heap.
 const metrics = reportMetrics(hub);
 
 metrics.gauge("fps", frameRateGauge());
@@ -48,6 +47,8 @@ let latest: InstanceView | undefined;
 ownWorker(worker, () => { log.error("worker failed to load", { "worker": id }); });
 // This page made the worker, and names it on its link — the same id the page assigned at the referee — and, the
 // worker's reports reaching its page through here, it's the edge that names them.
+// (The referee is kept by name: observability keeps what the worker reaches over its uplinks only when the worker
+// reports under the id the link gives it, and it reports as "client" — it learns its id from the referee, after.)
 hub.link(scopedTransport(portTransport(worker), id, { "keep": (other) => other === hub.id || other === "referee" }), { "peer": id });
 
 // Its page is its tab's root: link up to it at once, so the tab observes (and debugs) its own client — whether or not

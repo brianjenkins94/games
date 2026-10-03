@@ -5,7 +5,7 @@ import type { Referee } from "../net/index.ts";
 import type { Recorder } from "../diag/recorder.ts";
 import type { AttachMessage, DiagRequest, InitMessage, RefereeControl, RefereeInspection } from "./contract.ts";
 import { createHub, dataChannelTransport, portTransport, serve } from "@brianjenkins94/hub";
-import { observe, reportMetrics } from "@brianjenkins94/observability";
+import { durationGauge, observe, reportMetrics } from "@brianjenkins94/observability";
 import { createReferee, lobbyPermissions, teamView } from "../net/index.ts";
 import { snapshotUnit } from "../sim/snapshot.ts";
 import { setupMatch } from "../sim/setup.ts";
@@ -15,11 +15,10 @@ import { MATCH, REFEREE_CONTROL, REFEREE_DIAG, REFEREE_INSPECT } from "./contrac
 import { describe } from "../net/view.ts";
 import { TICK_MS } from "../sim/components.ts";
 import { loadGameMap } from "../maps.ts";
-import { durationGauge } from "./metrics.ts";
 
 const hub = createHub({ "id": "referee" });
 const { log } = observe(hub, { "network": true });
-// Its gauge (metrics.ts): how long a sim step takes, against its TICK_MS budget.
+// Its gauge (observability's): how long a sim step takes, against its TICK_MS budget.
 const stepTime = durationGauge();
 
 reportMetrics(hub).gauge("tickMs", stepTime.gauge);

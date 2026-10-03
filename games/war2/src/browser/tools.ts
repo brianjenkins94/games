@@ -10,7 +10,7 @@ import type { UnitSnapshot } from "../sim/types.ts";
 import type { AppliedCommand, Fixture } from "../diag/recorder.ts";
 import type { ClientInspection, DiagRequest, RefereeControl, RefereeInspection } from "./contract.ts";
 import type { UnitInfo } from "../net/view.ts";
-import { createRpcClient, rpcCallSubject } from "@brianjenkins94/hub";
+import { createRpcClient } from "@brianjenkins94/hub";
 import { CmdType } from "../sim/command.ts";
 import { FP, TILE_PX } from "../sim/components.ts";
 import { createComponents, simFields } from "../sim/components.ts";
@@ -60,13 +60,16 @@ export function war2Tools(hub: Hub, status: () => unknown): PageTool[] {
 	const segments = (track: { "tick": number; "tile": [number, number] }[], now: number) => track.map((entry, index) => ({ "tile": entry.tile, "from": entry.tick, "dwell": (track[index + 1]?.tick ?? now) - entry.tick }));
 	/** A client this tab can reach — its own (through its instance); another tab's player is that tab's to inspect. */
 	const reachable = async (peer: string): Promise<ClientInspection | undefined> => {
-		const subject = instanceSubjects(peer).debug("inspect");
+		try {
+			return await rpc.request(instanceSubjects(peer).debug("inspect"), undefined, CALL) as ClientInspection;
+		} catch (error) {
+			// (hub's RpcError — by its code: `instanceof` fails across realms.)
+			if ((error as { "code"?: string }).code === "no-responder") {
+				return undefined;
+			}
 
-		if (!await hub.whenInterested(rpcCallSubject(subject), CALL.waitForResponderMs)) {
-			return undefined;
+			throw error;
 		}
-
-		return await rpc.request(subject, undefined, CALL) as ClientInspection;
 	};
 	const ELSEWHERE = "in another tab — its own tab inspects it (the referee's link carries only the game)";
 	/** The named client, or every seated one. */
